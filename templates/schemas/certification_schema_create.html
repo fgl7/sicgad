@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Esquema de certificacion �?" SICGAD{% endblock %}
+{% block page_title %}Nuevo esquema de certificacion mensual{% endblock %}
+
+{% block content %}
+  <div class="max-w-3xl space-y-4">
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Esquema de certificacion mensual</h2>
+      <p class="text-slate-300 mb-2">
+        Como Administrador puedes definir un esquema de datos <strong>mensuales</strong> para certificacion,
+        a partir de un dataset diario existente configurado por los Cargadores.
+      </p>
+      <p class="text-slate-400">
+        Selecciona primero el dataset base (diario) y luego marca los campos que quieres incluir en la
+        certificacion (por ejemplo: fecha, producto, produccion). El esquema resultante se validara en los
+        flujos habituales de validacion hasta declararse produccion certificada.
+      </p>
+    </section>
+
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
+      <form method="post" class="space-y-4 text-xs">
+        {% csrf_token %}
+
+        <div class="space-y-1">
+          <label for="{{ form.source_dataset.id_for_label }}" class="block font-semibold text-slate-200">
+            {{ form.source_dataset.label }}
+          </label>
+          {{ form.source_dataset }}
+          {% if form.source_dataset.errors %}
+            <p class="text-red-400 mt-1">{{ form.source_dataset.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="space-y-1">
+          <label for="{{ form.name.id_for_label }}" class="block font-semibold text-slate-200">
+            {{ form.name.label }}
+          </label>
+          {{ form.name }}
+          {% if form.name.errors %}
+            <p class="text-red-400 mt-1">{{ form.name.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-baseline justify-between">
+            <span class="font-semibold text-slate-200">{{ form.columns.label }}</span>
+            <span class="text-[11px] text-slate-400">
+              Los campos disponibles dependen del dataset base seleccionado.
+            </span>
+          </div>
+          <div class="space-y-1 bg-slate-950/80 border border-slate-800 rounded-md px-3 py-2 max-h-64 overflow-y-auto">
+            {% if form.columns.field.queryset.exists %}
+              {% for checkbox in form.columns %}
+                <label class="flex items-start gap-2 cursor-pointer">
+                  {{ checkbox.tag }}
+                  <span class="text-slate-200">{{ checkbox.choice_label }}</span>
+                </label>
+              {% endfor %}
+            {% else %}
+              <p class="text-slate-400 text-[11px]">
+                Primero selecciona un dataset base y guarda para ver los campos disponibles.
+              </p>
+            {% endif %}
+          </div>
+          {% if form.columns.errors %}
+            <p class="text-red-400 mt-1">{{ form.columns.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <a href="{% url 'schemas:schema_list' %}" class="text-xs text-slate-300 hover:text-slate-100">
+            Volver al listado de esquemas
+          </a>
+          <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
+            Crear esquema de certificacion
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}
+

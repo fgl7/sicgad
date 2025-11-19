@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Esquemas – SICGAD{% endblock %}
+{% block page_title %}Esquemas de datos{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold">Listado de esquemas</h2>
+    {% if is_admin %}
+      <a href="{% url 'schemas:certification_schema_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
+        Nuevo esquema de certificacion
+      </a>
+    {% else %}
+      <a href="{% url 'schemas:schema_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
+        Nuevo esquema
+      </a>
+    {% endif %}
+  </div>
+
+  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
+    <table class="min-w-full text-xs">
+      <thead class="bg-slate-950/80 text-slate-300">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold">Planta</th>
+          <th class="px-3 py-2 text-left font-semibold">Nombre</th>
+          <th class="px-3 py-2 text-left font-semibold">Versión</th>
+          <th class="px-3 py-2 text-left font-semibold">Frecuencia</th>
+          <th class="px-3 py-2 text-left font-semibold">Activo</th>
+          <th class="px-3 py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ds in datasets %}
+          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+            <td class="px-3 py-2 align-top">{{ ds.plant.code }}</td>
+            <td class="px-3 py-2 align-top">
+              <a href="{% url 'schemas:schema_detail' ds.pk %}" class="text-emerald-400 hover:underline">
+                {{ ds.name }}
+              </a>
+            </td>
+            <td class="px-3 py-2 align-top">{{ ds.version }}</td>
+            <td class="px-3 py-2 align-top">
+              {{ ds.get_validation_frequency_display }}
+            </td>
+            <td class="px-3 py-2 align-top">
+              {% if ds.is_active %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-300">Sí</span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-700 text-slate-200">No</span>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 text-right">
+              <a href="{% url 'schemas:schema_edit' ds.pk %}" class="text-xs text-slate-300 hover:text-emerald-400">
+                Editar
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="px-3 py-4 text-center text-slate-400">
+              No hay esquemas definidos todavía.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

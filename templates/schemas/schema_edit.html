@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}{% if dataset %}Editar esquema{% else %}Nuevo esquema{% endif %} – SICGAD{% endblock %}
+{% block page_title %}{% if dataset %}Editar esquema{% else %}Nuevo esquema{% endif %}{% endblock %}
+
+{% block content %}
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
+      <h2 class="text-sm font-semibold mb-1">Datos generales</h2>
+      <div class="grid md:grid-cols-2 gap-3 text-xs">
+        <div>
+          <label class="block mb-1 text-slate-300">Planta</label>
+          {{ form.plant }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300">Nombre del dataset</label>
+          {{ form.name }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300">Versión</label>
+          {{ form.version }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300">Frecuencia de validación</label>
+          {{ form.validation_frequency }}
+        </div>
+        <div class="flex items-center gap-2 mt-2">
+          {{ form.is_active }}
+          <span class="text-slate-300">Esquema activo</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold">Columnas</h2>
+        <button type="button" hx-get="#" class="hidden text-xs px-2 py-1 rounded border border-slate-700">
+          Añadir fila (placeholder)
+        </button>
+      </div>
+
+      {{ formset.management_form }}
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950/80 text-slate-300">
+            <tr>
+              <th class="px-2 py-1 text-left font-semibold">Nombre</th>
+              <th class="px-2 py-1 text-left font-semibold">Etiqueta</th>
+              <th class="px-2 py-1 text-left font-semibold">Tipo</th>
+              <th class="px-2 py-1 text-left font-semibold">Req.</th>
+              <th class="px-2 py-1 text-left font-semibold">Mín.</th>
+              <th class="px-2 py-1 text-left font-semibold">Máx.</th>
+              <th class="px-2 py-1 text-left font-semibold">Unidad</th>
+              <th class="px-2 py-1 text-left font-semibold">Rol gráfico</th>
+              <th class="px-2 py-1 text-left font-semibold">Agreg.</th>
+              <th class="px-2 py-1 text-left font-semibold">KPI</th>
+              <th class="px-2 py-1 text-left font-semibold">Orden</th>
+              <th class="px-2 py-1 text-left font-semibold">Activo</th>
+              <th class="px-2 py-1 text-left font-semibold">Eliminar</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for form in formset.forms %}
+              <tr class="border-t border-slate-800 align-top">
+                <td class="px-2 py-1">{{ form.name }}</td>
+                <td class="px-2 py-1">{{ form.label }}</td>
+                <td class="px-2 py-1">{{ form.data_type }}</td>
+                <td class="px-2 py-1 text-center">{{ form.required }}</td>
+                <td class="px-2 py-1">{{ form.min_value }}</td>
+                <td class="px-2 py-1">{{ form.max_value }}</td>
+                <td class="px-2 py-1">{{ form.unit }}</td>
+                <td class="px-2 py-1">{{ form.axis_role }}</td>
+                <td class="px-2 py-1">{{ form.default_agg }}</td>
+                <td class="px-2 py-1 text-center">{{ form.is_primary_kpi }}</td>
+                <td class="px-2 py-1">{{ form.display_order }}</td>
+                <td class="px-2 py-1 text-center">{{ form.is_active }}</td>
+                <td class="px-2 py-1 text-center">
+                  {% if form.instance.pk %}
+                    {{ form.DELETE }}
+                  {% endif %}
+                </td>
+                {% for hidden in form.hidden_fields %}
+                  {{ hidden }}
+                {% endfor %}
+              </tr>
+              {% if form.errors %}
+                <tr>
+                  <td colspan="13" class="px-2 pb-2 text-red-400">
+                    {{ form.errors }}
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="flex items-center justify-between">
+      <a href="{% url 'schemas:schema_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+        ← Volver al listado
+      </a>
+      <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
+        Guardar esquema
+      </button>
+    </div>
+  </form>
+{% endblock %}
+

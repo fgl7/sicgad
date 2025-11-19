@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Editar usuario - SICGAD{% endblock %}
+{% block page_title %}Editar usuario{% endblock %}
+
+{% block content %}
+  <section class="max-w-xl bg-slate-950/60 border border-slate-800 rounded-xl p-5 text-xs">
+    <h2 class="text-sm font-semibold mb-3">Editar datos del usuario: {{ user_obj.username }}</h2>
+
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Usuario</label>
+          {{ form.username }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Email</label>
+          {{ form.email }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Nombre</label>
+          {{ form.first_name }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Apellido</label>
+          {{ form.last_name }}
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Nueva contrasena temporal</label>
+          {{ form.password1 }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Confirmar contrasena</label>
+          {{ form.password2 }}
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-3">
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Rol</label>
+          {{ form.role }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Planta</label>
+          {{ form.plant }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Nivel de validacion</label>
+          {{ form.validation_level }}
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Institucion</label>
+          {{ form.institution }}
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div class="flex items-center gap-2">
+          {{ form.can_validate_daily }}
+          <span class="text-slate-300 text-[11px]">
+            Puede validar flujo diario
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          {{ form.can_validate_monthly }}
+          <span class="text-slate-300 text-[11px]">
+            Puede validar flujo mensual / certificacion
+          </span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <a href="{% url 'accounts:admin_user_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+          ← Volver al listado
+        </a>
+        <button
+          type="submit"
+          class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500"
+        >
+          Guardar cambios
+        </button>
+      </div>
+    </form>
+  </section>
+{% endblock %}
+

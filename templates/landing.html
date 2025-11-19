@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>SICGAD - Inicio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen">
+    <div class="relative min-h-screen flex items-center justify-center">
+      <div
+        class="absolute inset-0 bg-cover bg-center"
+        style="background-image: url('{% static "background.png" %}');"
+      ></div>
+      <div class="absolute inset-0 bg-slate-900/80"></div>
+
+      <div class="relative z-10 max-w-2xl mx-auto text-center px-4">
+        <div class="flex justify-center mb-6">
+          <img
+            src="{% static 'escudo.png' %}"
+            alt="Escudo"
+            class="h-40 w-40 md:h-64 md:w-64 object-contain"
+          />
+        </div>
+
+        <h1 class="text-sm md:text-base font-semibold text-slate-200 tracking-wide mb-1">
+          MINISTERIO DE HIDROCARBUROS Y ENERGIAS
+        </h1>
+        <h2 class="text-xs md:text-sm text-slate-300 mb-4">
+          Viceministerio de Exploracion y Explotacion de Recursos Energeticos
+        </h2>
+
+        <p class="text-lg md:text-2xl font-bold text-slate-50 mb-1">
+          Sistema Integral de Carga, Gestion y Analisis de Datos
+        </p>
+        <p class="text-base md:text-xl font-semibold text-emerald-400 mb-8">
+          (SICGAD)
+        </p>
+
+        <div class="flex flex-col items-center gap-3 md:flex-row md:justify-center">
+          <a
+            href="{% url 'home' %}"
+            class="inline-flex items-center justify-center px-6 py-2 rounded-full bg-emerald-600 text-sm font-semibold text-slate-950 hover:bg-emerald-500 min-w-[200px]"
+          >
+            Visualizacion de datos
+          </a>
+          {% if request.user.is_authenticated %}
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center px-6 py-2 rounded-full border border-emerald-400 text-sm font-semibold text-emerald-300 hover:bg-emerald-600/10 min-w-[200px]"
+              >
+                Logout
+              </button>
+            </form>
+          {% else %}
+            <a
+              href="{% url 'login' %}"
+              class="inline-flex items-center justify-center px-6 py-2 rounded-full border border-emerald-400 text-sm font-semibold text-emerald-300 hover:bg-emerald-600/10 min-w-[200px]"
+            >
+              Login
+            </a>
+          {% endif %}
+        </div>
+
+        {% if request.user.is_authenticated %}
+          <div class="mt-4 flex justify-center">
+            <a
+              href="{% url 'home' %}"
+              class="inline-flex items-center justify-center px-10 py-2.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-sm font-semibold text-slate-900 hover:from-amber-300 hover:via-yellow-200 hover:to-amber-400 shadow-xl shadow-amber-900/50 border border-amber-300"
+            >
+              Volver a Home
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+  </html>

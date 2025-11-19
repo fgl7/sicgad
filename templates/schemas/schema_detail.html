@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Esquema – {{ dataset.name }}{% endblock %}
+{% block page_title %}Detalle de esquema{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-sm font-semibold">{{ dataset.name }}</h2>
+      <p class="text-xs text-slate-400">
+        Planta: {{ dataset.plant.code }} · Versión {{ dataset.version }} · Frecuencia: {{ dataset.get_validation_frequency_display }}
+      </p>
+    </div>
+    <a href="{% url 'schemas:schema_edit' dataset.pk %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
+      Editar esquema
+    </a>
+  </div>
+
+  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
+    <table class="min-w-full text-xs">
+      <thead class="bg-slate-950/80 text-slate-300">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold">Orden</th>
+          <th class="px-3 py-2 text-left font-semibold">Nombre</th>
+          <th class="px-3 py-2 text-left font-semibold">Etiqueta</th>
+          <th class="px-3 py-2 text-left font-semibold">Tipo</th>
+          <th class="px-3 py-2 text-left font-semibold">Unidad</th>
+          <th class="px-3 py-2 text-left font-semibold">Rol gráfico</th>
+          <th class="px-3 py-2 text-left font-semibold">Agregación</th>
+          <th class="px-3 py-2 text-left font-semibold">KPI</th>
+          <th class="px-3 py-2 text-left font-semibold">Activo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for col in columns %}
+          <tr class="border-t border-slate-800">
+            <td class="px-3 py-2 align-top">{{ col.display_order }}</td>
+            <td class="px-3 py-2 align-top font-mono text-[11px]">{{ col.name }}</td>
+            <td class="px-3 py-2 align-top">{{ col.label }}</td>
+            <td class="px-3 py-2 align-top">{{ col.get_data_type_display }}</td>
+            <td class="px-3 py-2 align-top">{{ col.unit }}</td>
+            <td class="px-3 py-2 align-top">{{ col.get_axis_role_display }}</td>
+            <td class="px-3 py-2 align-top">{{ col.get_default_agg_display }}</td>
+            <td class="px-3 py-2 align-top">
+              {% if col.is_primary_kpi %}Sí{% else %}No{% endif %}
+            </td>
+            <td class="px-3 py-2 align-top">
+              {% if col.is_active %}Sí{% else %}No{% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="9" class="px-3 py-4 text-center text-slate-400">
+              Este esquema aún no tiene columnas definidas.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4">
+    <a href="{% url 'schemas:schema_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+      ← Volver al listado de esquemas
+    </a>
+  </div>
+{% endblock %}
+

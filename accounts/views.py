@@ -1,0 +1,145 @@
+from django.contrib.auth import get_user_model
+from django.contrib.auth.views import PasswordChangeView
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+
+from plants.models import Plant
+
+from .decorators import admin_required
+from .forms import AdminUserCreateForm
+from .models import AccountProfile, Membership
+
+
+User = get_user_model()
+
+
+class ForcePasswordChangeView(PasswordChangeView):
+    template_name = "accounts/force_password_change.html"
+    success_url = reverse_lazy("home")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        profile, _ = AccountProfile.objects.get_or_create(user=self.request.user)
+        profile.must_change_password = False
+        profile.save()
+        return response
+
+
+@admin_required
+def admin_user_list(request):
+    role = request.GET.get("role") or ""
+    plant_id = request.GET.get("plant") or ""
+    institution = request.GET.get("institution") or ""
+
+    users_qs = User.objects.filter(is_superuser=False).prefetch_related("memberships__plant")
+
+    if role:
+        users_qs = users_qs.filter(memberships__role=role)
+    if plant_id:
+        users_qs = users_qs.filter(memberships__plant_id=plant_id)
+    if institution:
+        users_qs = users_qs.filter(memberships__institution=institution)
+
+    users = users_qs.order_by("username").distinct()
+
+    roles = Membership.ROLE_CHOICES
+    plants = Plant.objects.all().order_by("code")
+    institutions = Membership.INSTITUTION_CHOICES
+
+    return render(
+        request,
+        "accounts/admin_user_list.html",
+        {
+            "users": users,
+            "roles": roles,
+            "plants": plants,
+            "institutions": institutions,
+            "filter_role": role,
+            "filter_plant": plant_id,
+            "filter_institution": institution,
+        },
+    )
+
+
+@admin_required
+def admin_user_create(request):
+    if request.method == "POST":
+        form = AdminUserCreateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("accounts:admin_user_list")
+    else:
+        form = AdminUserCreateForm()
+
+    return render(request, "accounts/admin_user_create.html", {"form": form})
+
+
+@admin_required
+def admin_user_edit(request, user_id):
+    user = get_object_or_404(User, pk=user_id, is_superuser=False)
+    membership = user.memberships.first()
+
+    initial = {}
+    if membership:
+        initial.update(
+            {
+                "role": membership.role,
+                "plant": membership.plant,
+                "validation_level": membership.validation_level,
+                "can_validate_daily": membership.can_validate_daily,
+                "can_validate_monthly": membership.can_validate_monthly,
+                "institution": membership.institution,
+            }
+        )
+
+    if request.method == "POST":
+        form = AdminUserCreateForm(request.POST, instance=user, initial=initial)
+        if form.is_valid():
+            data = form.cleaned_data
+            user.username = data["username"]
+            user.first_name = data["first_name"]
+            user.last_name = data["last_name"]
+            user.email = data["email"]
+            user.set_password(data["password1"])
+            user.save()
+
+            if membership is None:
+                membership = Membership(user=user)
+
+            membership.plant = data.get("plant")
+            membership.role = data["role"]
+            membership.validation_level = data.get("validation_level")
+            membership.can_validate_daily = data.get("can_validate_daily", False)
+            membership.can_validate_monthly = data.get("can_validate_monthly", False)
+            membership.institution = data.get("institution", "YLB")
+            membership.is_active = True
+            membership.save()
+
+            return redirect("accounts:admin_user_list")
+    else:
+        form = AdminUserCreateForm(instance=user, initial=initial)
+
+    return render(
+        request,
+        "accounts/admin_user_edit.html",
+        {
+            "form": form,
+            "user_obj": user,
+        },
+    )
+
+
+@admin_required
+def admin_user_delete(request, user_id):
+    user = get_object_or_404(User, pk=user_id, is_superuser=False)
+    if request.method == "POST":
+        user.delete()
+        return redirect("accounts:admin_user_list")
+
+    return render(
+        request,
+        "accounts/admin_user_confirm_delete.html",
+        {
+            "user_obj": user,
+        },
+    )

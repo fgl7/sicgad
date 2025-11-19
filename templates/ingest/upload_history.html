@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de cargas – SICGAD{% endblock %}
+{% block page_title %}Historial de cargas{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold">Últimas cargas de datos</h2>
+    <a href="{% url 'ingest:upload' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
+      Nueva carga
+    </a>
+  </div>
+
+  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
+    <table class="min-w-full text-xs">
+      <thead class="bg-slate-950/80 text-slate-300">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold">Fecha</th>
+          <th class="px-3 py-2 text-left font-semibold">Planta</th>
+          <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+          <th class="px-3 py-2 text-left font-semibold">Periodo</th>
+          <th class="px-3 py-2 text-left font-semibold">Estado</th>
+          <th class="px-3 py-2 text-left font-semibold">Filas</th>
+          <th class="px-3 py-2 text-left font-semibold">Errores</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inst in instances %}
+          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+            <td class="px-3 py-2 align-top">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
+            <td class="px-3 py-2 align-top">{{ inst.plant.code }}</td>
+            <td class="px-3 py-2 align-top">{{ inst.dataset_type.name }}</td>
+            <td class="px-3 py-2 align-top">{{ inst.period }}</td>
+            <td class="px-3 py-2 align-top">{{ inst.get_state_display }}</td>
+            <td class="px-3 py-2 align-top">{{ inst.row_count }}</td>
+            <td class="px-3 py-2 align-top">
+              {{ inst.error_count }}
+              {% if inst.error_count and inst.last_error_summary %}
+                <div class="text-[10px] text-red-300 mt-1">
+                  {{ inst.last_error_summary|truncatechars:80 }}
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="px-3 py-4 text-center text-slate-400">
+              Aún no hay cargas registradas para este usuario.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
+

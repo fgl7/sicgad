@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Login – SICGAD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen">
+    <div class="relative min-h-screen flex items-center justify-center">
+      <div
+        class="absolute inset-0 bg-cover bg-center"
+        style="background-image: url('{% static "background.png" %}');"
+      ></div>
+      <div class="absolute inset-0 bg-slate-900/85"></div>
+
+      <div class="relative z-10 w-full max-w-sm mx-auto px-4">
+        <div
+          class="login-card bg-slate-950/80 border border-slate-800 rounded-2xl p-6 shadow-xl shadow-slate-950/60"
+        >
+          <div class="flex flex-col items-center mb-4">
+            <img
+              src="{% static 'escudo.png' %}"
+              alt="Escudo"
+              class="h-12 w-12 mb-2"
+            />
+            <h1 class="text-lg font-semibold text-slate-50 text-center">
+              Ingresar a SICGAD
+            </h1>
+            <p class="text-[11px] text-slate-400 mt-1 text-center">
+              Usa tus credenciales asignadas por el administrador.
+            </p>
+          </div>
+
+          {% if form.errors %}
+            <div class="mb-4 text-[11px] text-red-300 bg-red-900/30 border border-red-800/60 rounded-md px-3 py-2">
+              Usuario o contraseña incorrectos. Inténtalo de nuevo.
+            </div>
+          {% endif %}
+
+          <form method="post" class="space-y-3 text-xs">
+            {% csrf_token %}
+            <div>
+              <label class="block mb-1 text-slate-300 text-[11px]">Usuario</label>
+              {{ form.username }}
+            </div>
+            <div>
+              <label class="block mb-1 text-slate-300 text-[11px]">Contraseña</label>
+              {{ form.password }}
+            </div>
+            <button
+              type="submit"
+              class="w-full inline-flex items-center justify-center px-4 py-2 rounded-md bg-emerald-600 text-xs font-semibold text-slate-950 hover:bg-emerald-500 transition-colors"
+            >
+              Entrar
+            </button>
+          </form>
+
+          <div class="mt-4 text-[11px] text-slate-400 text-center">
+            <a href="{% url 'landing' %}" class="hover:text-emerald-300">
+              ← Volver a inicio
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+  </html>
+

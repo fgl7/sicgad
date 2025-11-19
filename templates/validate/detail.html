@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Validación de dataset – SICGAD{% endblock %}
+{% block page_title %}Detalle de dataset{% endblock %}
+
+{% block content %}
+  <section class="space-y-4">
+    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Información básica</h2>
+      <p class="text-slate-300">
+        <strong>Planta:</strong> {{ instance.plant.code }}<br />
+        <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
+        <strong>Periodo:</strong> {{ instance.period }}<br />
+        <strong>Estado actual:</strong> {{ instance.get_state_display }}
+      </p>
+    </div>
+
+    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Acción de validación</h2>
+      <form method="post" class="space-y-3">
+        {% csrf_token %}
+        <div>
+          <label class="block mb-1 text-slate-300">Decisión</label>
+          {{ form.decision }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300">Comentario</label>
+          {{ form.comment }}
+        </div>
+        <div class="flex items-center justify-end gap-2">
+          <a href="{% url 'validation:inbox' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+            Cancelar
+          </a>
+          <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
+            Registrar decisión
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Historial de validaciones</h2>
+      <ul class="space-y-1">
+        {% for act in actions %}
+          <li>
+            <span class="text-slate-300">{{ act.created_at|date:"Y-m-d H:i" }}</span>
+            – L{{ act.level }} – {{ act.get_decision_display }}
+            {% if act.user %}por {{ act.user.username }}{% endif %}
+            {% if act.comment %}
+              <div class="text-[11px] text-slate-400 ml-2">
+                "{{ act.comment }}"
+              </div>
+            {% endif %}
+          </li>
+        {% empty %}
+          <li class="text-slate-400">Aún no hay acciones registradas.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+{% endblock %}
+

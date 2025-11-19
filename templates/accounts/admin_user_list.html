@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios - SICGAD{% endblock %}
+{% block page_title %}Administracion de usuarios{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold">Usuarios del sistema</h2>
+    <a href="{% url 'accounts:admin_user_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
+      Nuevo usuario
+    </a>
+  </div>
+
+  <form method="get" class="mb-4 flex flex-wrap items-end gap-3 text-xs">
+    <div>
+      <label class="block mb-1 text-slate-300">Rol</label>
+      <select name="role" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
+        <option value="">Todos</option>
+        {% for value,label in roles %}
+          <option value="{{ value }}" {% if filter_role == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block mb-1 text-slate-300">Planta</label>
+      <select name="plant" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
+        <option value="">Todas</option>
+        {% for p in plants %}
+          <option value="{{ p.id }}" {% if filter_plant == p.id|stringformat:'s' %}selected{% endif %}>{{ p.code }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block mb-1 text-slate-300">Institucion</label>
+      <select name="institution" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
+        <option value="">Todas</option>
+        {% for value,label in institutions %}
+          <option value="{{ value }}" {% if filter_institution == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="submit" class="px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
+        Filtrar
+      </button>
+      <a href="{% url 'accounts:admin_user_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+        Limpiar
+      </a>
+    </div>
+  </form>
+
+  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
+    <table class="min-w-full text-xs">
+      <thead class="bg-slate-950/80 text-slate-300">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold">Usuario</th>
+          <th class="px-3 py-2 text-left font-semibold">Nombre</th>
+          <th class="px-3 py-2 text-left font-semibold">Email</th>
+          <th class="px-3 py-2 text-left font-semibold">Roles</th>
+          <th class="px-3 py-2 text-left font-semibold">Plantas</th>
+          <th class="px-3 py-2 text-left font-semibold">Validacion</th>
+          <th class="px-3 py-2 text-left font-semibold">Institucion</th>
+          <th class="px-3 py-2 text-left font-semibold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+            <td class="px-3 py-2 align-top font-mono text-[11px]">{{ u.username }}</td>
+            <td class="px-3 py-2 align-top">{{ u.get_full_name|default:"(sin nombre)" }}</td>
+            <td class="px-3 py-2 align-top">{{ u.email }}</td>
+            {% with u.memberships.all as mems %}
+              <td class="px-3 py-2 align-top">
+                {% if mems %}
+                  {% for m in mems %}
+                    <div>{{ m.get_role_display }}</div>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-slate-400">(sin roles)</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 align-top">
+                {% if mems %}
+                  {% for m in mems %}
+                    <div>
+                      {% if m.plant %}
+                        {{ m.plant.code }}
+                      {% else %}
+                        GLOBAL
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-slate-400">(sin plantas)</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 align-top">
+                {% if mems %}
+                  {% for m in mems %}
+                    <div>
+                      {% if m.validation_level %}
+                        Nivel {{ m.validation_level }}
+                      {% else %}
+                        Nivel -
+                      {% endif %}
+                      {% if m.can_validate_daily or m.can_validate_monthly %}
+                        (
+                        {% if m.can_validate_daily %}diario{% endif %}
+                        {% if m.can_validate_daily and m.can_validate_monthly %} / {% endif %}
+                        {% if m.can_validate_monthly %}mensual{% endif %}
+                        )
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-slate-400">(sin validacion)</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 align-top">
+                {% if mems %}
+                  {% for m in mems %}
+                    <div>{{ m.get_institution_display }}</div>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-slate-400">(sin institucion)</span>
+                {% endif %}
+              </td>
+            {% endwith %}
+            <td class="px-3 py-2 align-top">
+              <a href="{% url 'accounts:admin_user_edit' u.id %}" class="text-xs text-emerald-400 hover:underline">Editar</a>
+              |
+              <a href="{% url 'accounts:admin_user_delete' u.id %}" class="text-xs text-red-400 hover:underline">Eliminar</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="px-3 py-4 text-center text-slate-400">
+              Aun no hay usuarios registrados.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

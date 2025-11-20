@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Bandeja de validación – SICGAD{% endblock %}
-{% block page_title %}Bandeja de validación{% endblock %}
+{% block title %}Bandeja de validación - SICGAD{% endblock %}
+{% block page_title %}Bandeja de validación diaria/mensual{% endblock %}
 
 {% block content %}
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
-    <h2 class="text-sm font-semibold mb-3">Datasets pendientes</h2>
+    <h2 class="text-sm font-semibold mb-3">Datasets pendientes de validación</h2>
+    <p class="text-[11px] text-slate-400 mb-3">
+      Esta bandeja muestra datasets diarios y mensuales que requieren tu aprobación según tus permisos de validador.
+    </p>
 
     <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
       <table class="min-w-full text-xs">
@@ -15,6 +18,7 @@
             <th class="px-3 py-2 text-left font-semibold">Planta</th>
             <th class="px-3 py-2 text-left font-semibold">Dataset</th>
             <th class="px-3 py-2 text-left font-semibold">Periodo</th>
+            <th class="px-3 py-2 text-left font-semibold">Frecuencia</th>
             <th class="px-3 py-2 text-left font-semibold">Estado</th>
             <th class="px-3 py-2"></th>
           </tr>
@@ -26,17 +30,70 @@
               <td class="px-3 py-2 align-top">{{ inst.plant.code }}</td>
               <td class="px-3 py-2 align-top">{{ inst.dataset_type.name }}</td>
               <td class="px-3 py-2 align-top">{{ inst.period }}</td>
+              <td class="px-3 py-2 align-top">
+                {{ inst.dataset_type.get_validation_frequency_display }}
+              </td>
               <td class="px-3 py-2 align-top">{{ inst.get_state_display }}</td>
               <td class="px-3 py-2 align-top text-right">
                 <a href="{% url 'validation:detail' inst.pk %}" class="text-xs text-emerald-400 hover:underline">
-                  Ver detalle
+                  Ver y decidir
                 </a>
               </td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="6" class="px-3 py-4 text-center text-slate-400">
+              <td colspan="7" class="px-3 py-4 text-center text-slate-400">
                 No hay datasets pendientes de validación para tus plantas.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mt-6 bg-slate-950/60 border border-slate-800 rounded-xl p-4">
+    <h2 class="text-sm font-semibold mb-3">Historial de mis validaciones</h2>
+    <p class="text-[11px] text-slate-400 mb-3">
+      Listado de datasets sobre los que has tomado decisiones de aprobación o rechazo.
+    </p>
+
+    <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
+      <table class="min-w-full text-xs">
+        <thead class="bg-slate-950 text-slate-300">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold">Fecha</th>
+            <th class="px-3 py-2 text-left font-semibold">Planta</th>
+            <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+            <th class="px-3 py-2 text-left font-semibold">Periodo</th>
+            <th class="px-3 py-2 text-left font-semibold">Decisión</th>
+            <th class="px-3 py-2 text-left font-semibold">Comentario</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for act in history_actions %}
+            <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+              <td class="px-3 py-2 align-top">{{ act.created_at|date:"Y-m-d H:i" }}</td>
+              <td class="px-3 py-2 align-top">{{ act.dataset_instance.plant.code }}</td>
+              <td class="px-3 py-2 align-top">{{ act.dataset_instance.dataset_type.name }}</td>
+              <td class="px-3 py-2 align-top">{{ act.dataset_instance.period }}</td>
+              <td class="px-3 py-2 align-top">
+                {{ act.get_decision_display }} (L{{ act.level }})
+              </td>
+              <td class="px-3 py-2 align-top text-[11px]">
+                {% if act.comment %}
+                  <span class="text-slate-300">
+                    {{ act.comment|truncatechars:80 }}
+                  </span>
+                {% else %}
+                  <span class="text-slate-500">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="px-3 py-4 text-center text-slate-400">
+                Aún no has registrado validaciones.
               </td>
             </tr>
           {% endfor %}

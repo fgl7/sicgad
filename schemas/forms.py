@@ -49,7 +49,7 @@ class CertificationSchemaForm(forms.Form):
         ),
     )
     name = forms.CharField(
-        label="Nombre del esquema de certificaci��n",
+        label="Nombre del esquema de certificación",
         widget=forms.TextInput(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
@@ -58,7 +58,7 @@ class CertificationSchemaForm(forms.Form):
     )
     columns = forms.ModelMultipleChoiceField(
         queryset=ColumnDef.objects.none(),
-        label="Campos a incluir en la certificaci��n",
+        label="Campos a incluir en la certificación",
         widget=forms.CheckboxSelectMultiple(
             attrs={
                 "class": "space-y-1 text-xs",
@@ -98,6 +98,6 @@ class CertificationSchemaForm(forms.Form):
             ).order_by("display_order", "name")
 
             if not self.initial.get("name") and not self.data.get("name"):
-                self.fields["name"].initial = f"{source.name} - Certificaci��n mensual"
+                self.fields["name"].initial = f"{source.name} - Certificación mensual"
         else:
             self.fields["columns"].queryset = ColumnDef.objects.none()

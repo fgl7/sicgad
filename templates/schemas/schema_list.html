@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Esquemas – SICGAD{% endblock %}
+{% block title %}Esquemas - SICGAD{% endblock %}
 {% block page_title %}Esquemas de datos{% endblock %}
 
 {% block content %}
@@ -8,9 +8,9 @@
     <h2 class="text-sm font-semibold">Listado de esquemas</h2>
     {% if is_admin %}
       <a href="{% url 'schemas:certification_schema_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
-        Nuevo esquema de certificacion
+        Crear nuevo esquema de certificación
       </a>
-    {% else %}
+    {% elif can_create_schemas %}
       <a href="{% url 'schemas:schema_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
         Nuevo esquema
       </a>
@@ -25,6 +25,7 @@
           <th class="px-3 py-2 text-left font-semibold">Nombre</th>
           <th class="px-3 py-2 text-left font-semibold">Versión</th>
           <th class="px-3 py-2 text-left font-semibold">Frecuencia</th>
+          <th class="px-3 py-2 text-left font-semibold">Estado</th>
           <th class="px-3 py-2 text-left font-semibold">Activo</th>
           <th class="px-3 py-2"></th>
         </tr>
@@ -34,7 +35,7 @@
           <tr class="border-t border-slate-800 hover:bg-slate-900/60">
             <td class="px-3 py-2 align-top">{{ ds.plant.code }}</td>
             <td class="px-3 py-2 align-top">
-              <a href="{% url 'schemas:schema_detail' ds.pk %}" class="text-emerald-400 hover:underline">
+              <a href="{% url 'schemas:schema_detail' ds.slug|default:ds.pk %}" class="text-emerald-400 hover:underline">
                 {{ ds.name }}
               </a>
             </td>
@@ -43,21 +44,73 @@
               {{ ds.get_validation_frequency_display }}
             </td>
             <td class="px-3 py-2 align-top">
+              {% if ds.status == 'DRAFT' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-700 text-slate-200">Borrador</span>
+              {% elif ds.status == 'PENDING' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">Pendiente aprobación</span>
+              {% elif ds.status == 'APPROVED' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-300">Aprobado</span>
+              {% elif ds.status == 'REJECTED' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">Rechazado</span>
+                {% if ds.status_comment %}
+                  <div class="mt-1 text-[10px] text-red-200">
+                    {{ ds.status_comment }}
+                  </div>
+                {% endif %}
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-700 text-slate-200">{{ ds.status }}</span>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 align-top">
               {% if ds.is_active %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-300">Sí</span>
               {% else %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-700 text-slate-200">No</span>
               {% endif %}
             </td>
-            <td class="px-3 py-2 text-right">
-              <a href="{% url 'schemas:schema_edit' ds.pk %}" class="text-xs text-slate-300 hover:text-emerald-400">
-                Editar
-              </a>
+            <td class="px-3 py-2 text-right space-x-2">
+              {% if is_admin %}
+                <a href="{% url 'schemas:schema_detail' ds.slug|default:ds.pk %}" class="text-xs text-slate-300 hover:text-emerald-400">
+                  Ver
+                </a>
+              {% endif %}
+              {% if can_edit_schemas and not ds.is_certification or is_admin and ds.is_certification %}
+                <a href="{% url 'schemas:schema_edit' ds.slug|default:ds.pk %}" class="text-xs text-slate-300 hover:text-emerald-400">
+                  Editar
+                </a>
+              {% endif %}
+              {% if can_edit_schemas and ds.status == 'DRAFT' %}
+                <form method="post" action="{% url 'schemas:schema_submit' ds.slug|default:ds.pk %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" class="text-xs text-amber-300 hover:text-amber-200">
+                    Enviar a aprobación
+                  </button>
+                </form>
+              {% elif is_admin and ds.status == 'PENDING' %}
+                <form method="post" action="{% url 'schemas:schema_approve' ds.slug|default:ds.pk %}" class="inline-block mr-2">
+                  {% csrf_token %}
+                  <button type="submit" class="text-xs text-emerald-300 hover:text-emerald-200">
+                    Aprobar
+                  </button>
+                </form>
+                <form method="post" action="{% url 'schemas:schema_reject' ds.slug|default:ds.pk %}" class="inline-flex items-center gap-1">
+                  {% csrf_token %}
+                  <input
+                    type="text"
+                    name="comment"
+                    placeholder="Motivo del rechazo"
+                    class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px]"
+                  />
+                  <button type="submit" class="text-xs text-red-300 hover:text-red-200">
+                    Rechazar
+                  </button>
+                </form>
+              {% endif %}
             </td>
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6" class="px-3 py-4 text-center text-slate-400">
+            <td colspan="7" class="px-3 py-4 text-center text-slate-400">
               No hay esquemas definidos todavía.
             </td>
           </tr>
@@ -66,3 +119,4 @@
     </table>
   </div>
 {% endblock %}
+

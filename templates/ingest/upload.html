@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Carga de datos – SICGAD{% endblock %}
+{% load static %}
+
+{% block title %}Carga de datos - SICGAD{% endblock %}
 {% block page_title %}Carga de datos{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/ingest_upload.js' %}"></script>
+{% endblock %}
 
 {% block content %}
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4">
@@ -33,14 +39,97 @@
       </div>
 
       <div class="flex items-center justify-between pt-2">
-        <a href="{% url 'ingest:upload_history' %}" class="text-xs text-slate-300 hover:text-emerald-400">
-          Ver historial de mis cargas
-        </a>
+        <div class="flex items-center gap-3">
+          <a href="{% url 'ingest:upload_history' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+            Ver historial de mis cargas
+          </a>
+          <button
+            type="button"
+            id="download-template-btn"
+            data-download-url="{% url 'ingest:download_template' %}"
+            class="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-800 text-xs font-semibold text-slate-100 hover:bg-slate-700"
+          >
+            Descargar plantilla (Excel)
+          </button>
+        </div>
         <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
           Subir archivo
         </button>
       </div>
     </form>
   </section>
-{% endblock %}
 
+  {% if instances %}
+    <section class="mt-6 bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold">Mis últimas cargas</h2>
+        <span class="text-[11px] text-slate-400">
+          Recuerda enviar los datasets diarios a validación una vez cargados.
+        </span>
+      </div>
+
+      <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold">Fecha</th>
+              <th class="px-3 py-2 text-left font-semibold">Planta</th>
+              <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+              <th class="px-3 py-2 text-left font-semibold">Periodo</th>
+              <th class="px-3 py-2 text-left font-semibold">Estado</th>
+              <th class="px-3 py-2 text-left font-semibold">Comentario</th>
+              <th class="px-3 py-2 text-left font-semibold">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inst in instances %}
+              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+                <td class="px-3 py-2 align-top">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.plant.code }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.dataset_type.name }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.period }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.get_state_display }}</td>
+                <td class="px-3 py-2 align-top text-[10px]">
+                  {% if inst.last_error_summary %}
+                    <span class="text-red-300">
+                      {{ inst.last_error_summary|truncatechars:80 }}
+                    </span>
+                  {% else %}
+                    <span class="text-slate-500">—</span>
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2 align-top space-x-2">
+                  {% if inst.state == inst.STATE_DRAFT and inst.last_error_summary %}
+                    <a href="{% url 'ingest:edit_instance' inst.pk %}" class="text-emerald-300 hover:text-emerald-200">
+                      Corregir archivo
+                    </a>
+                    <form method="post" action="{% url 'ingest:delete_instance' inst.pk %}" class="inline">
+                      {% csrf_token %}
+                      <button type="submit" class="text-[10px] text-red-300 hover:text-red-200">
+                        Eliminar
+                      </button>
+                    </form>
+                  {% else %}
+                    {% if inst.raw_file %}
+                      <a href="{% url 'ingest:instance_detail' inst.pk %}" class="text-emerald-300 hover:text-emerald-200">
+                        Ver datos
+                      </a>
+                    {% endif %}
+                    {% if inst.state == inst.STATE_DRAFT %}
+                      <form method="post" action="{% url 'ingest:submit_instance' inst.pk %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-[10px] text-amber-300 hover:text-amber-200">
+                          Enviar a validación diaria
+                        </button>
+                      </form>
+                    {% endif %}
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+{% endblock %}

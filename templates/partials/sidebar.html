@@ -18,13 +18,28 @@
       <span>Esquemas</span>
     </a>
 
-    <a href='{{ ingest_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":8" == "/ingest/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-      <span>Carga de datos</span>
-    </a> 
+    {% url 'ingest:upload_history' as ingest_history_url %}
+    {% if is_admin or is_loader %}
+      {% if is_admin %}
+        <a href='{{ ingest_history_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":8" == "/ingest/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
+          <span>Carga de datos</span>
+        </a>
+      {% else %}
+        <a href='{{ ingest_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == ingest_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
+          <span>Carga de datos</span>
+        </a>
+      {% endif %}
+    {% endif %}
 
-    <a href='{{ validation_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":10" == "/validate/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-      <span>Validacion</span>
-    </a>
+    {% if is_validator or is_admin %}
+      <a href='{{ validation_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":10" == "/validate/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
+        <span>Validacion</span>
+      </a>
+    {% elif is_loader %}
+      <a href='{{ ingest_history_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == ingest_history_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
+        <span>Validacion</span>
+      </a>
+    {% endif %}
 
     <a href='#' class='flex items-center gap-2 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800/60'>
       <span>KPIs / Graficos</span>

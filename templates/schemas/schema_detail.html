@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Esquema – {{ dataset.name }}{% endblock %}
+{% block title %}Esquema - {{ dataset.name }}{% endblock %}
 {% block page_title %}Detalle de esquema{% endblock %}
 
 {% block content %}
@@ -11,9 +11,11 @@
         Planta: {{ dataset.plant.code }} · Versión {{ dataset.version }} · Frecuencia: {{ dataset.get_validation_frequency_display }}
       </p>
     </div>
-    <a href="{% url 'schemas:schema_edit' dataset.pk %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
-      Editar esquema
-    </a>
+    {% if can_edit_schemas and not dataset.is_certification or is_admin and dataset.is_certification %}
+      <a href="{% url 'schemas:schema_edit' dataset.slug|default:dataset.pk %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
+        Editar esquema
+      </a>
+    {% endif %}
   </div>
 
   <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Resumen de validaciones - SICGAD{% endblock %}
+{% block page_title %}Validación - Administración{% endblock %}
+
+{% block content %}
+  <div class="grid gap-4 md:grid-cols-2">
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Validaciones diarias</h2>
+      <p class="text-[11px] text-slate-400 mb-2">
+        Incluye datasets de frecuencia <strong>diaria</strong> (operación diaria).
+      </p>
+
+      <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold">Fecha</th>
+              <th class="px-3 py-2 text-left font-semibold">Planta</th>
+              <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+              <th class="px-3 py-2 text-left font-semibold">Periodo</th>
+              <th class="px-3 py-2 text-left font-semibold">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inst in daily_instances %}
+              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+                <td class="px-3 py-2 align-top">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.plant.code }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.dataset_type.name }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.period }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.get_state_display }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="px-3 py-4 text-center text-slate-400">
+                  No hay registros de validación diaria.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Validaciones mensuales</h2>
+      <p class="text-[11px] text-slate-400 mb-2">
+        Incluye datasets de frecuencia <strong>mensual</strong>, por ejemplo esquemas de certificación.
+      </p>
+
+      <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold">Fecha</th>
+              <th class="px-3 py-2 text-left font-semibold">Planta</th>
+              <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+              <th class="px-3 py-2 text-left font-semibold">Periodo</th>
+              <th class="px-3 py-2 text-left font-semibold">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inst in monthly_instances %}
+              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+                <td class="px-3 py-2 align-top">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.plant.code }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.dataset_type.name }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.period }}</td>
+                <td class="px-3 py-2 align-top">{{ inst.get_state_display }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="px-3 py-4 text-center text-slate-400">
+                  No hay registros de validación mensual.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+{% endblock %}

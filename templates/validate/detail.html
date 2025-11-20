@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Validación de dataset – SICGAD{% endblock %}
-{% block page_title %}Detalle de dataset{% endblock %}
+{% block title %}Validación de dataset - SICGAD{% endblock %}
+{% block page_title %}Detalle de dataset para validación{% endblock %}
 
 {% block content %}
   <section class="space-y-4">
@@ -10,9 +10,17 @@
       <p class="text-slate-300">
         <strong>Planta:</strong> {{ instance.plant.code }}<br />
         <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
+        <strong>Frecuencia:</strong> {{ instance.dataset_type.get_validation_frequency_display }}<br />
         <strong>Periodo:</strong> {{ instance.period }}<br />
         <strong>Estado actual:</strong> {{ instance.get_state_display }}
       </p>
+      {% if instance.raw_file %}
+        <p class="mt-2">
+          <a href="{% url 'ingest:instance_detail' instance.pk %}" class="text-xs text-emerald-300 hover:text-emerald-200">
+            Ver datos cargados
+          </a>
+        </p>
+      {% endif %}
     </div>
 
     <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
@@ -44,7 +52,7 @@
         {% for act in actions %}
           <li>
             <span class="text-slate-300">{{ act.created_at|date:"Y-m-d H:i" }}</span>
-            – L{{ act.level }} – {{ act.get_decision_display }}
+            - Nivel {{ act.level }} - {{ act.get_decision_display }}
             {% if act.user %}por {{ act.user.username }}{% endif %}
             {% if act.comment %}
               <div class="text-[11px] text-slate-400 ml-2">

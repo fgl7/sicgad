@@ -1,7 +1,12 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}{% if dataset %}Editar esquema{% else %}Nuevo esquema{% endif %} – SICGAD{% endblock %}
+{% block title %}{% if dataset %}Editar esquema{% else %}Nuevo esquema{% endif %} - SICGAD{% endblock %}
 {% block page_title %}{% if dataset %}Editar esquema{% else %}Nuevo esquema{% endif %}{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/schema_edit.js' %}"></script>
+{% endblock %}
 
 {% block content %}
   <form method="post" class="space-y-4">
@@ -12,7 +17,23 @@
       <div class="grid md:grid-cols-2 gap-3 text-xs">
         <div>
           <label class="block mb-1 text-slate-300">Planta</label>
-          {{ form.plant }}
+          {% if is_admin %}
+            {{ form.plant }}
+          {% else %}
+            {% if dataset %}
+              <div class="text-slate-200 text-xs">
+                {{ dataset.plant.code }} - {{ dataset.plant.name }}
+              </div>
+              <input type="hidden" name="{{ form.plant.name }}" value="{{ dataset.plant.id }}">
+            {% elif loader_plant %}
+              <div class="text-slate-200 text-xs">
+                {{ loader_plant.code }} - {{ loader_plant.name }}
+              </div>
+              <input type="hidden" name="{{ form.plant.name }}" value="{{ loader_plant.id }}">
+            {% else %}
+              {{ form.plant }}
+            {% endif %}
+          {% endif %}
         </div>
         <div>
           <label class="block mb-1 text-slate-300">Nombre del dataset</label>
@@ -24,7 +45,12 @@
         </div>
         <div>
           <label class="block mb-1 text-slate-300">Frecuencia de validación</label>
-          {{ form.validation_frequency }}
+          {% if is_admin %}
+            {{ form.validation_frequency }}
+          {% else %}
+            <div class="text-slate-200 text-xs">Diaria</div>
+            <input type="hidden" name="{{ form.validation_frequency.name }}" value="DAILY">
+          {% endif %}
         </div>
         <div class="flex items-center gap-2 mt-2">
           {{ form.is_active }}
@@ -36,12 +62,23 @@
     <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-semibold">Columnas</h2>
-        <button type="button" hx-get="#" class="hidden text-xs px-2 py-1 rounded border border-slate-700">
-          Añadir fila (placeholder)
+        <button
+          type="button"
+          id="add-column-btn"
+          class="text-xs px-2 py-1 rounded border border-slate-700 text-slate-200 hover:bg-slate-800/60"
+        >
+          Añadir columna
         </button>
       </div>
 
       {{ formset.management_form }}
+      <input
+        type="hidden"
+        data-schema-columns-total-forms
+        id="id_{{ formset.prefix }}-TOTAL_FORMS"
+        name="{{ formset.management_form.TOTAL_FORMS.html_name }}"
+        value="{{ formset.management_form.TOTAL_FORMS.value }}"
+      />
       <div class="overflow-x-auto">
         <table class="min-w-full text-[11px]">
           <thead class="bg-slate-950/80 text-slate-300">
@@ -61,7 +98,7 @@
               <th class="px-2 py-1 text-left font-semibold">Eliminar</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="columns-body">
             {% for form in formset.forms %}
               <tr class="border-t border-slate-800 align-top">
                 <td class="px-2 py-1">{{ form.name }}</td>
@@ -96,6 +133,29 @@
           </tbody>
         </table>
       </div>
+
+      <template id="empty-column-row">
+        <tr class="border-t border-slate-800 align-top">
+          {% with form=formset.empty_form %}
+            <td class="px-2 py-1">{{ form.name }}</td>
+            <td class="px-2 py-1">{{ form.label }}</td>
+            <td class="px-2 py-1">{{ form.data_type }}</td>
+            <td class="px-2 py-1 text-center">{{ form.required }}</td>
+            <td class="px-2 py-1">{{ form.min_value }}</td>
+            <td class="px-2 py-1">{{ form.max_value }}</td>
+            <td class="px-2 py-1">{{ form.unit }}</td>
+            <td class="px-2 py-1">{{ form.axis_role }}</td>
+            <td class="px-2 py-1">{{ form.default_agg }}</td>
+            <td class="px-2 py-1 text-center">{{ form.is_primary_kpi }}</td>
+            <td class="px-2 py-1">{{ form.display_order }}</td>
+            <td class="px-2 py-1 text-center">{{ form.is_active }}</td>
+            <td class="px-2 py-1 text-center"></td>
+            {% for hidden in form.hidden_fields %}
+              {{ hidden }}
+            {% endfor %}
+          {% endwith %}
+        </tr>
+      </template>
     </section>
 
     <div class="flex items-center justify-between">
@@ -108,4 +168,3 @@
     </div>
   </form>
 {% endblock %}
-

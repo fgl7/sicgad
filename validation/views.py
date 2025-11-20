@@ -15,17 +15,39 @@ from .models import ValidationAction
 @login_required
 def inbox(request):
     """
-    Bandeja de validacion:
-    - Usa can_validate_daily / can_validate_monthly para decidir que datasets ve cada validador.
+    Bandeja de validacion para validadores.
+    Los administradores usarán una vista de resumen separada.
     """
+    user = request.user
+
+    if user.is_superuser or Membership.objects.filter(
+        user=user, role="ADMIN", is_active=True
+    ).exists():
+        return redirect("validation:admin_overview")
+
+    # Si el usuario no es validador, lo redirigimos al historial de cargas,
+    # donde podrá ver el estado y comentarios de sus datasets.
+    is_validator = Membership.objects.filter(
+        user=user,
+        role="VALIDATOR",
+        is_active=True,
+    ).exists()
+    if not is_validator:
+        messages.info(
+            request,
+            "La bandeja de validación está disponible solo para validadores. "
+            "Puedes revisar el estado y comentarios de tus cargas en el historial.",
+        )
+        return redirect("ingest:upload_history")
+
     daily_memberships = Membership.objects.filter(
-        user=request.user,
+        user=user,
         role="VALIDATOR",
         is_active=True,
         can_validate_daily=True,
     )
     monthly_memberships = Membership.objects.filter(
-        user=request.user,
+        user=user,
         role="VALIDATOR",
         is_active=True,
         can_validate_monthly=True,
@@ -57,7 +79,58 @@ def inbox(request):
 
     items = base_qs.filter(daily_filter | monthly_filter).order_by("-created_at")
 
-    return render(request, "validate/inbox.html", {"items": items})
+    # Historial de validaciones realizadas por este usuario (como validador)
+    history_actions = (
+        ValidationAction.objects.select_related(
+            "dataset_instance",
+            "dataset_instance__dataset_type",
+            "dataset_instance__plant",
+        )
+        .filter(validator__user=user, validator__is_active=True)
+        .order_by("-created_at")[:50]
+    )
+
+    return render(
+        request,
+        "validate/inbox.html",
+        {
+            "items": items,
+            "history_actions": history_actions,
+        },
+    )
+
+
+@login_required
+def admin_overview(request):
+    """
+    Historial y estado de validaciones para Administracion,
+    separado en datasets diarios y mensuales.
+    """
+    if not (
+        request.user.is_superuser
+        or Membership.objects.filter(user=request.user, role="ADMIN", is_active=True).exists()
+    ):
+        return redirect("validation:inbox")
+
+    daily_instances = (
+        DatasetInstance.objects.select_related("dataset_type", "plant")
+        .filter(dataset_type__validation_frequency=DatasetType.DAILY)
+        .order_by("-created_at")[:100]
+    )
+    monthly_instances = (
+        DatasetInstance.objects.select_related("dataset_type", "plant")
+        .filter(dataset_type__validation_frequency=DatasetType.MONTHLY)
+        .order_by("-created_at")[:100]
+    )
+
+    return render(
+        request,
+        "validate/admin_overview.html",
+        {
+            "daily_instances": daily_instances,
+            "monthly_instances": monthly_instances,
+        },
+    )
 
 
 @login_required
@@ -132,7 +205,8 @@ def detail(request, pk):
                 messages.success(request, "Dataset aprobado correctamente.")
             else:
                 instance.state = DatasetInstance.STATE_DRAFT
-                instance.save()
+                instance.last_error_summary = action.comment or ""
+                instance.save(update_fields=["state", "last_error_summary"])
                 messages.warning(request, "Dataset rechazado y devuelto a borrador.")
 
             return redirect(reverse("validation:inbox"))

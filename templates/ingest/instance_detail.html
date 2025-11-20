@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Carga de datos - Detalle{% endblock %}
+{% block page_title %}Detalle de carga de datos{% endblock %}
+
+{% block content %}
+  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
+    <h2 class="text-sm font-semibold mb-1">Información básica</h2>
+    <p class="text-slate-300">
+      <strong>Planta:</strong> {{ instance.plant.code }}<br />
+      <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
+      <strong>Periodo:</strong> {{ instance.period }}<br />
+      <strong>Estado:</strong> {{ instance.get_state_display }}<br />
+      <strong>Archivo fuente:</strong>
+      {% if instance.raw_file %}
+        {{ instance.raw_file.name }}
+      {% else %}
+        <span class="text-slate-500">No registrado</span>
+      {% endif %}
+    </p>
+  </section>
+
+  <section class="mt-4 bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
+    <h2 class="text-sm font-semibold mb-2">Vista rápida de datos</h2>
+    {% if header %}
+      <p class="text-[11px] text-slate-400 mb-2">
+        Se muestran las primeras 100 filas del archivo cargado.
+      </p>
+      <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-auto max-h-[480px]">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              {% for col in header %}
+                <th class="px-2 py-1 text-left font-semibold whitespace-nowrap">{{ col }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+                {% for value in row %}
+                  <td class="px-2 py-1 align-top whitespace-nowrap">{{ value }}</td>
+                {% endfor %}
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="{{ header|length }}" class="px-3 py-4 text-center text-slate-400">
+                  No se encontraron filas en el archivo.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-slate-400">
+        No se pudo leer el contenido del archivo o el archivo está vacío.
+      </p>
+    {% endif %}
+  </section>
+
+  <div class="mt-4">
+    <a href="{{ back_url }}" class="text-xs text-slate-300 hover:text-emerald-400">
+      ← Volver
+    </a>
+  </div>
+{% endblock %}
+

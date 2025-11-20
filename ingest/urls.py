@@ -6,6 +6,10 @@ app_name = "ingest"
 
 urlpatterns = [
     path("upload/", views.upload, name="upload"),
+    path("template/", views.download_template, name="download_template"),
     path("history/", views.upload_history, name="upload_history"),
+    path("instance/<int:pk>/", views.instance_detail, name="instance_detail"),
+    path("instance/<int:pk>/submit/", views.submit_instance, name="submit_instance"),
+    path("instance/<int:pk>/edit/", views.edit_instance, name="edit_instance"),
+    path("instance/<int:pk>/delete/", views.delete_instance, name="delete_instance"),
 ]
-

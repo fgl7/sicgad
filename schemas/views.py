@@ -1,40 +1,112 @@
 from django.db.models import Max
 from django.forms import inlineformset_factory
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from accounts.decorators import admin_required
+from accounts.models import Membership
 
 from .models import ColumnDef, DatasetType
 from .forms import DatasetTypeForm, ColumnDefForm, CertificationSchemaForm
 
 
+def _is_admin_user(user) -> bool:
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return Membership.objects.filter(user=user, role="ADMIN", is_active=True).exists()
+
+
 def schema_list(request):
+    user = request.user
+    is_admin = _is_admin_user(user)
+
     datasets = DatasetType.objects.select_related("plant").order_by("plant__code", "name", "-version")
-    return render(request, "schemas/schema_list.html", {"datasets": datasets})
 
+    if not is_admin:
+        datasets = datasets.filter(is_certification=False)
 
-def schema_detail(request, pk):
-    dataset = get_object_or_404(DatasetType.objects.select_related("plant"), pk=pk)
-    columns = dataset.columns.order_by("display_order", "name")
+    can_edit_schemas = False
+    can_create_schemas = False
+    if user.is_authenticated and not is_admin:
+        is_loader = Membership.objects.filter(user=user, role="LOADER", is_active=True).exists()
+        if is_loader:
+            can_edit_schemas = True
+            can_create_schemas = True
+
     return render(
         request,
-        "schemas/schema_detail.html",
-        {"dataset": dataset, "columns": columns},
+        "schemas/schema_list.html",
+        {
+            "datasets": datasets,
+            "can_edit_schemas": can_edit_schemas,
+            "can_create_schemas": can_create_schemas,
+        },
     )
 
 
-def schema_edit(request, pk=None):
-    if pk:
-        dataset = get_object_or_404(DatasetType, pk=pk)
+def _get_dataset_by_slug_or_pk(slug: str) -> DatasetType:
+    qs = DatasetType.objects.select_related("plant")
+    try:
+        return qs.get(slug=slug)
+    except DatasetType.DoesNotExist:
+        try:
+            pk = int(slug)
+        except (TypeError, ValueError):
+            raise Http404
+        return get_object_or_404(qs, pk=pk)
+
+
+def schema_detail(request, slug):
+    dataset = _get_dataset_by_slug_or_pk(slug)
+    columns = dataset.columns.order_by("display_order", "name")
+
+    user = request.user
+    is_admin = _is_admin_user(user)
+    can_edit_schemas = False
+    if user.is_authenticated and not is_admin:
+        is_loader = Membership.objects.filter(user=user, role="LOADER", is_active=True).exists()
+        if is_loader:
+            can_edit_schemas = True
+
+    return render(
+        request,
+        "schemas/schema_detail.html",
+        {
+            "dataset": dataset,
+            "columns": columns,
+            "can_edit_schemas": can_edit_schemas,
+            "is_admin": is_admin,
+        },
+    )
+
+
+def schema_edit(request, slug=None):
+    if slug:
+        dataset = _get_dataset_by_slug_or_pk(slug)
     else:
         dataset = None
+
+    is_admin = _is_admin_user(request.user)
+    if is_admin and dataset and not dataset.is_certification:
+        return redirect("schemas:schema_detail", slug=dataset.slug)
+    loader_plant = None
+    if not is_admin and request.user.is_authenticated:
+        loader_membership = (
+            Membership.objects.filter(user=request.user, role="LOADER", is_active=True)
+            .select_related("plant")
+            .first()
+        )
+        if loader_membership:
+            loader_plant = loader_membership.plant
 
     DatasetColumnFormSet = inlineformset_factory(
         DatasetType,
         ColumnDef,
         form=ColumnDefForm,
-        extra=1,
+        extra=0,
         can_delete=True,
     )
 
@@ -42,12 +114,21 @@ def schema_edit(request, pk=None):
         form = DatasetTypeForm(request.POST, instance=dataset)
         formset = DatasetColumnFormSet(request.POST, instance=dataset)
         if form.is_valid() and formset.is_valid():
-            dataset = form.save()
+            dataset = form.save(commit=False)
+            if not is_admin:
+                dataset.validation_frequency = DatasetType.DAILY
+                if loader_plant and not dataset.plant_id:
+                    dataset.plant = loader_plant
+                dataset.status = DatasetType.STATUS_DRAFT
+                dataset.is_active = False
+            dataset.save()
             formset.instance = dataset
             formset.save()
-            return redirect(reverse("schemas:schema_detail", args=[dataset.pk]))
+            return redirect(reverse("schemas:schema_detail", args=[dataset.slug]))
     else:
         form = DatasetTypeForm(instance=dataset)
+        if not is_admin and loader_plant and not dataset:
+            form.fields["plant"].initial = loader_plant
         formset = DatasetColumnFormSet(instance=dataset)
 
     return render(
@@ -57,8 +138,67 @@ def schema_edit(request, pk=None):
             "form": form,
             "formset": formset,
             "dataset": dataset,
+            "loader_plant": loader_plant,
+            "is_admin": is_admin,
         },
     )
+
+
+def schema_submit_for_approval(request, slug):
+    if request.method != "POST":
+        return redirect("schemas:schema_list")
+
+    dataset = _get_dataset_by_slug_or_pk(slug)
+
+    is_admin = _is_admin_user(request.user)
+    if not request.user.is_authenticated or is_admin:
+        return redirect("schemas:schema_list")
+
+    loader_membership = (
+        Membership.objects.filter(user=request.user, role="LOADER", is_active=True)
+        .select_related("plant")
+        .first()
+    )
+    if not loader_membership or loader_membership.plant_id != dataset.plant_id:
+        return redirect("schemas:schema_list")
+
+    if dataset.status == DatasetType.STATUS_DRAFT:
+        dataset.status = DatasetType.STATUS_PENDING
+        dataset.is_active = False
+        dataset.save(update_fields=["status", "is_active"])
+
+    return redirect("schemas:schema_list")
+
+
+@admin_required
+def schema_approve(request, slug):
+    if request.method != "POST":
+        return redirect("schemas:schema_list")
+
+    dataset = _get_dataset_by_slug_or_pk(slug)
+
+    dataset.status = DatasetType.STATUS_APPROVED
+    dataset.is_active = True
+    dataset.status_comment = ""
+    dataset.save(update_fields=["status", "is_active", "status_comment"])
+
+    return redirect("schemas:schema_list")
+
+
+@admin_required
+def schema_reject(request, slug):
+    if request.method != "POST":
+        return redirect("schemas:schema_list")
+
+    dataset = _get_dataset_by_slug_or_pk(slug)
+
+    comment = request.POST.get("comment", "").strip()
+    dataset.status = DatasetType.STATUS_REJECTED
+    dataset.is_active = False
+    dataset.status_comment = comment
+    dataset.save(update_fields=["status", "is_active", "status_comment"])
+
+    return redirect("schemas:schema_list")
 
 
 @admin_required
@@ -104,7 +244,7 @@ def certification_schema_create(request):
                     is_active=col.is_active,
                 )
 
-            return redirect(reverse("schemas:schema_detail", args=[dataset.pk]))
+            return redirect(reverse("schemas:schema_detail", args=[dataset.slug]))
     else:
         form = CertificationSchemaForm()
 

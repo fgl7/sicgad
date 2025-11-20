@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Corregir archivo de carga - SICGAD{% endblock %}
+{% block page_title %}Corregir archivo de carga{% endblock %}
+
+{% block content %}
+  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4 text-xs">
+    <h2 class="text-sm font-semibold">Datos de la carga</h2>
+    <p class="text-slate-300">
+      <strong>Planta:</strong> {{ instance.plant.code }}<br />
+      <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
+      <strong>Periodo:</strong> {{ instance.period }}<br />
+      <strong>Estado actual:</strong> {{ instance.get_state_display }}
+    </p>
+  </section>
+
+  <section class="mt-4 bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
+    <h2 class="text-sm font-semibold">Subir archivo corregido</h2>
+    <p class="text-slate-400 text-[11px]">
+      Reemplaza el archivo de esta carga con un nuevo archivo corregido. Luego podrás volver a enviarlo a validación diaria.
+    </p>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-3">
+      {% csrf_token %}
+      <div>
+        <label class="block mb-1 text-slate-300">Nuevo archivo corregido</label>
+        {% if instance.raw_file %}
+          <p class="text-[11px] text-slate-500 mb-1">
+            Archivo actual: <span class="text-slate-300">{{ instance.raw_file.name }}</span>
+          </p>
+        {% endif %}
+        {{ form.raw_file }}
+      </div>
+      <div class="flex items-center justify-between">
+        <a href="{% url 'ingest:upload' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+          ← Volver a carga de datos
+        </a>
+        <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
+          Guardar archivo corregido
+        </button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

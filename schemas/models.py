@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 
 from plants.models import Plant
 
@@ -12,6 +13,18 @@ class DatasetType(models.Model):
         (MONTHLY, "Mensual"),
     ]
 
+    STATUS_DRAFT = "DRAFT"
+    STATUS_PENDING = "PENDING"
+    STATUS_APPROVED = "APPROVED"
+    STATUS_REJECTED = "REJECTED"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Borrador"),
+        (STATUS_PENDING, "Pendiente aprobación"),
+        (STATUS_APPROVED, "Aprobado"),
+        (STATUS_REJECTED, "Rechazado"),
+    ]
+
     plant = models.ForeignKey(
         Plant,
         on_delete=models.CASCADE,
@@ -19,7 +32,7 @@ class DatasetType(models.Model):
     )
     name = models.CharField(
         max_length=255,
-        help_text="Nombre del dataset, por ejemplo 'Producci��n diaria PICP'.",
+        help_text="Nombre del dataset, por ejemplo 'Producción diaria PICP'.",
     )
     version = models.PositiveIntegerField(default=1)
     validation_frequency = models.CharField(
@@ -30,11 +43,21 @@ class DatasetType(models.Model):
     )
     is_certification = models.BooleanField(
         default=False,
-        help_text="Indica si este esquema es para certificaci��n mensual creada por Administraci��n.",
+        help_text="Indica si este esquema es para certificación mensual creada por Administración.",
     )
     is_active = models.BooleanField(
         default=True,
-        help_text="Solo un esquema por familia (planta+nombre) deber��a estar activo a la vez.",
+        help_text="Solo un esquema por familia (planta+nombre) deberia estar activo a la vez.",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_DRAFT,
+        help_text="Estado de aprobación del esquema.",
+    )
+    status_comment = models.TextField(
+        blank=True,
+        help_text="Comentario de la última decisión de aprobación/rechazo.",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -47,6 +70,19 @@ class DatasetType(models.Model):
     def __str__(self) -> str:
         return f"{self.plant.code} - {self.name} v{self.version}"
 
+    slug = models.SlugField(
+        max_length=255,
+        unique=True,
+        blank=True,
+        help_text="Slug legible para URLs, basado en planta, nombre y versión.",
+    )
+
+    def save(self, *args, **kwargs):
+        if not self.slug and self.plant_id and self.name and self.version:
+            base = f"{self.plant.code}-{self.name}-v{self.version}"
+            self.slug = slugify(base)
+        super().save(*args, **kwargs)
+
 
 class ColumnDef(models.Model):
     DATA_TYPE_CHOICES = [
@@ -55,7 +91,7 @@ class ColumnDef(models.Model):
         ("STRING", "Texto"),
         ("DATE", "Fecha"),
         ("BOOLEAN", "Booleano"),
-        ("CHOICE", "Categ��rico"),
+        ("CHOICE", "Categórico"),
     ]
 
     AXIS_ROLE_CHOICES = [
@@ -69,10 +105,10 @@ class ColumnDef(models.Model):
     DEFAULT_AGG_CHOICES = [
         ("SUM", "Suma"),
         ("AVG", "Promedio"),
-        ("MAX", "Mǭximo"),
-        ("MIN", "M��nimo"),
+        ("MAX", "Máximo"),
+        ("MIN", "Mínimo"),
         ("COUNT", "Conteo"),
-        ("NONE", "Sin agregaci��n"),
+        ("NONE", "Sin agregación"),
     ]
 
     dataset_type = models.ForeignKey(
@@ -100,33 +136,33 @@ class ColumnDef(models.Model):
     regex = models.CharField(
         max_length=255,
         blank=True,
-        help_text="Expresi��n regular opcional para validar texto.",
+        help_text="Expresión regular opcional para validar texto.",
     )
     choices_raw = models.TextField(
         blank=True,
-        help_text="Lista de opciones para campos categ��ricos, una por l��nea.",
+        help_text="Lista de opciones para campos categóricos, una por línea.",
     )
 
     unit = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Unidad para KPIs y grǭficos (t/d��a, m��, kWh, %...).",
+        help_text="Unidad para KPIs y gráficos (t/día, m3, kWh, %...).",
     )
     axis_role = models.CharField(
         max_length=10,
         choices=AXIS_ROLE_CHOICES,
         default="NONE",
-        help_text="Rol principal en grǭficos (eje X, Y, serie o filtro).",
+        help_text="Rol principal en gráficos (eje X, Y, serie o filtro).",
     )
     default_agg = models.CharField(
         max_length=10,
         choices=DEFAULT_AGG_CHOICES,
         default="SUM",
-        help_text="Tipo de agregaci��n por defecto para KPIs.",
+        help_text="Tipo de agregación por defecto para KPIs.",
     )
     is_primary_kpi = models.BooleanField(
         default=False,
-        help_text="Indica si el campo es un KPI principal que deber��a aparecer por defecto.",
+        help_text="Indica si el campo es un KPI principal que debería aparecer por defecto.",
     )
     display_order = models.PositiveIntegerField(
         default=0,

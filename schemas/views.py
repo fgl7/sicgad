@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from accounts.decorators import admin_required
 from accounts.models import Membership
+from audit.utils import record_action
 
 from .models import ColumnDef, DatasetType
 from .forms import DatasetTypeForm, ColumnDefForm, CertificationSchemaForm
@@ -124,6 +125,15 @@ def schema_edit(request, slug=None):
             dataset.save()
             formset.instance = dataset
             formset.save()
+            action = "SCHEMA"
+            verb = "creado" if slug is None else "editado"
+            record_action(
+                action,
+                request=request,
+                module="Schemas",
+                object_repr=f"Esquema {dataset.name} v{dataset.version} ({dataset.plant.code}) {verb}",
+                details="Esquema de datos diario" if not dataset.is_certification else "Esquema de certificación",
+            )
             return redirect(reverse("schemas:schema_detail", args=[dataset.slug]))
     else:
         form = DatasetTypeForm(instance=dataset)
@@ -166,6 +176,13 @@ def schema_submit_for_approval(request, slug):
         dataset.status = DatasetType.STATUS_PENDING
         dataset.is_active = False
         dataset.save(update_fields=["status", "is_active"])
+        record_action(
+            "SCHEMA",
+            request=request,
+            module="Schemas",
+            object_repr=f"Esquema {dataset.name} v{dataset.version} ({dataset.plant.code}) enviado a aprobación",
+            details="Envío de borrador a aprobación de admin",
+        )
 
     return redirect("schemas:schema_list")
 
@@ -181,6 +198,13 @@ def schema_approve(request, slug):
     dataset.is_active = True
     dataset.status_comment = ""
     dataset.save(update_fields=["status", "is_active", "status_comment"])
+    record_action(
+        "SCHEMA",
+        request=request,
+        module="Schemas",
+        object_repr=f"Esquema {dataset.name} v{dataset.version} ({dataset.plant.code}) aprobado",
+        details="Aprobación de esquema por administración",
+    )
 
     return redirect("schemas:schema_list")
 
@@ -197,6 +221,13 @@ def schema_reject(request, slug):
     dataset.is_active = False
     dataset.status_comment = comment
     dataset.save(update_fields=["status", "is_active", "status_comment"])
+    record_action(
+        "SCHEMA",
+        request=request,
+        module="Schemas",
+        object_repr=f"Esquema {dataset.name} v{dataset.version} ({dataset.plant.code}) rechazado",
+        details=comment or "Rechazo de esquema por administración",
+    )
 
     return redirect("schemas:schema_list")
 
@@ -244,6 +275,13 @@ def certification_schema_create(request):
                     is_active=col.is_active,
                 )
 
+            record_action(
+                "SCHEMA",
+                request=request,
+                module="Schemas",
+                object_repr=f"Esquema certificación {dataset.name} v{dataset.version} ({dataset.plant.code}) creado",
+                details=f"Derivado de {source.name} v{source.version}",
+            )
             return redirect(reverse("schemas:schema_detail", args=[dataset.slug]))
     else:
         form = CertificationSchemaForm()

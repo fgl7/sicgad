@@ -36,4 +36,5 @@ urlpatterns = [
     path("schemas/", include("schemas.urls")),
     path("ingest/", include("ingest.urls")),
     path("validate/", include("validation.urls")),
+    path("audit/", include("audit.urls")),
 ]

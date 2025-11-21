@@ -9,26 +9,103 @@
     <section class="md:col-span-2 bg-slate-950/60 border border-slate-800 rounded-xl p-4">
       <h2 class="text-sm font-semibold mb-2">Bienvenido a SICGAD</h2>
       <p class="text-sm text-slate-300">
-        Desde este panel podras acceder a las funciones principales de carga,
-        validacion y administracion del sistema.
+        Desde este panel puedes acceder a las funciones principales de carga,
+        validación, visualización y administración del sistema.
       </p>
     </section>
     <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
-      <h2 class="text-sm font-semibold mb-2">Estado rapido</h2>
+      <h2 class="text-sm font-semibold mb-2">Estado rápido</h2>
       <ul class="text-xs text-slate-300 space-y-1">
-        <li>&#8226; Esquemas configurados: pendiente</li>
-        <li>&#8226; Cargas de datos: pendiente</li>
-        <li>&#8226; Validaciones abiertas: pendiente</li>
+        <li>&#8226; Esquemas configurados: <span class="font-semibold">{{ total_schemas }}</span></li>
+        <li>&#8226; Cargas totales: <span class="font-semibold">{{ total_instances }}</span></li>
+        <li>&#8226; Pendientes de validación: <span class="font-semibold">{{ pending_instances }}</span></li>
+        <li>&#8226; Publicadas: <span class="font-semibold">{{ published_instances }}</span></li>
       </ul>
+    </section>
+  </div>
+
+  <div class="mt-6 grid gap-4 md:grid-cols-2">
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Últimas acciones de auditoría</h2>
+      <p class="text-[11px] text-slate-400 mb-2">
+        Transparencia para todos los usuarios: muestra las acciones más recientes registradas en el sistema.
+      </p>
+      <div class="max-h-64 overflow-auto bg-slate-950/80 border border-slate-800 rounded-lg">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="px-3 py-1 text-left font-semibold">Fecha</th>
+              <th class="px-3 py-1 text-left font-semibold">Usuario</th>
+              <th class="px-3 py-1 text-left font-semibold">Acción</th>
+              <th class="px-3 py-1 text-left font-semibold">Detalles</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in recent_logs %}
+              <tr class="border-t border-slate-800">
+                <td class="px-3 py-1 align-top whitespace-nowrap">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-3 py-1 align-top whitespace-nowrap">{{ log.username|default:"Sistema" }}</td>
+                <td class="px-3 py-1 align-top whitespace-nowrap">{{ log.get_action_display }}</td>
+                <td class="px-3 py-1 align-top">
+                  {{ log.object_repr|default:"-" }}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="px-3 py-3 text-center text-slate-400">
+                  Aún no hay acciones registradas.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Últimas cargas de datos</h2>
+      <p class="text-[11px] text-slate-400 mb-2">
+        Resumen de las cargas de datos más recientes registradas en el sistema.
+      </p>
+      <div class="max-h-64 overflow-auto bg-slate-950/80 border border-slate-800 rounded-lg">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="px-3 py-1 text-left font-semibold">Fecha</th>
+              <th class="px-3 py-1 text-left font-semibold">Planta</th>
+              <th class="px-3 py-1 text-left font-semibold">Dataset</th>
+              <th class="px-3 py-1 text-left font-semibold">Periodo</th>
+              <th class="px-3 py-1 text-left font-semibold">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inst in recent_instances %}
+              <tr class="border-t border-slate-800">
+                <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.plant.code }}</td>
+                <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.dataset_type.name }}</td>
+                <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.period }}</td>
+                <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.get_state_display }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="px-3 py-3 text-center text-slate-400">
+                  Aún no hay cargas de datos registradas.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </section>
   </div>
 
   {% if is_admin %}
     <div class="mt-6 grid gap-4 md:grid-cols-3">
       <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-        <h3 class="text-sm font-semibold mb-2">Administracion de plantas</h3>
+        <h3 class="text-sm font-semibold mb-2">Administración de plantas</h3>
         <p class="text-slate-300 mb-3">
-          Define las plantas (PCS, PICP, PICL, etc.) que participaran en SICGAD.
+          Define las plantas (PCS, PICP, PICL, etc.) que participarán en SICGAD.
         </p>
         <a href="{% url 'plants:plant_list' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
           Gestionar plantas
@@ -46,13 +123,13 @@
       </section>
 
       <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-        <h3 class="text-sm font-semibold mb-2">Niveles de validacion</h3>
+        <h3 class="text-sm font-semibold mb-2">Niveles de validación</h3>
         <p class="text-slate-300 mb-3">
-          Los niveles de validacion se definen al asignar roles de Validador
-          (campo 'Nivel de validacion' en la creacion de usuarios).
+          Los niveles de validación se definen al asignar roles de Validador
+          (campo "Nivel de validación" en la creación de usuarios).
         </p>
         <p class="text-[11px] text-slate-400">
-          Mas adelante se podra editar la jerarquia de validacion desde una vista dedicada.
+          Más adelante se podrá editar la jerarquía de validación desde una vista dedicada.
         </p>
       </section>
     </div>

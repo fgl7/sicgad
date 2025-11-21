@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 
 from plants.models import Plant
+from audit.utils import record_action
 
 from .decorators import admin_required
 from .forms import AdminUserCreateForm
@@ -66,7 +67,14 @@ def admin_user_create(request):
     if request.method == "POST":
         form = AdminUserCreateForm(request.POST)
         if form.is_valid():
-            form.save()
+            user = form.save()
+            record_action(
+                "USER",
+                request=request,
+                module="Accounts",
+                object_repr=f"Usuario {user.username} creado",
+                details=f"Rol {form.cleaned_data.get('role')} - Planta {form.cleaned_data.get('plant') or 'GLOBAL'}",
+            )
             return redirect("accounts:admin_user_list")
     else:
         form = AdminUserCreateForm()
@@ -115,6 +123,13 @@ def admin_user_edit(request, user_id):
             membership.is_active = True
             membership.save()
 
+            record_action(
+                "USER",
+                request=request,
+                module="Accounts",
+                object_repr=f"Usuario {user.username} editado",
+                details=f"Rol {membership.role} - Planta {membership.plant or 'GLOBAL'}",
+            )
             return redirect("accounts:admin_user_list")
     else:
         form = AdminUserCreateForm(instance=user, initial=initial)
@@ -133,7 +148,15 @@ def admin_user_edit(request, user_id):
 def admin_user_delete(request, user_id):
     user = get_object_or_404(User, pk=user_id, is_superuser=False)
     if request.method == "POST":
+        username = user.username
         user.delete()
+        record_action(
+            "USER",
+            request=request,
+            module="Accounts",
+            object_repr=f"Usuario {username} eliminado",
+            details="Usuario eliminado desde el panel de administración",
+        )
         return redirect("accounts:admin_user_list")
 
     return render(

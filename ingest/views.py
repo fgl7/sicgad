@@ -10,6 +10,7 @@ import openpyxl
 
 from accounts.models import Membership
 from schemas.models import DatasetType
+from audit.utils import record_action
 from .forms import DatasetInstanceUploadForm, DatasetInstanceEditForm
 from .models import DatasetInstance
 
@@ -50,6 +51,13 @@ def upload(request):
             messages.success(
                 request,
                 "Archivo subido correctamente. Revisa tus cargas y envía el dataset a validación diaria.",
+            )
+            record_action(
+                "UPLOAD",
+                request=request,
+                module="Ingest",
+                object_repr=f"{instance.dataset_type.name} | {instance.period}",
+                details=f"Planta {instance.plant.code}",
             )
             return redirect(reverse("ingest:upload_history"))
     else:
@@ -187,7 +195,10 @@ def instance_detail(request, pk):
             header = []
             rows = []
 
-    if is_loader and not is_validator and not is_admin:
+    next_url = request.GET.get("next")
+    if next_url and next_url.startswith("/"):
+        back_url = next_url
+    elif is_loader and not is_validator and not is_admin:
         back_url = reverse("ingest:upload")
     elif is_validator and not is_admin:
         # Validador (con o sin rol de cargador): volver al detalle de validación
@@ -224,7 +235,36 @@ def upload_history(request):
     else:
         instances = DatasetInstance.objects.none()
 
-    return render(request, "ingest/upload_history.html", {"instances": instances})
+    is_validator = (
+        Membership.objects.filter(
+            user=request.user,
+            role="VALIDATOR",
+            is_active=True,
+        ).exists()
+        if request.user.is_authenticated
+        else False
+    )
+    is_admin = (
+        request.user.is_authenticated
+        and (
+            request.user.is_superuser
+            or Membership.objects.filter(
+                user=request.user,
+                role="ADMIN",
+                is_active=True,
+            ).exists()
+        )
+    )
+
+    return render(
+        request,
+        "ingest/upload_history.html",
+        {
+            "instances": instances,
+            "is_validator": is_validator,
+            "is_admin": is_admin,
+        },
+    )
 
 
 def submit_instance(request, pk):
@@ -248,6 +288,13 @@ def submit_instance(request, pk):
         instance.last_error_summary = ""
         instance.save(update_fields=["state", "last_error_summary"])
         messages.success(request, "Dataset enviado a validación diaria.")
+        record_action(
+            "SUBMIT",
+            request=request,
+            module="Ingest",
+            object_repr=f"{instance.dataset_type.name} | {instance.period}",
+            details="Enviado a validación diaria",
+        )
 
     return redirect("ingest:upload")
 
@@ -279,6 +326,13 @@ def edit_instance(request, pk):
             instance.state = DatasetInstance.STATE_DRAFT
             instance.save()
             messages.success(request, "Dataset actualizado. Ahora puedes enviarlo a validación diaria.")
+            record_action(
+                "EDIT",
+                request=request,
+                module="Ingest",
+                object_repr=f"{instance.dataset_type.name} | {instance.period}",
+                details="Archivo corregido y reemplazado",
+            )
             return redirect("ingest:upload")
     else:
         form = DatasetInstanceEditForm(instance=instance)
@@ -309,6 +363,13 @@ def delete_instance(request, pk):
         messages.info(request, "Solo se pueden eliminar datasets en estado borrador.")
         return redirect("ingest:upload_history")
 
+    record_action(
+        "DELETE",
+        request=request,
+        module="Ingest",
+        object_repr=f"{instance.dataset_type.name} | {instance.period}",
+        details="Carga eliminada",
+    )
     instance.delete()
     messages.success(request, "Dataset eliminado correctamente.")
     return redirect("ingest:upload")

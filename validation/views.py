@@ -8,6 +8,7 @@ from accounts.models import Membership
 from ingest.models import DatasetInstance
 from schemas.models import DatasetType
 
+from audit.utils import record_action
 from .forms import ValidationDecisionForm
 from .models import ValidationAction
 
@@ -203,11 +204,25 @@ def detail(request, pk):
 
                 instance.save()
                 messages.success(request, "Dataset aprobado correctamente.")
+                record_action(
+                    "VALIDATION",
+                    request=request,
+                    module="Validation",
+                    object_repr=f"{instance.dataset_type.name} | {instance.period}",
+                    details="Aprobado",
+                )
             else:
                 instance.state = DatasetInstance.STATE_DRAFT
                 instance.last_error_summary = action.comment or ""
                 instance.save(update_fields=["state", "last_error_summary"])
                 messages.warning(request, "Dataset rechazado y devuelto a borrador.")
+                record_action(
+                    "VALIDATION",
+                    request=request,
+                    module="Validation",
+                    object_repr=f"{instance.dataset_type.name} | {instance.period}",
+                    details="Rechazado",
+                )
 
             return redirect(reverse("validation:inbox"))
     else:

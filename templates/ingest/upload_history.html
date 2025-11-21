@@ -26,6 +26,7 @@
           <th class="px-3 py-2 text-left font-semibold">Comentario</th>
           <th class="px-3 py-2 text-left font-semibold">Filas</th>
           <th class="px-3 py-2 text-left font-semibold">Errores</th>
+          <th class="px-3 py-2 text-left font-semibold">Ver datos</th>
         </tr>
       </thead>
       <tbody>
@@ -54,6 +55,15 @@
             </td>
             <td class="px-3 py-2 align-top">{{ inst.row_count }}</td>
             <td class="px-3 py-2 align-top">{{ inst.error_count }}</td>
+            <td class="px-3 py-2 align-top">
+              {% if is_validator or is_admin %}
+                <a href="{% url 'ingest:instance_detail' inst.pk %}?next={{ request.path|urlencode }}" class="text-emerald-300 hover:text-emerald-200 text-xs">
+                  Ver datos
+                </a>
+              {% else %}
+                <span class="text-slate-500 text-xs">—</span>
+              {% endif %}
+            </td>
           </tr>
         {% empty %}
           <tr>

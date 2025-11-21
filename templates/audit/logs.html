@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Auditoría - SICGAD{% endblock %}
+{% block page_title %}Auditoría{% endblock %}
+
+{% block content %}
+  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4">
+    <h2 class="text-sm font-semibold">Trazabilidad y logs</h2>
+    <p class="text-[11px] text-slate-400">
+      Aquí se registran las acciones relevantes del sistema (cargas, envíos, validaciones, cambios de esquemas y usuarios).
+    </p>
+
+    <form method="get" class="flex flex-wrap items-end gap-3 text-[11px] bg-slate-950/80 border border-slate-800 rounded-lg p-3">
+      <div>
+        <label class="block mb-1 text-slate-300">Usuario</label>
+        <input
+          type="text"
+          name="user"
+          value="{{ filter_user }}"
+          class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
+          placeholder="Nombre de usuario"
+        />
+      </div>
+      <div>
+        <label class="block mb-1 text-slate-300">Acción</label>
+        <select
+          name="action"
+          class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs min-w-[140px]"
+        >
+          <option value="">Todas</option>
+          {% for code, label in actions %}
+            <option value="{{ code }}" {% if filter_action == code %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block mb-1 text-slate-300">Desde</label>
+        <input
+          type="date"
+          name="from"
+          value="{{ filter_from }}"
+          class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
+        />
+      </div>
+      <div>
+        <label class="block mb-1 text-slate-300">Hasta</label>
+        <input
+          type="date"
+          name="to"
+          value="{{ filter_to }}"
+          class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
+        />
+      </div>
+      <div class="flex items-center gap-2 mt-4">
+        <input
+          type="checkbox"
+          id="only_mine"
+          name="only_mine"
+          value="1"
+          class="rounded border-slate-700"
+          {% if only_mine %}checked{% endif %}
+        />
+        <label for="only_mine" class="text-slate-300">Solo mis acciones</label>
+      </div>
+      <div class="ml-auto flex items-center gap-2 mt-4">
+        <button
+          type="submit"
+          class="px-3 py-1.5 rounded-md bg-emerald-600 text-[11px] font-semibold hover:bg-emerald-500"
+        >
+          Aplicar filtros
+        </button>
+        <a
+          href="{% url 'audit:log_list' %}"
+          class="px-3 py-1.5 rounded-md border border-slate-600 text-[11px] text-slate-200 hover:bg-slate-800/60"
+        >
+          Limpiar
+        </a>
+      </div>
+    </form>
+
+    <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
+      <table class="min-w-full text-xs">
+        <thead class="bg-slate-950 text-slate-300">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold">Fecha</th>
+            <th class="px-3 py-2 text-left font-semibold">Usuario</th>
+            <th class="px-3 py-2 text-left font-semibold">Acción</th>
+            <th class="px-3 py-2 text-left font-semibold">Módulo</th>
+            <th class="px-3 py-2 text-left font-semibold">Objeto</th>
+            <th class="px-3 py-2 text-left font-semibold">Detalles</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+            <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+              <td class="px-3 py-2 align-top">{{ log.created_at|date:"Y-m-d H:i" }}</td>
+              <td class="px-3 py-2 align-top">{{ log.username|default:"Sistema" }}</td>
+              <td class="px-3 py-2 align-top">{{ log.get_action_display }}</td>
+              <td class="px-3 py-2 align-top">{{ log.module|default:"General" }}</td>
+              <td class="px-3 py-2 align-top">{{ log.object_repr|default:"-" }}</td>
+              <td class="px-3 py-2 align-top">{{ log.details|truncatechars:80 }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="px-3 py-4 text-center text-slate-400">
+                Del sistema aún no se han registrado acciones auditables.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}
+

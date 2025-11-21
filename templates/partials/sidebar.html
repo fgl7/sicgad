@@ -1,6 +1,9 @@
 <aside class='w-56 bg-slate-950/80 border-r border-slate-800 hidden md:flex flex-col'>
   <div class='p-4 border-b border-slate-800'>
-    <span class='text-lg font-semibold tracking-wide'>SICGAD</span>
+    {% url 'landing' as landing_url %}
+    <a href='{{ landing_url }}' class='inline-block text-lg font-semibold tracking-wide text-slate-100 hover:text-emerald-400'>
+      SICGAD
+    </a>
   </div>
   <nav class='flex-1 p-3 space-y-1 text-sm'>
     {% url 'home' as home_url %}
@@ -9,6 +12,7 @@
     {% url 'validation:inbox' as validation_url %}
     {% url 'plants:plant_list' as plants_url %}
     {% url 'accounts:admin_user_list' as users_url %}
+    {% url 'audit:log_list' as audit_url %}
 
     <a href='{{ home_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == home_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
       <span>Inicio</span>
@@ -45,7 +49,7 @@
       <span>KPIs / Graficos</span>
     </a>
 
-    <a href='#' class='flex items-center gap-2 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800/60'>
+    <a href='{{ audit_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":7" == "/audit/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
       <span>Auditoria</span>
     </a>
 

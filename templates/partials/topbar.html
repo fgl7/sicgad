@@ -4,7 +4,7 @@
       Menu
     </button>
     <h1 class='text-sm md:text-base font-semibold'>
-      {% block page_title %}Inicio{% endblock %}
+      {{ current_section|default:"Inicio" }}
     </h1>
   </div>
   <div class='flex items-center gap-3 text-xs md:text-sm'>
@@ -33,4 +33,3 @@
     {% endif %}
   </div>
 </header>
-

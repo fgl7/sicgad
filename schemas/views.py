@@ -5,6 +5,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from accounts.decorators import admin_required
+from django.utils import timezone
+
 from accounts.models import Membership
 from audit.utils import record_action
 
@@ -36,6 +38,11 @@ def schema_list(request):
         if is_loader:
             can_edit_schemas = True
             can_create_schemas = True
+
+            profile = getattr(user, "profile", None)
+            if profile:
+                profile.last_seen_schema_status = timezone.now()
+                profile.save(update_fields=["last_seen_schema_status"])
 
     return render(
         request,

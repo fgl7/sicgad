@@ -100,7 +100,7 @@
           </thead>
           <tbody id="columns-body">
             {% for form in formset.forms %}
-              <tr class="border-t border-slate-800 align-top">
+              <tr class="border-t border-slate-800 align-top" data-column-row>
                 <td class="px-2 py-1">{{ form.name }}</td>
                 <td class="px-2 py-1">{{ form.label }}</td>
                 <td class="px-2 py-1">{{ form.data_type }}</td>
@@ -114,9 +114,16 @@
                 <td class="px-2 py-1">{{ form.display_order }}</td>
                 <td class="px-2 py-1 text-center">{{ form.is_active }}</td>
                 <td class="px-2 py-1 text-center">
-                  {% if form.instance.pk %}
+                  <button
+                    type="button"
+                    class="text-red-400 hover:text-red-300 text-[10px]"
+                    data-delete-row
+                  >
+                    Eliminar
+                  </button>
+                  <span class="hidden">
                     {{ form.DELETE }}
-                  {% endif %}
+                  </span>
                 </td>
                 {% for hidden in form.hidden_fields %}
                   {{ hidden }}
@@ -135,7 +142,7 @@
       </div>
 
       <template id="empty-column-row">
-        <tr class="border-t border-slate-800 align-top">
+        <tr class="border-t border-slate-800 align-top" data-column-row>
           {% with form=formset.empty_form %}
             <td class="px-2 py-1">{{ form.name }}</td>
             <td class="px-2 py-1">{{ form.label }}</td>
@@ -149,7 +156,18 @@
             <td class="px-2 py-1 text-center">{{ form.is_primary_kpi }}</td>
             <td class="px-2 py-1">{{ form.display_order }}</td>
             <td class="px-2 py-1 text-center">{{ form.is_active }}</td>
-            <td class="px-2 py-1 text-center"></td>
+            <td class="px-2 py-1 text-center">
+              <button
+                type="button"
+                class="text-red-400 hover:text-red-300 text-[10px]"
+                data-delete-row
+              >
+                Eliminar
+              </button>
+              <span class="hidden">
+                {{ form.DELETE }}
+              </span>
+            </td>
             {% for hidden in form.hidden_fields %}
               {{ hidden }}
             {% endfor %}

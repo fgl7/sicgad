@@ -2,7 +2,7 @@ from django.db import models
 
 from accounts.models import Membership
 from plants.models import Plant
-from schemas.models import DatasetType
+from schemas.models import DatasetType, ColumnDef
 
 
 class DatasetInstance(models.Model):
@@ -69,7 +69,7 @@ class DatasetInstance(models.Model):
         unique_together = ("dataset_type", "plant", "period")
 
     def __str__(self) -> str:
-        return f"{self.dataset_type} – {self.period}"
+        return f"{self.dataset_type} - {self.period}"
 
     @property
     def is_pending_validation(self) -> bool:
@@ -77,3 +77,42 @@ class DatasetInstance(models.Model):
             self.STATE_SUBMITTED,
             self.STATE_VALIDATED_L1,
         }
+
+
+class PublishedDataPoint(models.Model):
+    """
+    Representa un valor publicado (oficial) para una celda de un dataset.
+    Se usa tanto para datasets diarios como para los de certificación mensual.
+    """
+
+    instance = models.ForeignKey(
+        DatasetInstance,
+        on_delete=models.CASCADE,
+        related_name="published_points",
+    )
+    column = models.ForeignKey(
+        ColumnDef,
+        on_delete=models.CASCADE,
+        related_name="published_points",
+    )
+    row_index = models.PositiveIntegerField(
+        help_text="Índice de fila dentro del archivo original (comenzando en 1).",
+    )
+
+    numeric_value = models.FloatField(null=True, blank=True)
+    text_value = models.TextField(blank=True)
+    date_value = models.DateField(null=True, blank=True)
+    bool_value = models.BooleanField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["instance", "row_index", "column"]
+        indexes = [
+            models.Index(fields=["instance", "column"]),
+            models.Index(fields=["column"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.instance_id} - {self.column.name} - row {self.row_index}"
+

@@ -1,6 +1,7 @@
 from django import forms
 
 from schemas.models import DatasetType
+from plants.models import Plant
 from .models import DatasetInstance
 
 
@@ -15,6 +16,22 @@ class DatasetInstanceUploadForm(forms.ModelForm):
         ),
         label="Tipo de dataset",
     )
+
+    def __init__(self, *args, loader_plant: Plant | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if loader_plant:
+            # Restringir la planta al valor asignado al cargador
+            self.fields["plant"].queryset = Plant.objects.filter(pk=loader_plant.pk)
+            self.fields["plant"].initial = loader_plant
+            # Restringir los datasets a esa planta
+            self.fields["dataset_type"].queryset = (
+                DatasetType.objects.select_related("plant")
+                .filter(
+                    plant=loader_plant,
+                    is_active=True,
+                    status=DatasetType.STATUS_APPROVED,
+                )
+            )
 
     class Meta:
         model = DatasetInstance

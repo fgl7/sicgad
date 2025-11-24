@@ -76,6 +76,11 @@ class AccountProfile(models.Model):
         default=False,
         help_text="Si esta activo, el usuario debe cambiar su contrasena antes de usar el sistema.",
     )
+    last_seen_schema_status = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha/hora en la que el usuario vio por ultima vez el estado de esquemas.",
+    )
 
     def __str__(self) -> str:
         return f"Perfil de {self.user.username}"

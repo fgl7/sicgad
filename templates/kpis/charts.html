@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}KPIs y Gráficos - SICGAD{% endblock %}
+{% block page_title %}KPIs y gráficos{% endblock %}
+
+{% block content %}
+  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-4">
+    <div class="flex flex-col md:flex-row md:items-end gap-3 text-xs">
+      <div class="flex-1 grid gap-3 md:grid-cols-3">
+        <div>
+          <label class="block mb-1 text-slate-300">Modo de datos</label>
+          <select
+            id="kpi-mode-select"
+            class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
+          >
+            <option value="published">Datos publicados (oficiales)</option>
+            {% if can_see_drafts %}
+              <option value="draft">Borradores / en validación</option>
+            {% endif %}
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block mb-1 text-slate-300">Dataset y periodo</label>
+          <select
+            id="kpi-instance-select"
+            class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
+          >
+            <option value="">Selecciona un dataset...</option>
+            {% for inst in published_instances %}
+              <option
+                value="{{ inst.id }}"
+                data-mode="published"
+              >
+                [{{ inst.plant.code }}] {{ inst.dataset_type.name }} — {{ inst.period }} (Oficial)
+              </option>
+            {% endfor %}
+            {% if can_see_drafts %}
+              {% for inst in draft_instances %}
+                <option
+                  value="{{ inst.id }}"
+                  data-mode="draft"
+                >
+                  [{{ inst.plant.code }}] {{ inst.dataset_type.name }} — {{ inst.period }} ({{ inst.get_state_display }})
+                </option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </div>
+      </div>
+      <div class="grid gap-3 md:grid-cols-2">
+        <div>
+          <label class="block mb-1 text-slate-300">Eje X</label>
+          <select
+            id="kpi-x-field-select"
+            class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
+          ></select>
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300">Eje Y</label>
+          <select
+            id="kpi-y-field-select"
+            class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
+          ></select>
+        </div>
+      </div>
+    </div>
+    <p class="mt-3 text-[11px] text-slate-400">
+      Los datos en modo <span class="text-emerald-300">publicados</span> son oficiales.
+      Los datos en modo <span class="text-amber-300">borrador</span> están en revisión y solo son visibles para cargadores, validadores y administración.
+    </p>
+  </section>
+
+  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-4">
+    <div id="kpi-chart" class="w-full" style="height: 420px;"></div>
+  </section>
+
+  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+    <h2 class="text-sm font-semibold mb-2">Datos tabulares</h2>
+    <div id="kpi-table-container" class="max-h-80 overflow-auto border border-slate-800 rounded-lg bg-slate-950/80"></div>
+  </section>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script src="{% static 'js/kpis_charts.js' %}"></script>
+{% endblock %}
+

@@ -15,6 +15,11 @@ class PasswordChangeRequiredMiddleware:
     def __call__(self, request):
         user = getattr(request, "user", None)
         if user and user.is_authenticated:
+            # El superusuario no debe ser obligado a pasar por
+            # el flujo de cambio de contraseña de SICGAD.
+            if user.is_superuser:
+                return self.get_response(request)
+
             profile = getattr(user, "profile", None)
             if profile and profile.must_change_password:
                 path = request.path

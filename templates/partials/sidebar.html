@@ -20,6 +20,22 @@
 
     <a href='{{ schemas_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":9" == "/schemas/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
       <span>Esquemas</span>
+      {% if is_admin and pending_schema_requests %}
+        <span class='ml-auto inline-flex items-center justify-center px-2 py-0 rounded-full bg-amber-500 text-slate-900 text-[10px] font-semibold'>
+          {{ pending_schema_requests }}
+        </span>
+      {% elif is_loader %}
+        {% if loader_schema_approved %}
+          <span class='ml-auto inline-flex items-center justify-center px-2 py-0 rounded-full bg-emerald-500 text-slate-900 text-[10px] font-semibold'>
+            {{ loader_schema_approved }}
+          </span>
+        {% endif %}
+        {% if loader_schema_rejected %}
+          <span class='inline-flex items-center justify-center px-2 py-0 rounded-full bg-red-500 text-slate-900 text-[10px] font-semibold ml-1'>
+            {{ loader_schema_rejected }}
+          </span>
+        {% endif %}
+      {% endif %}
     </a>
 
     {% url 'ingest:upload_history' as ingest_history_url %}
@@ -38,14 +54,29 @@
     {% if is_validator or is_admin %}
       <a href='{{ validation_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":10" == "/validate/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
         <span>Validacion</span>
+        {% if is_validator and pending_validation_items %}
+          <span class='ml-auto inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-500 text-slate-900 text-[10px] font-semibold'>
+            {{ pending_validation_items }}
+          </span>
+        {% endif %}
       </a>
     {% elif is_loader %}
       <a href='{{ ingest_history_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == ingest_history_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
         <span>Validacion</span>
+        {% if loader_validation_approved %}
+          <span class='ml-auto inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-500 text-slate-900 text-[10px] font-semibold'>
+            {{ loader_validation_approved }}
+          </span>
+        {% endif %}
+        {% if loader_validation_rejected %}
+          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-red-500 text-slate-900 text-[10px] font-semibold ml-1'>
+            {{ loader_validation_rejected }}
+          </span>
+        {% endif %}
       </a>
     {% endif %}
 
-    <a href='#' class='flex items-center gap-2 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800/60'>
+    <a href='{% url "kpis_charts" %}' class='flex items-center gap-2 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800/60'>
       <span>KPIs / Graficos</span>
     </a>
 

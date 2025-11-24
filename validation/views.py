@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from accounts.models import Membership
 from ingest.models import DatasetInstance
+from ingest.utils import materialize_instance
 from schemas.models import DatasetType
 
 from audit.utils import record_action
@@ -203,6 +204,9 @@ def detail(request, pk):
                             instance.state = DatasetInstance.STATE_PUBLISHED
 
                 instance.save()
+
+                if instance.state == DatasetInstance.STATE_PUBLISHED:
+                    materialize_instance(instance)
                 messages.success(request, "Dataset aprobado correctamente.")
                 record_action(
                     "VALIDATION",

@@ -1,4 +1,10 @@
+from django.db.models import Q
+from django.db.utils import OperationalError, ProgrammingError
+from django.utils import timezone
+
 from .models import Membership
+from schemas.models import DatasetType
+from ingest.models import DatasetInstance
 
 
 def admin_flags(request):
@@ -6,6 +12,13 @@ def admin_flags(request):
     is_admin = False
     is_loader = False
     is_validator = False
+    pending_schema_requests = 0
+    pending_validation_items = 0
+    loader_validation_approved = 0
+    loader_validation_rejected = 0
+    loader_schema_approved = 0
+    loader_schema_rejected = 0
+    loader_default_plant = None
     if user and user.is_authenticated:
         if user.is_superuser:
             is_admin = True
@@ -15,6 +28,123 @@ def admin_flags(request):
             is_validator = Membership.objects.filter(
                 user=user, role="VALIDATOR", is_active=True
             ).exists()
+
+            profile = getattr(user, "profile", None)
+
+            if is_loader:
+                loader_membership = (
+                    Membership.objects.filter(
+                        user=user,
+                        role="LOADER",
+                        is_active=True,
+                        plant__isnull=False,
+                    )
+                    .select_related("plant")
+                    .first()
+                )
+                if loader_membership:
+                    loader_default_plant = loader_membership.plant
+
+        try:
+            if is_admin:
+                pending_schema_requests = DatasetType.objects.filter(
+                    status=DatasetType.STATUS_PENDING
+                ).count()
+
+            # Conteo de items pendientes para cualquier usuario con rol de validador,
+            # independientemente de si también tiene rol de administrador.
+            if is_validator:
+                daily_memberships = Membership.objects.filter(
+                    user=user,
+                    role="VALIDATOR",
+                    is_active=True,
+                    can_validate_daily=True,
+                )
+                monthly_memberships = Membership.objects.filter(
+                    user=user,
+                    role="VALIDATOR",
+                    is_active=True,
+                    can_validate_monthly=True,
+                )
+
+                daily_plants = [m.plant_id for m in daily_memberships if m.plant_id]
+                monthly_plants = [m.plant_id for m in monthly_memberships if m.plant_id]
+
+                has_global_daily = any(m.plant_id is None for m in daily_memberships)
+                has_global_monthly = any(m.plant_id is None for m in monthly_memberships)
+
+                base_qs = DatasetInstance.objects.filter(
+                    state__in=[
+                        DatasetInstance.STATE_SUBMITTED,
+                        DatasetInstance.STATE_VALIDATED_L1,
+                    ]
+                )
+
+                daily_filter = Q(
+                    dataset_type__validation_frequency=DatasetType.DAILY,
+                    plant_id__in=daily_plants,
+                )
+                if has_global_daily:
+                    daily_filter |= Q(dataset_type__validation_frequency=DatasetType.DAILY)
+
+                monthly_filter = Q(
+                    dataset_type__validation_frequency=DatasetType.MONTHLY,
+                    plant_id__in=monthly_plants,
+                )
+                if has_global_monthly:
+                    monthly_filter |= Q(
+                        dataset_type__validation_frequency=DatasetType.MONTHLY
+                    )
+
+                pending_validation_items = base_qs.filter(daily_filter | monthly_filter).count()
+
+            if is_loader and not is_admin:
+                # Notificaciones sobre cargas aprobadas y rechazadas
+                loader_qs = DatasetInstance.objects.filter(created_by__user=user)
+                loader_validation_approved = loader_qs.filter(
+                    state=DatasetInstance.STATE_PUBLISHED
+                ).count()
+                loader_validation_rejected = loader_qs.filter(
+                    state=DatasetInstance.STATE_DRAFT,
+                    last_error_summary__gt="",
+                ).count()
+
+                # Notificaciones sobre esquemas de sus plantas aprobados y rechazados
+                loader_plants = list(
+                    Membership.objects.filter(
+                        user=user,
+                        role="LOADER",
+                        is_active=True,
+                        plant__isnull=False,
+                    ).values_list("plant_id", flat=True)
+                )
+                if loader_plants:
+                    schema_qs = DatasetType.objects.filter(
+                        plant_id__in=loader_plants,
+                        is_certification=False,
+                        status__in=[
+                            DatasetType.STATUS_APPROVED,
+                            DatasetType.STATUS_REJECTED,
+                        ],
+                    )
+                    if profile and profile.last_seen_schema_status:
+                        schema_qs = schema_qs.filter(
+                            updated_at__gt=profile.last_seen_schema_status
+                        )
+
+                    loader_schema_approved = schema_qs.filter(
+                        status=DatasetType.STATUS_APPROVED
+                    ).count()
+                    loader_schema_rejected = schema_qs.filter(
+                        status=DatasetType.STATUS_REJECTED
+                    ).count()
+        except (OperationalError, ProgrammingError):
+            pending_schema_requests = 0
+            pending_validation_items = 0
+            loader_validation_approved = 0
+            loader_validation_rejected = 0
+            loader_schema_approved = 0
+            loader_schema_rejected = 0
 
     path = getattr(request, "path", "") or ""
     if path.startswith("/schemas/"):
@@ -39,4 +169,11 @@ def admin_flags(request):
         "is_loader": is_loader,
         "is_validator": is_validator,
         "current_section": current_section,
+        "pending_schema_requests": pending_schema_requests,
+        "pending_validation_items": pending_validation_items,
+        "loader_validation_approved": loader_validation_approved,
+        "loader_validation_rejected": loader_validation_rejected,
+        "loader_schema_approved": loader_schema_approved,
+        "loader_schema_rejected": loader_schema_rejected,
+        "loader_default_plant": loader_default_plant,
     }

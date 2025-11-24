@@ -1,7 +1,12 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Esquemas - SICGAD{% endblock %}
 {% block page_title %}Esquemas de datos{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'js/schema_list.js' %}"></script>
+{% endblock %}
 
 {% block content %}
   <div class="flex items-center justify-between mb-4">
@@ -93,18 +98,16 @@
                     Aprobar
                   </button>
                 </form>
-                <form method="post" action="{% url 'schemas:schema_reject' ds.slug|default:ds.pk %}" class="inline-flex items-center gap-1">
-                  {% csrf_token %}
-                  <input
-                    type="text"
-                    name="comment"
-                    placeholder="Motivo del rechazo"
-                    class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px]"
-                  />
-                  <button type="submit" class="text-xs text-red-300 hover:text-red-200">
-                    Rechazar
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  class="text-xs text-red-300 hover:text-red-200"
+                  data-open-reject-modal
+                  data-reject-url="{% url 'schemas:schema_reject' ds.slug|default:ds.pk %}"
+                  data-dataset-name="{{ ds.name }}"
+                  data-dataset-plant="{{ ds.plant.code }}"
+                >
+                  Rechazar
+                </button>
               {% endif %}
             </td>
           </tr>
@@ -118,5 +121,46 @@
       </tbody>
     </table>
   </div>
-{% endblock %}
 
+  {% if is_admin %}
+    <div
+      id="schema-reject-modal"
+      class="fixed inset-0 bg-slate-900/70 flex items-center justify-center z-50 hidden"
+    >
+      <div class="bg-slate-950 border border-slate-800 rounded-lg p-4 w-full max-w-md shadow-xl">
+        <h3 class="text-sm font-semibold mb-2">Rechazar esquema</h3>
+        <p class="text-xs text-slate-300 mb-3" id="schema-reject-modal-dataset"></p>
+        <form method="post" id="schema-reject-form" class="space-y-3">
+          {% csrf_token %}
+          <div>
+            <label for="schema-reject-comment" class="block text-[11px] text-slate-300 mb-1">
+              Motivo del rechazo
+            </label>
+            <textarea
+              id="schema-reject-comment"
+              name="comment"
+              rows="3"
+              class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
+              placeholder="Describe brevemente el motivo del rechazo"
+            ></textarea>
+          </div>
+          <div class="flex items-center justify-end gap-2 text-xs">
+            <button
+              type="button"
+              class="px-3 py-1 rounded border border-slate-600 text-slate-200 hover:bg-slate-800/60"
+              data-close-reject-modal
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="px-3 py-1 rounded bg-red-600 text-slate-50 hover:bg-red-500"
+            >
+              Confirmar rechazo
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

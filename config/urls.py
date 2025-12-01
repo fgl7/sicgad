@@ -19,13 +19,14 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 
-from kpis.views import home, landing, charts
+from kpis.views import home, landing, charts, dataset_data
 
 urlpatterns = [
     path("", landing, name="landing"),
     path("admin/", admin.site.urls),
     path("home/", home, name="home"),
     path("kpis/", charts, name="kpis_charts"),
+    path("kpis/data/<int:instance_id>/", dataset_data, name="kpis_dataset_data"),
     path(
         "login/",
         auth_views.LoginView.as_view(template_name="registration/login.html"),

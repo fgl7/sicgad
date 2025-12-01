@@ -188,7 +188,13 @@ def dataset_data(request, instance_id: int):
             {"row_index": idx, "values": row}
             for idx, row in sorted(rows_map.items(), key=lambda item: item[0])
         ]
-    else:
+
+        # Si no hay datos publicados a pesar de que la instancia
+        # estǭ en estado publicado, usar los datos del archivo original.
+        if not rows:
+            use_published = False
+
+    if not use_published:
         header, parsed_rows = _read_instance_file(instance)
 
         header_map = {}

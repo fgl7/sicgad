@@ -8,6 +8,7 @@ from accounts.models import Membership
 from ingest.models import DatasetInstance
 from ingest.utils import materialize_instance
 from schemas.models import DatasetType
+from schemas.services import collect_certification_status, previous_month_range
 
 from audit.utils import record_action
 from .forms import ValidationDecisionForm
@@ -92,12 +93,40 @@ def inbox(request):
         .order_by("-created_at")[:50]
     )
 
+    certification_alerts = []
+    if monthly_memberships.exists():
+        _, previous_month_end = previous_month_range()
+        pending_cert_states = [
+            DatasetInstance.STATE_DRAFT,
+            DatasetInstance.STATE_SUBMITTED,
+            DatasetInstance.STATE_VALIDATED_L1,
+            DatasetInstance.STATE_VALIDATED_L2,
+        ]
+        cert_qs = (
+            DatasetInstance.objects.select_related("dataset_type", "plant")
+            .filter(
+                dataset_type__validation_frequency=DatasetType.MONTHLY,
+                dataset_type__is_certification=True,
+                period=previous_month_end,
+                state__in=pending_cert_states,
+            )
+            .order_by("plant__code", "dataset_type__name")
+        )
+        if not has_global_monthly:
+            if monthly_plants:
+                cert_qs = cert_qs.filter(plant_id__in=monthly_plants)
+            else:
+                cert_qs = cert_qs.none()
+
+        certification_alerts = list(cert_qs)
+
     return render(
         request,
         "validate/inbox.html",
         {
             "items": items,
             "history_actions": history_actions,
+            "certification_alerts": certification_alerts,
         },
     )
 
@@ -124,6 +153,7 @@ def admin_overview(request):
         .filter(dataset_type__validation_frequency=DatasetType.MONTHLY)
         .order_by("-created_at")[:100]
     )
+    certification_status = collect_certification_status()
 
     return render(
         request,
@@ -131,6 +161,7 @@ def admin_overview(request):
         {
             "daily_instances": daily_instances,
             "monthly_instances": monthly_instances,
+            "certification_status": certification_status,
         },
     )
 

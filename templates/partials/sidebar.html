@@ -58,6 +58,13 @@
           <span class='ml-auto inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-500 text-slate-900 text-[10px] font-semibold'>
             {{ pending_validation_items }}
           </span>
+        {% elif is_admin %}
+          <span class='ml-auto text-[10px] text-slate-500'>Panel</span>
+        {% endif %}
+        {% if is_validator and pending_certification_alerts %}
+          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='Certificación mensual pendiente'>
+            C{{ pending_certification_alerts }}
+          </span>
         {% endif %}
       </a>
     {% elif is_loader %}

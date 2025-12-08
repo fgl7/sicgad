@@ -81,4 +81,47 @@
       </div>
     </section>
   </div>
+
+  {% if certification_status %}
+    <section class="mt-6 bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+      <h2 class="text-sm font-semibold mb-2">Cobertura de esquemas de certificación</h2>
+      <p class="text-[11px] text-slate-400 mb-3">
+        Muestra la última fecha diaria disponible en el dataset base y la última consolidación mensual generada.
+      </p>
+      <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold">Planta</th>
+              <th class="px-3 py-2 text-left font-semibold">Esquema</th>
+              <th class="px-3 py-2 text-left font-semibold">Último diario publicado</th>
+              <th class="px-3 py-2 text-left font-semibold">Último mes consolidado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for status in certification_status %}
+              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+                <td class="px-3 py-2 align-top">{{ status.schema.plant.code }}</td>
+                <td class="px-3 py-2 align-top">{{ status.schema.name }}</td>
+                <td class="px-3 py-2 align-top">
+                  {% if status.latest_daily_period %}
+                    {{ status.latest_daily_period }}
+                  {% else %}
+                    <span class="text-slate-500">Sin datos publicados</span>
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2 align-top">
+                  {% if status.last_consolidated_period %}
+                    {{ status.last_consolidated_period }}
+                  {% else %}
+                    <span class="text-slate-500">Sin consolidación</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
 {% endblock %}

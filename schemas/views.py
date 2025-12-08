@@ -12,6 +12,7 @@ from audit.utils import record_action
 
 from .models import ColumnDef, DatasetType
 from .forms import DatasetTypeForm, ColumnDefForm, CertificationSchemaForm
+from .services import consolidate_latest_month
 
 
 def _is_admin_user(user) -> bool:
@@ -261,6 +262,7 @@ def certification_schema_create(request):
                 validation_frequency=DatasetType.MONTHLY,
                 is_certification=True,
                 is_active=True,
+                source_dataset=source,
             )
 
             for col in columns:
@@ -282,6 +284,8 @@ def certification_schema_create(request):
                     is_active=col.is_active,
                 )
 
+            consolidate_latest_month(dataset, request=request)
+
             record_action(
                 "SCHEMA",
                 request=request,
@@ -291,7 +295,11 @@ def certification_schema_create(request):
             )
             return redirect(reverse("schemas:schema_detail", args=[dataset.slug]))
     else:
-        form = CertificationSchemaForm()
+        initial = {}
+        selected_dataset = request.GET.get("source_dataset")
+        if selected_dataset:
+            initial["source_dataset"] = selected_dataset
+        form = CertificationSchemaForm(initial=initial)
 
     return render(
         request,

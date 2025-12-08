@@ -4,6 +4,30 @@
 {% block page_title %}Bandeja de validación diaria/mensual{% endblock %}
 
 {% block content %}
+  {% if certification_alerts %}
+    <section class="bg-amber-950/40 border border-amber-800 rounded-xl p-4 mb-6 text-xs">
+      <h2 class="text-sm font-semibold mb-2 text-amber-200">Alertas de certificación mensual</h2>
+      <p class="text-[11px] text-amber-100/80 mb-3">
+        El mes anterior ya finalizó y existen consolidaciones automáticas pendientes de validar.
+      </p>
+      <ul class="space-y-2">
+        {% for alert in certification_alerts %}
+          <li class="flex items-center justify-between bg-slate-950/40 border border-amber-800/50 rounded-lg px-3 py-2">
+            <div>
+              <div class="font-semibold text-slate-100">{{ alert.dataset_type.name }}</div>
+              <div class="text-[11px] text-slate-300">
+                Planta {{ alert.plant.code }} — periodo {{ alert.period }}
+              </div>
+            </div>
+            <a href="{% url 'validation:detail' alert.pk %}" class="text-xs text-amber-200 hover:underline">
+              Revisar ahora
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
     <h2 class="text-sm font-semibold mb-3">Datasets pendientes de validación</h2>
     <p class="text-[11px] text-slate-400 mb-3">
@@ -102,4 +126,3 @@
     </div>
   </section>
 {% endblock %}
-

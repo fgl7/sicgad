@@ -81,6 +81,11 @@ class AccountProfile(models.Model):
         blank=True,
         help_text="Fecha/hora en la que el usuario vio por ultima vez el estado de esquemas.",
     )
+    last_seen_validation_status = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha/hora en la que el usuario vio por ultima vez el estado de sus cargas.",
+    )
 
     def __str__(self) -> str:
         return f"Perfil de {self.user.username}"

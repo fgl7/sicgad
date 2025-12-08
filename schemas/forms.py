@@ -90,6 +90,11 @@ class CertificationSchemaForm(forms.Form):
             initial_source = self.initial.get("source_dataset")
             if isinstance(initial_source, DatasetType):
                 source = initial_source
+            elif initial_source:
+                try:
+                    source = DatasetType.objects.get(pk=initial_source)
+                except (TypeError, ValueError, DatasetType.DoesNotExist):
+                    source = None
 
         if source is not None:
             self.fields["columns"].queryset = ColumnDef.objects.filter(

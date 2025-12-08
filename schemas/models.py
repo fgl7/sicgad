@@ -30,6 +30,14 @@ class DatasetType(models.Model):
         on_delete=models.CASCADE,
         related_name="dataset_types",
     )
+    source_dataset = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="derived_certifications",
+        help_text="Dataset base diario utilizado para consolidaciones de certificación.",
+    )
     name = models.CharField(
         max_length=255,
         help_text="Nombre del dataset, por ejemplo 'Producción diaria PICP'.",
@@ -62,6 +70,11 @@ class DatasetType(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    last_consolidated_period = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Último periodo (último día del mes) consolidado automáticamente para certificación.",
+    )
 
     class Meta:
         ordering = ["plant__code", "name", "-version"]

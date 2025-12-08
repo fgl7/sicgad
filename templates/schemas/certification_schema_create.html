@@ -50,18 +50,20 @@
             </span>
           </div>
           <div class="space-y-1 bg-slate-950/80 border border-slate-800 rounded-md px-3 py-2 max-h-64 overflow-y-auto">
-            {% if form.columns.field.queryset.exists %}
-              {% for checkbox in form.columns %}
-                <label class="flex items-start gap-2 cursor-pointer">
-                  {{ checkbox.tag }}
-                  <span class="text-slate-200">{{ checkbox.choice_label }}</span>
-                </label>
-              {% endfor %}
-            {% else %}
-              <p class="text-slate-400 text-[11px]">
-                Primero selecciona un dataset base y guarda para ver los campos disponibles.
-              </p>
-            {% endif %}
+            {% with column_qs=form.columns.field.queryset %}
+              {% if column_qs %}
+                {% for checkbox in form.columns %}
+                  <label class="flex items-start gap-2 cursor-pointer">
+                    {{ checkbox.tag }}
+                    <span class="text-slate-200">{{ checkbox.choice_label }}</span>
+                  </label>
+                {% endfor %}
+              {% else %}
+                <p class="text-slate-400 text-[11px]">
+                  Selecciona primero un dataset base para cargar los campos disponibles.
+                </p>
+              {% endif %}
+            {% endwith %}
           </div>
           {% if form.columns.errors %}
             <p class="text-red-400 mt-1">{{ form.columns.errors.0 }}</p>
@@ -81,3 +83,23 @@
   </div>
 {% endblock %}
 
+{% block extra_js %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const select = document.getElementById("{{ form.source_dataset.id_for_label }}");
+      if (!select) {
+        return;
+      }
+      select.addEventListener("change", function () {
+        const value = this.value;
+        const url = new URL(window.location.href);
+        if (value) {
+          url.searchParams.set("source_dataset", value);
+        } else {
+          url.searchParams.delete("source_dataset");
+        }
+        window.location.href = url.toString();
+      });
+    });
+  </script>
+{% endblock %}

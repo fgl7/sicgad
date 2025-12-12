@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Validación de dataset - SICGAD{% endblock %}
-{% block page_title %}Detalle de dataset para validación{% endblock %}
+{% block title %}Validacion de dataset - SICGAD{% endblock %}
+{% block page_title %}Detalle de dataset para validacion{% endblock %}
 
 {% block content %}
   <section class="space-y-4">
     <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-      <h2 class="text-sm font-semibold mb-2">Información básica</h2>
+      <h2 class="text-sm font-semibold mb-2">Informacion basica</h2>
       <p class="text-slate-300">
         <strong>Planta:</strong> {{ instance.plant.code }}<br />
         <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
@@ -14,21 +14,133 @@
         <strong>Periodo:</strong> {{ instance.period }}<br />
         <strong>Estado actual:</strong> {{ instance.get_state_display }}
       </p>
-      {% if instance.raw_file %}
-        <p class="mt-2">
-          <a href="{% url 'ingest:instance_detail' instance.pk %}" class="text-xs text-emerald-300 hover:text-emerald-200">
-            Ver datos cargados
-          </a>
-        </p>
-      {% endif %}
+      <p class="mt-2">
+        <a href="{% url 'ingest:instance_detail' instance.pk %}" class="text-xs text-emerald-300 hover:text-emerald-200">
+          Ver datos cargados
+        </a>
+      </p>
     </div>
 
+    {% if monthly_review %}
+      <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs space-y-4">
+        <div>
+          <h2 class="text-sm font-semibold mb-2">Detalle diario del mes</h2>
+          <p class="text-[11px] text-slate-400">
+            Revisa los registros diarios publicados que alimentan esta certificacion. Las filas resaltadas fueron modificadas por el cargador.
+          </p>
+        </div>
+        <div class="overflow-auto border border-slate-800 rounded-lg">
+          <table class="min-w-full text-[11px]">
+            <thead class="bg-slate-950 text-slate-300">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold whitespace-nowrap">Fecha</th>
+                {% for column in monthly_review.daily_display_columns %}
+                  <th class="px-3 py-2 text-left font-semibold">
+                    {{ column.label|default:column.name }}
+                  </th>
+                {% endfor %}
+                <th class="px-3 py-2 text-left font-semibold">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in monthly_review.daily_rows %}
+                <tr class="border-t border-slate-800 {% if row.changed %}bg-amber-500/10 border-amber-400/70{% endif %}">
+                  <td class="px-3 py-2 text-slate-200 whitespace-nowrap">{{ row.date|date:"Y-m-d" }}</td>
+                  {% for cell in row.values %}
+                    <td class="px-3 py-2 text-slate-300 whitespace-nowrap">
+                      {{ cell.display }}
+                    </td>
+                  {% endfor %}
+                  <td class="px-3 py-2">
+                    {% if row.changed %}
+                      <span class="text-amber-300 font-semibold">Modificado</span>
+                    {% elif row.has_instance %}
+                      <span class="text-slate-400">Publicado</span>
+                    {% else %}
+                      <span class="text-slate-500">Sin datos</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="{{ monthly_review.daily_display_columns|length|add:2 }}" class="px-3 py-3 text-center text-slate-400">
+                    No se encontraron registros diarios para este periodo.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 class="text-sm font-semibold mb-2 text-slate-200">Total mensual a certificar</h3>
+          <div class="overflow-auto border border-slate-800 rounded-lg">
+            <table class="min-w-full text-[11px]">
+              <thead class="bg-slate-950 text-slate-300">
+                <tr>
+                  {% for item in monthly_review.monthly_values %}
+                    <th class="px-3 py-2 text-left font-semibold">
+                      {{ item.column.label|default:item.column.name }}
+                    </th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-t border-slate-800">
+                  {% for item in monthly_review.monthly_values %}
+                    <td class="px-3 py-2 text-slate-100">
+                      {{ item.value }}
+                    </td>
+                  {% endfor %}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if change_requests %}
+      <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+        <h2 class="text-sm font-semibold mb-2">Justificaciones del cargador</h2>
+        <div class="space-y-3">
+          {% for req in change_requests %}
+            <div class="border border-slate-800 rounded-lg p-3 bg-slate-950/50">
+              <div class="text-[11px] text-slate-400 mb-1">
+                {{ req.created_at|date:"Y-m-d H:i" }}
+                {% if req.target_period %}
+                  - Periodo afectado: {{ req.target_period }}
+                {% endif %}
+                {% if req.submitted_by and req.submitted_by.user %}
+                  - {{ req.submitted_by.user.get_full_name|default:req.submitted_by.user.username }}
+                {% endif %}
+              </div>
+              <p class="text-slate-100 whitespace-pre-line">{{ req.justification }}</p>
+              {% if req.attachments.all %}
+                <div class="mt-2 text-[11px] text-slate-400">
+                  Soportes:
+                  <ul class="list-disc ml-4 space-y-0.5">
+                    {% for attachment in req.attachments.all %}
+                      <li>
+                        <a href="{{ attachment.file.url }}" target="_blank" class="text-emerald-300 hover:text-emerald-200">
+                          {{ attachment.original_name|default:"Archivo de soporte" }}
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
     <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-      <h2 class="text-sm font-semibold mb-2">Acción de validación</h2>
+      <h2 class="text-sm font-semibold mb-2">Accion de validacion</h2>
       <form method="post" class="space-y-3">
         {% csrf_token %}
         <div>
-          <label class="block mb-1 text-slate-300">Decisión</label>
+          <label class="block mb-1 text-slate-300">Decision</label>
           {{ form.decision }}
         </div>
         <div>
@@ -40,7 +152,7 @@
             Cancelar
           </a>
           <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
-            Registrar decisión
+            Registrar decision
           </button>
         </div>
       </form>
@@ -61,10 +173,9 @@
             {% endif %}
           </li>
         {% empty %}
-          <li class="text-slate-400">Aún no hay acciones registradas.</li>
+          <li class="text-slate-400">Aun no hay acciones registradas.</li>
         {% endfor %}
       </ul>
     </div>
   </section>
 {% endblock %}
-

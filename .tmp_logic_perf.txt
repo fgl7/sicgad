@@ -1,0 +1,31 @@
+﻿411: **h) `core` o `common` (funciones comunes, opcional)**
+412: 
+413: - Modelos base, mixins, utilidades compartidas entre apps.
+414: 
+415: ---
+416: 
+417: ## M¾dulo de desempe±o (rendimiento, eficiencia, balances y pÚrdidas)
+418: 
+419: Ademßs del flujo de recolecci¾n/validaci¾n/certificaci¾n, SICGAD debe poder automatizar lo descrito en `docs/prop_desemp.docx`: cßlculo recurrente de indicadores de rendimiento productivo y eficiencia de proceso, balances de materia y estimaci¾n de pÚrdidas para:
+420: 
+421: - Planta de Concentraci¾n de Sales (PCS).
+422: - Planta Industrial de KCl.
+423: - Planta Industrial de Li2CO3.
+424: 
+425: ### Objetivo funcional
+426: 
+427: - Convertir datos operativos (diarios/mensuales) ya validados en indicadores mensuales comparables.
+428: - Mantener trazabilidad completa: f¾rmula aplicada, parßmetros (por ejemplo desfases de lote delta_t), fuentes usadas y versiones de esquema.
+429: - Producir salidas consumibles: dashboards, alertas, y exportables (fichas/informes).
+430: 
+431: ### Enfoque de implementaci¾n (integrable con lo que ya existe)
+432: 
+433: SICGAD ya tiene tres piezas que facilitan este m¾dulo:
+434: 
+435: - **Esquemas versionados** (`DatasetType`/`ColumnDef`) para capturar variables ômÝnimas requeridasö sin cambios de c¾digo.
+436: - **Instancias con estados** (`DatasetInstance`) para asegurar que los cßlculos se basen en datos validados/publicados.
+437: - **Datos publicados desnormalizados** (`PublishedDataPoint`) para consultar series y alimentar KPIs.
+438: 
+439: La implementaci¾n recomendada es agregar una app (por ejemplo `performance`) que:
+440: 
+441: 1. **Catßlogo de indicadores** (definiciones versionadas por planta).

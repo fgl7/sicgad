@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse, Http404
@@ -73,83 +75,66 @@ def charts(request):
     user = request.user
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
 
-    instances = DatasetInstance.objects.select_related("dataset_type", "plant")
+    datasets = DatasetType.objects.select_related("plant")
 
     if not is_admin:
         memberships = Membership.objects.filter(user=user, is_active=True)
         plant_ids = list(memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True))
         has_global = memberships.filter(plant__isnull=True).exists()
         if plant_ids and not has_global:
-            instances = instances.filter(plant_id__in=plant_ids)
+            datasets = datasets.filter(plant_id__in=plant_ids)
         elif not plant_ids and not has_global:
-            instances = instances.none()
+            datasets = datasets.none()
 
-    published_states = [DatasetInstance.STATE_PUBLISHED, DatasetInstance.STATE_LOCKED]
-    published_instances = instances.filter(state__in=published_states).order_by(
-        "plant__code", "dataset_type__name", "period"
+    datasets = (
+        datasets.filter(instances__isnull=False)
+        .distinct()
+        .order_by("plant__code", "name", "-version")
     )
 
     can_see_drafts = is_admin or is_loader or is_validator
-    if can_see_drafts:
-        draft_instances = instances.exclude(state__in=published_states).order_by(
-            "plant__code", "dataset_type__name", "period"
-        )
-    else:
-        draft_instances = DatasetInstance.objects.none()
 
     return render(
         request,
         "kpis/charts.html",
         {
-            "published_instances": published_instances,
-            "draft_instances": draft_instances,
+            "datasets": datasets,
             "can_see_drafts": can_see_drafts,
         },
     )
 
 
 @login_required
-def dataset_data(request, instance_id: int):
+def dataset_data(request, dataset_id: int):
     user = request.user
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
 
-    instance = get_object_or_404(
-        DatasetInstance.objects.select_related("dataset_type", "plant"),
-        pk=instance_id,
+    dataset = get_object_or_404(
+        DatasetType.objects.select_related("plant"),
+        pk=dataset_id,
     )
 
-    # Permisos por planta
     if not is_admin:
         memberships = Membership.objects.filter(user=user, is_active=True)
-        plant_ids = list(memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True))
+        plant_ids = list(
+            memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
+        )
         has_global = memberships.filter(plant__isnull=True).exists()
-        if not (has_global or (plant_ids and instance.plant_id in plant_ids)):
+        if not (has_global or (plant_ids and dataset.plant_id in plant_ids)):
             raise Http404
 
-    published_states = [DatasetInstance.STATE_PUBLISHED, DatasetInstance.STATE_LOCKED]
+    can_see_drafts = is_admin or is_loader or is_validator
+    source = (request.GET.get("source") or "published").lower()
+    if source not in ("published", "draft"):
+        source = "published"
+    include_drafts = source == "draft"
 
-    source = request.GET.get("source", "auto")
-    if source not in ("auto", "draft", "published"):
-        source = "auto"
+    if include_drafts and not can_see_drafts:
+        raise Http404
+    if source == "published" and not (is_admin or is_loader or is_validator or is_viewer):
+        raise Http404
 
-    if source == "draft":
-        if not (is_admin or is_loader or is_validator):
-            raise Http404
-        use_published = False
-    elif source == "published":
-        if instance.state not in published_states:
-            raise Http404
-        use_published = True
-    else:  # auto
-        use_published = instance.state in published_states
-        if use_published and not (is_admin or is_loader or is_validator or is_viewer):
-            raise Http404
-        if not use_published and not (is_admin or is_loader or is_validator):
-            raise Http404
-
-    dataset = instance.dataset_type
     columns_qs = dataset.columns.filter(is_active=True).order_by("display_order", "name")
-
     columns = [
         {
             "id": col.id,
@@ -163,72 +148,146 @@ def dataset_data(request, instance_id: int):
         }
         for col in columns_qs
     ]
+    columns_map = {col.name: col for col in columns_qs}
 
-    if use_published:
-        points = (
-            PublishedDataPoint.objects.filter(instance=instance)
-            .select_related("column")
-            .order_by("row_index", "column__display_order", "column__name")
+    def _normalize_date_value(raw_value):
+        if raw_value in (None, ""):
+            return raw_value
+        if isinstance(raw_value, datetime):
+            return raw_value.date().isoformat()
+        if isinstance(raw_value, date):
+            return raw_value.isoformat()
+        text = str(raw_value).strip()
+        if not text:
+            return ""
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+            try:
+                return datetime.strptime(text, fmt).date().isoformat()
+            except ValueError:
+                continue
+        try:
+            parsed_date = date.fromisoformat(text)
+            return parsed_date.isoformat()
+        except ValueError:
+            pass
+        try:
+            parsed_dt = datetime.fromisoformat(text)
+            return parsed_dt.date().isoformat()
+        except ValueError:
+            return text
+
+    published_states = [DatasetInstance.STATE_PUBLISHED, DatasetInstance.STATE_LOCKED]
+    published_points = (
+        PublishedDataPoint.objects.filter(
+            instance__dataset_type=dataset,
+            instance__state__in=published_states,
         )
+        .select_related("column", "instance")
+        .order_by(
+            "instance__period",
+            "instance_id",
+            "row_index",
+            "column__display_order",
+            "column__name",
+        )
+    )
 
-        rows_map = {}
-        for p in points:
-            row = rows_map.setdefault(p.row_index, {})
-            if p.numeric_value is not None:
-                value = p.numeric_value
-            elif p.date_value is not None:
-                value = p.date_value.isoformat()
-            elif p.bool_value is not None:
-                value = bool(p.bool_value)
+    rows = []
+    current_key = None
+    current_row = None
+
+    def _append_current_row():
+        nonlocal current_row
+        if current_row:
+            rows.append(current_row)
+            current_row = None
+
+    for point in published_points:
+        key = (point.instance_id, point.row_index)
+        if key != current_key:
+            _append_current_row()
+            current_key = key
+            current_row = {
+                "row_index": 0,
+                "values": {},
+                "period": point.instance.period.isoformat(),
+                "source": "published",
+                "_sort_key": (point.instance.period, 0, point.row_index),
+            }
+
+        if point.numeric_value is not None:
+            value = point.numeric_value
+        elif point.date_value is not None:
+            value = point.date_value.isoformat()
+        elif point.bool_value is not None:
+            value = bool(point.bool_value)
+        else:
+            if point.column.data_type == "DATE":
+                value = _normalize_date_value(point.text_value)
             else:
-                value = p.text_value
-            row[p.column.name] = value
+                value = point.text_value
+        current_row["values"][point.column.name] = value
 
-        rows = [
-            {"row_index": idx, "values": row}
-            for idx, row in sorted(rows_map.items(), key=lambda item: item[0])
-        ]
+    _append_current_row()
 
-        # Si no hay datos publicados a pesar de que la instancia
-        # estǭ en estado publicado, usar los datos del archivo original.
-        if not rows:
-            use_published = False
-
-    if not use_published:
-        header, parsed_rows = _read_instance_file(instance)
-
+    def _build_header_map():
         header_map = {}
         for col in columns_qs:
             key = (col.label or col.name or "").strip().lower()
             if key:
                 header_map[key] = col.name
+        return header_map
 
-        name_by_index = []
-        for name in header:
-            key = (name or "").strip().lower()
-            name_by_index.append(header_map.get(key))
+    if include_drafts:
+        draft_instance = (
+            DatasetInstance.objects.filter(dataset_type=dataset)
+            .exclude(state__in=published_states)
+            .order_by("-period", "-created_at")
+            .first()
+        )
 
-        rows = []
-        for row in parsed_rows:
-            values = {}
-            for idx, raw in enumerate(row.values):
-                col_name = name_by_index[idx] if idx < len(name_by_index) else None
-                if not col_name:
-                    continue
-                values[col_name] = raw
-            rows.append({"row_index": row.row_index, "values": values})
+        if draft_instance:
+            header, parsed_rows = _read_instance_file(draft_instance)
+            header_map = _build_header_map()
+            name_by_index = [
+                header_map.get((name or "").strip().lower()) for name in header
+            ]
+
+            for parsed in parsed_rows:
+                values = {}
+                for idx, raw in enumerate(parsed.values):
+                    col_name = name_by_index[idx] if idx < len(name_by_index) else None
+                    if not col_name:
+                        continue
+                    col_def = columns_map.get(col_name)
+                    if col_def and col_def.data_type == "DATE":
+                        values[col_name] = _normalize_date_value(raw)
+                    else:
+                        values[col_name] = raw
+
+                rows.append(
+                    {
+                        "row_index": 0,
+                        "values": values,
+                        "period": draft_instance.period.isoformat(),
+                        "source": "draft",
+                        "_sort_key": (draft_instance.period, 1, parsed.row_index),
+                    }
+                )
+
+    rows.sort(key=lambda r: r["_sort_key"])
+    for idx, row in enumerate(rows, start=1):
+        row["row_index"] = idx
+        row.pop("_sort_key", None)
 
     data = {
-        "instance": {
-            "id": instance.id,
-            "plant_code": instance.plant.code,
-            "plant_name": instance.plant.name,
-            "dataset_name": dataset.name,
-            "period": instance.period.isoformat(),
-            "state": instance.state,
-            "is_published": instance.state in published_states,
-            "is_certification": dataset.is_certification,
+        "dataset": {
+            "id": dataset.id,
+            "name": dataset.name,
+            "plant_code": dataset.plant.code,
+            "plant_name": dataset.plant.name,
             "validation_frequency": dataset.validation_frequency,
+            "is_certification": dataset.is_certification,
         },
         "columns": columns,
         "rows": rows,

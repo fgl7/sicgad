@@ -70,6 +70,7 @@ A nivel funcional, el ciclo de vida de los datos sigue estos pasos:
 3. Validación diaria (operativa).
 4. Publicación y visualización.
 5. Consolidación y certificación mensual.
+6. Cálculo de desempeño (rendimiento/eficiencia) y balances.
 6. Auditoría y trazabilidad.
 
 Cada paso se describe a continuación en lenguaje sencillo.
@@ -412,6 +413,120 @@ Carpeta base (ejemplo `config/`):
 - Modelos base, mixins, utilidades compartidas entre apps.
 
 ---
+
+## Módulo de desempeño (rendimiento, eficiencia, balances y pérdidas)
+
+Además del flujo de recolección/validación/certificación, SICGAD debe poder automatizar lo descrito en `docs/prop_desemp.docx`: cálculo recurrente de indicadores de rendimiento productivo y eficiencia de proceso, balances de materia y estimación de pérdidas para:
+
+- Planta de Concentración de Sales (PCS).
+- Planta Industrial de KCl.
+- Planta Industrial de Li2CO3.
+
+### Objetivo funcional
+
+- Convertir datos operativos (diarios/mensuales) ya validados en indicadores mensuales comparables.
+- Mantener trazabilidad completa: fórmula aplicada, parámetros (por ejemplo desfases de lote delta_t), fuentes usadas y versiones de esquema.
+- Producir salidas consumibles: dashboards, alertas, y exportables (fichas/informes).
+
+### Enfoque de implementación (integrable con lo que ya existe)
+
+SICGAD ya tiene tres piezas que facilitan este módulo:
+
+- **Esquemas versionados** (`DatasetType`/`ColumnDef`) para capturar variables “mínimas requeridas” sin cambios de código.
+- **Instancias con estados** (`DatasetInstance`) para asegurar que los cálculos se basen en datos validados/publicados.
+- **Datos publicados desnormalizados** (`PublishedDataPoint`) para consultar series y alimentar KPIs.
+
+La implementación recomendada es agregar una app (por ejemplo `performance`) que:
+
+1. **Catálogo de indicadores** (definiciones versionadas por planta).
+2. **Catálogo de variables de desempeño (estático)**: una "plantilla" con las variables definidas por la metodología (nombres técnicos estables) y su unidad esperada.
+3. **Mapeo administrable (solo Admin)**: asignación de cada variable de desempeño -> columna fuente del SICGAD (por `DatasetType`/`ColumnDef`), con agregación/transformaciones.
+3. **Motor de cálculo** (calcula por mes/planta y deja un rastro reproducible).
+4. **Almacenamiento de resultados** (indicadores por mes y trazas de cálculo).
+5. **UI/exports** (tableros y reportes).
+
+La idea central es separar:
+
+- Variables e indicadores "metodológicos" (estáticos, controlados por la institución).
+- Variables "capturadas" (dinámicas, pueden cambiar de nombre/versión en los esquemas).
+
+Así, si cambian esquemas (nombres, versiones o dónde se registra una variable), el backend no cambia: el Admin actualiza el mapeo.
+
+### Plantilla de variables (estático) + mapeo (Admin)
+
+La plantilla de variables define llaves estables (ejemplos):
+
+- PCS: `pcs.brine_volume`, `pcs.brine_density`, `pcs.tds`, `pcs.evaporated_volume_real`, `pcs.evaporated_volume_theoretical`, `pcs.salts_mass_total`, `pcs.pool_area_effective`.
+- KCl: `kcl.feed_mass_dry`, `kcl.product_mass`, `kcl.product_kcl_grade`, `kcl.tails_mass`, `kcl.tails_k_grade`, `kcl.water_fresh_volume`, `kcl.water_recirculated_volume`, `kcl.energy_equivalent_boe`.
+- Li2CO3: `lic.feed_mass_dry`, `lic.feed_li_grade`, `lic.product_mass`, `lic.product_purity`, `lic.residue_mass`, `lic.residue_li_grade`, `lic.energy_equivalent_boe`.
+
+El Admin configura el mapeo de cada llave a una fuente del SICGAD:
+
+- Fuente: `DatasetType` + `ColumnDef` (por ID, no por nombre).
+- Periodicidad: diaria/mensual (y cómo se agrega a mes: SUM/AVG/LAST, etc.).
+- Transformaciones (opcional): conversión de unidad, factores, manejo de nulos.
+- Parámetros globales: `delta_t` (PCS), factores de masa seca, etc.
+
+Operativamente esto se puede gestionar con una UI y/o una plantilla importable/exportable (CSV/Excel) para actualizar asignaciones sin tocar código.
+
+### Datos de entrada: variables mínimas por planta
+
+El documento `docs/prop_desemp.docx` lista variables mínimas para automatizar indicadores. En SICGAD se recomienda modelarlas como **dataset-types separados** (para mantener esquemas manejables) y con frecuencia diaria/mensual según corresponda.
+
+**PCS (Concentración de Sales)**
+- Producción y materia prima: volumen salmuera extraída (idealmente por pozo), densidad, TDS/fracción de sólidos, composición iónica mensual (Na, K, Li, Mg, Ca, Cl, SO4), masa de sales cristalizadas por tipo, altura de cristal y área efectiva por piscina.
+- Operaciones: trasvases (fecha/hora), área efectiva evaporativa por piscina, volumen evaporado real.
+- Consumos: combustibles/energía (GLP/eléctrica) normalizados a energía equivalente.
+- Residuos/contingencias: masa de residuos por piscina, eventos climáticos y contingencias operativas.
+
+**Planta Industrial de KCl**
+- Materia prima: masa diaria por corriente (Silvinita, mixtas, halita, etc.), composición (% K2O, % humedad, % insolubles).
+- Producción: producción diaria por tipo de KCl, pureza/ley.
+- Consumibles: reactivos (colectores, floculantes, espumantes, ácidos), agua fresca, agua recirculada, energía equivalente.
+- Residuos/pérdidas: masa de colas, ley de K en colas, eventos (derrames, fugas, paros).
+
+**Planta Industrial de Li2CO3**
+- Materia prima: sulfato de litio procesado, pureza/concentración de Li.
+- Producción: masa diaria de Li2CO3 y pureza.
+- Insumos/reactivos: consumos de reactivos (carbonato, cal, precipitantes, adsorbentes), agua (fresca/recirculada) y energía equivalente.
+- Residuos/pérdidas: lodos/barros, contenido de Li en residuos, fallas críticas de proceso.
+
+### Indicadores a soportar (síntesis)
+
+El módulo debe soportar familias de indicadores como:
+
+- **Rendimientos de producción** (PCS por "lote" con desfase delta_t; KCl y Li2CO3 respecto a materia prima procesada del mes).
+- **Eficiencias de recuperación** (Li y K, comparando contenido elemental recuperado vs. contenido elemental alimentado/origen).
+- **Eficiencia energética** (energía equivalente por TM de producto).
+- **Agua y recirculación** (por TM y % recirculado, especialmente KCl).
+- **Evaporación/cristalización** (PCS: real vs teórica; cristalizado real vs teórico con desfase delta_t).
+- **Balances globales y pérdidas** (materia total: entradas vs productos + residuos + pérdidas; % de pérdida de Li/K).
+
+### Desfases por lote (delta_t) y parámetros operativos
+
+Algunos indicadores de PCS están definidos "por lote" (la salmuera extraída en un mes se cristaliza meses después). Para implementarlo:
+
+- Guardar un **parámetro delta_t configurable** (por planta, y si aplica por línea/producto).
+- Permitir **conversión mensual** (m -> m - delta_t) al momento de consultar fuentes.
+- Versionar parámetros críticos (por ejemplo factores de ajuste estacional o factores de conversión a masa seca) para reproducibilidad.
+
+### Cómo se integra con validación y certificación
+
+Recomendación (para maximizar trazabilidad y reutilizar lo ya implementado):
+
+- Tratar el "desempeño mensual" como un **resultado derivado** que se genera automáticamente **a partir de datos ya publicados/lockeados**.
+- Generar un dataset mensual de indicadores (por planta) como `DatasetType` de frecuencia `MONTHLY` y **marcado como calculado** (solo lectura), con una `DatasetInstance` por mes.
+- El estado del desempeño mensual se alinea al de la **certificación mensual** (si la certificación se bloquea/publica, el desempeño se recalcula y se bloquea/publica).
+- Guardar una traza de cálculo que enlace: instancia de desempeño -> instancias fuente (IDs) + versión de fórmula + parámetros (delta_t, conversiones).
+
+Esto permite auditoría institucional: ante una revisión, se puede reconstruir exactamente "qué datos y qué fórmula" produjeron cada indicador.
+
+### Salidas: dashboards, alertas y exportables
+
+- Dashboard de desempeño por planta: series mensuales, comparaciones, ranking y explicación de cálculo (numerador/denominador).
+- Alertas por umbrales (configurables por indicador) y detección de faltantes (indicadores “no calculables” por ausencia de variables mínimas).
+- Exportables: CSV/Excel y, más adelante, PDF (ficha mensual para fiscalización).
+
 
 ## Plantillas HTML principales
 

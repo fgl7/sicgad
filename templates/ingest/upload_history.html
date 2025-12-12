@@ -4,8 +4,137 @@
 {% block page_title %}Historial de cargas{% endblock %}
 
 {% block content %}
+  {% if loader_certifications_pending %}
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h2 class="text-sm font-semibold text-amber-200">Alertas de certificacion mensual</h2>
+          <p class="text-[11px] text-slate-400">
+            El mes anterior ya finalizo y existen consolidaciones automaticas pendientes de revisar y enviar a validacion mensual.
+          </p>
+        </div>
+      </div>
+      <div class="space-y-3">
+        {% for inst in loader_certifications_pending %}
+          <div class="border border-slate-800 rounded-lg p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between bg-slate-950/70">
+            <div>
+              <div class="text-slate-100 font-semibold text-sm">{{ inst.dataset_type.name }}</div>
+              <div class="text-[11px] text-slate-400">
+                Planta {{ inst.plant.code }} - periodo {{ inst.period }}
+              </div>
+              <div class="text-[11px] text-slate-500">
+                Estado actual: {{ inst.get_state_display }}
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <a href="{% url 'ingest:certification_review' inst.pk %}?next={{ request.path|urlencode }}" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-100 text-[11px] hover:bg-slate-700">
+                Ver consolidacion
+              </a>
+              <form method="post" action="{% url 'ingest:submit_instance' inst.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="px-3 py-1.5 rounded-md bg-emerald-500 text-slate-900 text-[11px] font-semibold hover:bg-emerald-400">
+                  Enviar a validacion mensual
+                </button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if loader_certifications_rejected %}
+    <section class="bg-red-950/40 border border-red-800 rounded-xl p-4 mb-6 text-xs">
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h2 class="text-sm font-semibold text-red-200">Certificaciones rechazadas</h2>
+          <p class="text-[11px] text-red-200/80">
+            Un validador devolvio estas consolidaciones con observaciones. Revisa los comentarios y corrige antes de reenviar.
+          </p>
+        </div>
+      </div>
+      <div class="space-y-3">
+        {% for inst in loader_certifications_rejected %}
+          <div class="border border-red-800 rounded-lg p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between bg-red-900/30">
+            <div>
+              <div class="text-slate-100 font-semibold text-sm">{{ inst.dataset_type.name }}</div>
+              <div class="text-[11px] text-slate-300">
+                Planta {{ inst.plant.code }} - periodo {{ inst.period }}
+              </div>
+              <div class="text-[11px] text-red-200">
+                Motivo del rechazo: {{ inst.last_error_summary|default:"Sin detalles" }}
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <a href="{% url 'ingest:certification_review' inst.pk %}?next={{ request.path|urlencode }}" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-100 text-[11px] hover:bg-slate-700">
+                Revisar cambios
+              </a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h2 class="text-sm font-semibold text-slate-100">Historial de certificaciones</h2>
+        <p class="text-[11px] text-slate-400">
+          Consulta los envíos automáticos de certificación mensual y su estado actual.
+        </p>
+      </div>
+    </div>
+    <div class="bg-slate-950/70 border border-slate-800 rounded-lg overflow-hidden">
+      <table class="min-w-full text-[11px]">
+        <thead class="bg-slate-950 text-slate-300">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold">Actualizado</th>
+            <th class="px-3 py-2 text-left font-semibold">Planta</th>
+            <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+            <th class="px-3 py-2 text-left font-semibold">Periodo</th>
+            <th class="px-3 py-2 text-left font-semibold">Estado</th>
+            <th class="px-3 py-2 text-left font-semibold">Comentario</th>
+            <th class="px-3 py-2 text-left font-semibold">Accion</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inst in loader_certifications_history %}
+            <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+              <td class="px-3 py-2">{{ inst.updated_at|date:"Y-m-d H:i" }}</td>
+              <td class="px-3 py-2">{{ inst.plant.code }}</td>
+              <td class="px-3 py-2">{{ inst.dataset_type.name }}</td>
+              <td class="px-3 py-2">{{ inst.period }}</td>
+              <td class="px-3 py-2">
+                {{ inst.get_state_display }}
+              </td>
+              <td class="px-3 py-2 text-[10px]">
+                {% if inst.last_error_summary %}
+                  <span class="text-red-300">{{ inst.last_error_summary|truncatechars:80 }}</span>
+                {% else %}
+                  <span class="text-slate-500">-</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2">
+                <a href="{% url 'ingest:certification_review' inst.pk %}?next={{ request.path|urlencode }}" class="text-emerald-300 hover:text-emerald-200">
+                  Revisar
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="px-3 py-4 text-center text-slate-400">
+                Todavía no hay certificaciones registradas para tus plantas.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <div class="flex items-center justify-between mb-4">
-    <h2 class="text-sm font-semibold">Últimas cargas de datos</h2>
+    <h2 class="text-sm font-semibold">Ultimas cargas de datos</h2>
     {% if not is_admin %}
       <a href="{% url 'ingest:upload' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
         Nueva carga
@@ -50,7 +179,7 @@
                   {{ inst.last_error_summary|truncatechars:80 }}
                 </span>
               {% else %}
-                <span class="text-slate-500">—</span>
+                <span class="text-slate-500">-</span>
               {% endif %}
             </td>
             <td class="px-3 py-2 align-top">{{ inst.row_count }}</td>
@@ -61,14 +190,14 @@
                   Ver datos
                 </a>
               {% else %}
-                <span class="text-slate-500 text-xs">—</span>
+                <span class="text-slate-500 text-xs">-</span>
               {% endif %}
             </td>
           </tr>
         {% empty %}
           <tr>
             <td colspan="8" class="px-3 py-4 text-center text-slate-400">
-              Aún no hay cargas registradas.
+              Aun no hay cargas registradas.
             </td>
           </tr>
         {% endfor %}

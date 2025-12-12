@@ -6,8 +6,8 @@
 {% block page_title %}Captura manual de datos{% endblock %}
 
 {% block content %}
-  <div class="grid gap-6 lg:grid-cols-3">
-    <section class="lg:col-span-2 bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+  <div class="space-y-6">
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
       <h2 class="text-sm font-semibold mb-2">Ingreso manual</h2>
       <p class="text-[11px] text-slate-400 mb-4">
         Completa los valores directamente en la tabla. Cada fila representa un registro del dataset diario seleccionado.
@@ -48,11 +48,20 @@
 
         {% if row_formset %}
           {{ row_formset.management_form }}
-          <div class="flex items-center justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="text-[11px] text-slate-400">Completa al menos una fila. Los campos marcados como requeridos deben llenarse.</span>
-            <a href="?dataset_type={{ selected_dataset.pk }}&rows={{ rows_extra|add:3 }}" class="text-[11px] text-emerald-400 hover:underline">
-              Agregar más filas vacías
-            </a>
+            <div class="flex items-center gap-3 text-[11px]">
+              {% if can_remove_rows %}
+                <a href="?dataset_type={{ selected_dataset.pk }}&rows={{ rows_less_value }}" class="text-amber-300 hover:underline">
+                  Quitar ultima fila
+                </a>
+              {% endif %}
+              {% if can_add_rows %}
+                <a href="?dataset_type={{ selected_dataset.pk }}&rows={{ rows_more_value }}" class="text-emerald-400 hover:underline">
+                  Agregar mas filas vacias
+                </a>
+              {% endif %}
+            </div>
           </div>
           <div class="overflow-auto border border-slate-800 rounded-lg">
             <table class="min-w-full text-[11px]">
@@ -67,20 +76,36 @@
                       {% endif %}
                     </th>
                   {% endfor %}
+                  {% if row_formset.can_delete %}
+                    <th class="px-3 py-2 text-left font-semibold">Eliminar</th>
+                  {% endif %}
                 </tr>
               </thead>
               <tbody>
                 {% for form in row_formset %}
                   <tr class="border-t border-slate-800">
                     <td class="px-3 py-2 text-slate-500">{{ forloop.counter }}</td>
-                    {% for field in form %}
-                      <td class="px-3 py-2 align-top">
-                        {{ field }}
-                        {% if field.errors %}
-                          <p class="text-red-400 mt-1">{{ field.errors.0 }}</p>
-                        {% endif %}
-                      </td>
+                    {% for hidden in form.hidden_fields %}
+                      {{ hidden }}
                     {% endfor %}
+                    {% for field in form.visible_fields %}
+                      {% if field.name != 'DELETE' %}
+                        <td class="px-3 py-2 align-top">
+                          {{ field }}
+                          {% if field.errors %}
+                            <p class="text-red-400 mt-1">{{ field.errors.0 }}</p>
+                          {% endif %}
+                        </td>
+                      {% endif %}
+                    {% endfor %}
+                    {% if row_formset.can_delete %}
+                      <td class="px-3 py-2 align-top">
+                        <label class="inline-flex items-center gap-2 text-slate-300 text-[11px]">
+                          {{ form.DELETE }}
+                          <span>Quitar</span>
+                        </label>
+                      </td>
+                    {% endif %}
                   </tr>
                 {% endfor %}
               </tbody>

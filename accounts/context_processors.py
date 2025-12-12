@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef
 from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone
 
@@ -6,6 +6,8 @@ from .models import Membership
 from schemas.models import DatasetType
 from schemas.services import ensure_previous_month_consolidated, previous_month_range
 from ingest.models import DatasetInstance
+from validation.models import ValidationAction
+from validation.services import sync_previous_month_certifications
 
 
 def admin_flags(request):
@@ -17,17 +19,29 @@ def admin_flags(request):
     pending_validation_items = 0
     loader_validation_approved = 0
     loader_validation_rejected = 0
+    loader_certification_rejected = 0
     loader_schema_approved = 0
     loader_schema_rejected = 0
     loader_default_plant = None
     pending_certification_alerts = 0
+    loader_pending_certification_alerts = 0
+    loader_plants_ids = []
+    loader_memberships_list = []
+    has_global_loader = False
     if user and user.is_authenticated:
         ensure_previous_month_consolidated()
+        sync_previous_month_certifications()
         if user.is_superuser:
             is_admin = True
         else:
             is_admin = Membership.objects.filter(user=user, role="ADMIN", is_active=True).exists()
-            is_loader = Membership.objects.filter(user=user, role="LOADER", is_active=True).exists()
+            loader_memberships = Membership.objects.filter(
+                user=user,
+                role="LOADER",
+                is_active=True,
+            ).select_related("plant")
+            loader_memberships_list = list(loader_memberships)
+            is_loader = bool(loader_memberships_list)
             is_validator = Membership.objects.filter(
                 user=user, role="VALIDATOR", is_active=True
             ).exists()
@@ -35,18 +49,33 @@ def admin_flags(request):
             profile = getattr(user, "profile", None)
 
             if is_loader:
-                loader_membership = (
-                    Membership.objects.filter(
-                        user=user,
-                        role="LOADER",
-                        is_active=True,
-                        plant__isnull=False,
-                    )
-                    .select_related("plant")
-                    .first()
+                loader_plants_ids = [m.plant_id for m in loader_memberships_list if m.plant_id]
+                has_global_loader = any(m.plant_id is None for m in loader_memberships_list)
+                loader_membership = next(
+                    (m for m in loader_memberships_list if m.plant_id),
+                    loader_memberships_list[0],
                 )
-                if loader_membership:
-                    loader_default_plant = loader_membership.plant
+                loader_default_plant = loader_membership.plant
+
+                _, prev_month_end = previous_month_range()
+                loader_cert_states = [DatasetInstance.STATE_DRAFT]
+                loader_cert_qs = DatasetInstance.objects.filter(
+                    dataset_type__validation_frequency=DatasetType.MONTHLY,
+                    dataset_type__is_certification=True,
+                    period=prev_month_end,
+                    state__in=loader_cert_states,
+                    last_error_summary="",
+                )
+                if not has_global_loader:
+                    if loader_plants_ids:
+                        loader_cert_qs = loader_cert_qs.filter(plant_id__in=loader_plants_ids)
+                    else:
+                        loader_cert_qs = loader_cert_qs.none()
+                if profile and profile.last_seen_certification_alert:
+                    loader_cert_qs = loader_cert_qs.filter(
+                        updated_at__gt=profile.last_seen_certification_alert
+                    )
+                loader_pending_certification_alerts = loader_cert_qs.count()
 
         try:
             if is_admin:
@@ -121,6 +150,34 @@ def admin_flags(request):
                         else:
                             cert_qs = cert_qs.none()
 
+                    profile = getattr(user, "profile", None)
+                    last_seen_cert = profile.last_seen_certification_alert if profile else None
+                    cert_qs = cert_qs.filter(
+                        state__in=[
+                            DatasetInstance.STATE_SUBMITTED,
+                            DatasetInstance.STATE_VALIDATED_L1,
+                            DatasetInstance.STATE_VALIDATED_L2,
+                            DatasetInstance.STATE_LOCKED,
+                        ]
+                    )
+
+                    approval_subquery = ValidationAction.objects.filter(
+                        dataset_instance=OuterRef("pk"),
+                        user=user,
+                        decision=ValidationAction.DECISION_APPROVE,
+                    )
+                    approval_since_submit = approval_subquery.filter(
+                        created_at__gte=OuterRef("submitted_at")
+                    )
+                    cert_qs = cert_qs.annotate(
+                        already_approved_history=Exists(approval_subquery),
+                        already_approved_recent=Exists(approval_since_submit),
+                    ).filter(
+                        Q(submitted_at__isnull=True, already_approved_history=False)
+                        | Q(submitted_at__isnull=False, already_approved_recent=False)
+                    )
+                    if last_seen_cert:
+                        cert_qs = cert_qs.filter(updated_at__gt=last_seen_cert)
                     pending_certification_alerts = cert_qs.count()
 
             if is_loader and not is_admin:
@@ -137,16 +194,25 @@ def admin_flags(request):
                     rejected_qs = rejected_qs.filter(updated_at__gt=last_seen_validation)
                 loader_validation_approved = approved_qs.count()
                 loader_validation_rejected = rejected_qs.count()
+                # Certificaciones rechazadas (pueden no estar asociadas al mismo usuario)
+                cert_rejected_qs = DatasetInstance.objects.filter(
+                    dataset_type__validation_frequency=DatasetType.MONTHLY,
+                    dataset_type__is_certification=True,
+                    state=DatasetInstance.STATE_DRAFT,
+                    last_error_summary__gt="",
+                    period__lte=prev_month_end if "prev_month_end" in locals() else timezone.now().date(),
+                )
+                if not has_global_loader:
+                    if loader_plants_ids:
+                        cert_rejected_qs = cert_rejected_qs.filter(plant_id__in=loader_plants_ids)
+                    else:
+                        cert_rejected_qs = cert_rejected_qs.none()
+                if last_seen_validation:
+                    cert_rejected_qs = cert_rejected_qs.filter(updated_at__gt=last_seen_validation)
+                loader_certification_rejected = cert_rejected_qs.count()
 
                 # Notificaciones sobre esquemas de sus plantas aprobados y rechazados
-                loader_plants = list(
-                    Membership.objects.filter(
-                        user=user,
-                        role="LOADER",
-                        is_active=True,
-                        plant__isnull=False,
-                    ).values_list("plant_id", flat=True)
-                )
+                loader_plants = [pid for pid in loader_plants_ids if pid]
                 if loader_plants:
                     schema_qs = DatasetType.objects.filter(
                         plant_id__in=loader_plants,
@@ -189,6 +255,8 @@ def admin_flags(request):
         current_section = "Usuarios y roles"
     elif path.startswith("/audit/"):
         current_section = "Auditoría"
+    elif path.startswith("/performance/"):
+        current_section = "Desempeño"
     elif path.startswith("/home/"):
         current_section = "Inicio"
     else:
@@ -202,8 +270,10 @@ def admin_flags(request):
         "pending_schema_requests": pending_schema_requests,
         "pending_validation_items": pending_validation_items,
         "pending_certification_alerts": pending_certification_alerts,
+        "loader_pending_certification_alerts": loader_pending_certification_alerts,
         "loader_validation_approved": loader_validation_approved,
         "loader_validation_rejected": loader_validation_rejected,
+        "loader_certification_rejected": loader_certification_rejected,
         "loader_schema_approved": loader_schema_approved,
         "loader_schema_rejected": loader_schema_rejected,
         "loader_default_plant": loader_default_plant,

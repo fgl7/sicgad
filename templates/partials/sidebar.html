@@ -13,6 +13,7 @@
     {% url 'plants:plant_list' as plants_url %}
     {% url 'accounts:admin_user_list' as users_url %}
     {% url 'audit:log_list' as audit_url %}
+    {% url 'performance:pcs_formula_1' as performance_url %}
 
     <a href='{{ home_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == home_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
       <span>Inicio</span>
@@ -62,7 +63,7 @@
           <span class='ml-auto text-[10px] text-slate-500'>Panel</span>
         {% endif %}
         {% if is_validator and pending_certification_alerts %}
-          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='Certificación mensual pendiente'>
+          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='CertificaciÃ³n mensual pendiente'>
             C{{ pending_certification_alerts }}
           </span>
         {% endif %}
@@ -80,12 +81,28 @@
             {{ loader_validation_rejected }}
           </span>
         {% endif %}
+        {% if loader_certification_rejected %}
+          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-red-400 text-slate-900 text-[10px] font-semibold ml-1' title='Certificacion mensual rechazada'>
+            CR{{ loader_certification_rejected }}
+          </span>
+        {% endif %}
+        {% if loader_pending_certification_alerts %}
+          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='CertificaciÃ³n mensual pendiente'>
+            C{{ loader_pending_certification_alerts }}
+          </span>
+        {% endif %}
       </a>
     {% endif %}
 
     <a href='{% url "kpis_charts" %}' class='flex items-center gap-2 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800/60'>
       <span>KPIs / Graficos</span>
     </a>
+
+    {% if is_admin %}
+      <a href='{{ performance_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":13" == "/performance/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
+        <span>Desempeño</span>
+      </a>
+    {% endif %}
 
     <a href='{{ audit_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":7" == "/audit/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
       <span>Auditoria</span>

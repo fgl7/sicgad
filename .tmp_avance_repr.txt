@@ -1,0 +1,7 @@
+﻿0: '2. AVANCE CUANTIFICACIËN DEL RENDIMIENTO PRODUCTIVO Y LA EFICIENCIA DE PROCESOS'
+1: ''
+2: 'En el marco de la propuesta metodol¾gica para medir rendimiento productivo y eficiencia de procesos (plantas PCS, KCl y Li2CO3), se inici¾ la construcci¾n del componente de ôDesempe±oö dentro de SICGAD. El objetivo de este avance es que el sistema no solo reciba y valide datos, sino que tambiÚn pueda transformar esa informaci¾n en indicadores mensuales comparables, con trazabilidad y posibilidad de actualizaci¾n cuando cambien los esquemas de datos.'
+3: ''
+4: 'Principales mejoras implementadas hasta el momento:'
+5: ''
+6: '- Se incorpor¾ una nueva secci¾n ôDesempe±oö en la interfaz (visible para el usuario Administrador del sistema) para centralizar el trabajo relacionado con rendimiento y eficiencia.'

@@ -86,6 +86,11 @@ class AccountProfile(models.Model):
         blank=True,
         help_text="Fecha/hora en la que el usuario vio por ultima vez el estado de sus cargas.",
     )
+    last_seen_certification_alert = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha/hora en la que el usuario revisó las alertas de certificación mensual.",
+    )
 
     def __str__(self) -> str:
         return f"Perfil de {self.user.username}"

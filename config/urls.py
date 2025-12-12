@@ -18,6 +18,8 @@ Including another URLconf
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
+from django.conf import settings
+from django.conf.urls.static import static
 
 from kpis.views import home, landing, charts, dataset_data
 
@@ -26,7 +28,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("home/", home, name="home"),
     path("kpis/", charts, name="kpis_charts"),
-    path("kpis/data/<int:instance_id>/", dataset_data, name="kpis_dataset_data"),
+    path("kpis/data/<int:dataset_id>/", dataset_data, name="kpis_dataset_data"),
     path(
         "login/",
         auth_views.LoginView.as_view(template_name="registration/login.html"),
@@ -39,4 +41,5 @@ urlpatterns = [
     path("ingest/", include("ingest.urls")),
     path("validate/", include("validation.urls")),
     path("audit/", include("audit.urls")),
-]
+    path("performance/", include("performance.urls")),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

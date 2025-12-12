@@ -11,8 +11,8 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 - **Usuarios meta**: Cargadores, Validadores (varios niveles), Visualizadores, Administradores operativos y Superadmins técnicos.
 - **Valor clave**:
   - Flexibilidad para versionar esquemas sin despliegues.
-  - Automatización del flujo diario vs certificación mensual.
-  - Auditoría exhaustiva y control de seguridad (2FA, rate limiting, must-change-password).
+  - Automatización del flujo diario vs certificación mensual (con consolidación automática, revisión mensual y alertas escalonadas).
+  - Auditoría exhaustiva y control de seguridad (2FA planificada, rate limiting, must-change-password).
 
 ---
 
@@ -20,12 +20,12 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 
 | Módulo | Objetivo | Puntos clave |
 | --- | --- | --- |
-| **Accounts** | Gestión de usuarios, roles, membresías y políticas de acceso. | `Membership` vincula User+Planta+Rol+Nivel+Institución, `AccountProfile` fuerza cambio de contraseña y registra notificaciones. Middleware especializado. |
+| **Accounts** | Gestión de usuarios, roles, membresías y políticas de acceso. | `Membership` vincula User+Planta+Rol+Nivel+Institución, `AccountProfile` fuerza cambio de contraseña y registra notificaciones (banderas `last_seen_*` para limpiar badges). Middleware especializado. |
 | **Plants** | Catálogo de plantas operativas (PCS, PICP, etc.). | Se usa para permisos y para segmentar datasets/cargas. |
 | **Schemas** | Definición y versionado de esquemas de datos por planta. | `DatasetType`/`ColumnDef` con metadatos completos, flujo de aprobación, creación de esquemas de certificación a partir de diarios. |
-| **Ingest** | Descarga de plantillas, carga de archivos diarios (archivo o captura manual), historial del cargador. | `DatasetInstance` guarda estados, archivo fuente y errores. Upload restringido por rol/planta; se registran auditorías. |
-| **Validation** | Flujo de aprobación diario/mensual y publicación automática. | `ValidationAction` documenta nivel, decisión y comentarios. `materialize_instance` genera datos publicados cuando se llega a PUBLISHED. |
-| **KPIs** | Visualización (ECharts) de datos publicados o borradores según permisos. | Selección dinámica de instancia, eje X/Y, múltiples KPIs, filtros de fecha, tablas. |
+| **Ingest** | Descarga de plantillas, carga de archivos diarios (archivo o captura manual), historial del cargador y revisión de certificaciones. | `DatasetInstance` guarda estados, `submitted_at`, archivo fuente y errores. El historial muestra alertas, rechazados y un tablero de certificaciones con enlaces a `certification_review`. |
+| **Validation** | Flujo de aprobación diario/mensual y publicación automática. | `ValidationAction` documenta nivel, decisión y comentarios; la bandeja filtra instancias ya aprobadas tras el último envío y actualiza `last_seen_certification_alert`. `materialize_instance` genera datos publicados cuando se llega a PUBLISHED. |
+| **KPIs** | Visualización (ECharts) de datos publicados o borradores según permisos. | Selección dinámica de instancia, eje X/Y, múltiples KPIs, filtros de fecha, tablas y modo Published/Draft que refleja datos diarios certificados. |
 | **Audit** | Registro y consulta de eventos críticos. | `AuditLog` almacena acción, módulo, objeto, usuario, detalles; vista filtrable hasta 500 eventos. |
 | **Core** | Placeholder para utilidades comunes (aún vacío). | Se espera usarlo para mixins/helpers reutilizables. |
 
@@ -46,7 +46,7 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 - Los cargadores crean/editar borradores (si no son admins). Los admins aprueban/rechazan y pueden generar esquemas de certificación copiando columnas desde un dataset diario.
 
 ### 3.3 Instancias y datos publicados
-- `DatasetInstance`: instancia de carga con referencias al esquema (`DatasetType`), planta, periodo (fecha), estado (DRAFT→SUBMITTED→VALIDATED_L1/L2→PUBLISHED→LOCKED), archivo cargado, métricas de error y autor (`Membership`).
+- `DatasetInstance`: instancia de carga con referencias al esquema (`DatasetType`), planta, periodo (fecha), estado (DRAFT→SUBMITTED→VALIDATED_L1/L2→PUBLISHED→LOCKED), archivo cargado, métricas de error, `submitted_at` (tracking de envíos) y autor (`Membership`).
 - `PublishedDataPoint`: tabla desnormalizada que almacena cada valor publicado (numérico, texto, fecha, booleano) por fila/columna para servir a dashboards y KPIs.
 - `materialize_instance(instance)`:
   1. Limpia puntos previos del dataset.
@@ -64,19 +64,19 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 4. Para certificación mensual, Admin clona columnas seleccionadas de un dataset diario y crea un `DatasetType` `MONTHLY`/`is_certification=True`.
 
 ### 4.2 Carga y envío de datos
-1. Usuario descarga plantilla generada a partir del esquema aprobado **o** ingresa manualmente los datos desde `ingest/upload/manual` (el sistema genera internamente el CSV).
+1. Usuario descarga plantilla generada a partir del esquema aprobado **o** ingresa manualmente los datos desde `ingest/upload/manual`. La captura manual crea filas dinámicas (agregar/quitar), copia la fecha del periodo automáticamente y obliga a justificar cambios con adjuntos.
 2. Sube archivo diario (CSV/XLSX) o guarda el registro manual; ambos crean un `DatasetInstance` en borrador.
 3. Instancia queda en `STATE_DRAFT`. Puede editar/volver a subir mientras detecta errores.
-4. Al estar listo, envía (`submit_instance`) → estado `STATE_SUBMITTED`.
+4. Al estar listo, envía (`submit_instance`) → estado `STATE_SUBMITTED` y se marca `submitted_at`. El historial del cargador muestra alertas amarillas (pendientes), rojas (rechazados) y el histórico de certificaciones con enlaces a la revisión mensual.
 
 ### 4.3 Validación
 - **Diaria (operativa)**:
   - Solo nivel operativo (ej. Jefe de planta). Al aprobar, pasa directo a `PUBLISHED`, se materializa y alimenta KPIs diarios.
 - **Mensual/certificación**:
   - A partir de los datasets diarios publicados, el sistema consolida automáticamente el mes anterior en una instancia mensual (cuando se crea el esquema y cada vez que cierra un mes). Los validadores reciben alertas el primer día hábil del nuevo mes hasta revisar la consolidación.
-  - Secuencia de validadores `can_validate_monthly` por nivel. Cada `ValidationAction` registra decisión/comentario.
-  - El estado progresa: `SUBMITTED` → `VALIDATED_L1` ... hasta alcanzar nivel máximo; al último nivel, `STATE_PUBLISHED`.
-  - Rechazo devuelve a `DRAFT` y guarda comentario en `last_error_summary`.
+  - El cargador revisa la consolidación desde `certification_review`: ve todos los días del mes, se marcan los modificados, cada cambio requiere una justificación y soportes y puede enviarse a validación directamente desde esa pantalla (se registra `submitted_at`).
+  - Secuencia de validadores `can_validate_monthly` por nivel. Cada `ValidationAction` registra decisión/comentario y la lógica compara los niveles ya aprobados (ignorando la acción actual) para fijar el estado real: `SUBMITTED` → `VALIDATED_L1` → … → `PUBLISHED`.
+  - Rechazo devuelve a `DRAFT`, limpia `submitted_at` y guarda comentario en `last_error_summary`.
 
 ### 4.4 Visualización y consumo
 - `kpis/charts` lista instancias publicadas y, si corresponde, borradores visibles para loaders/validadores/admins.
@@ -89,7 +89,7 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 
 ### 4.5 Auditoría y notificaciones
 - `record_action` registra cada evento relevante en `AuditLog`.
-- Vistas y context processors muestran contadores de elementos pendientes para admins/validadores, notificaciones de esquemas aprobados/rechazados para cargadores y alertas de certificación mensual (chips en menú y panel en la bandeja).
+- Vistas y context processors muestran contadores de elementos pendientes para admins/validadores, notificaciones de esquemas aprobados/rechazados para cargadores y alertas de certificación mensual (chips en menú y panel en la bandeja). Los contadores consideran `last_seen_certification_alert` y si el validador ya aprobó el envío vigente.
 - `validation/admin_overview` incluye un resumen de cobertura (último día diario publicado y última consolidación generada) para cada esquema de certificación.
 - `audit/logs` permite filtrar logs por usuario, acción, rango de fechas o “solo mis eventos”.
 
@@ -109,11 +109,12 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 
 - Proyecto inicializado con todas las apps y rutas principales funcionales.
 - Modelos y vistas implementan el flujo completo básico (carga → validación → publicación → KPIs) usando SQLite.
-- Consolidación automática del mes anterior para esquemas de certificación (más alertas a validadores y resumen para admins).
+- Consolidación automática del mes anterior para esquemas de certificación, con revisión mensual (justificaciones y adjuntos por día/mes), alertas sincronizadas con sidebar y lógica multi-nivel corregida.
+- Historial del cargador ampliado con panel de certificaciones (pendientes, rechazadas e histórico) y badges por estado.
 - Auditoría operativa y paneles básicos completados.
 - Pendiente:
   - Integrar `django-otp` y `django-axes` en settings/login.
-  - Configurar Celery/Redis y tareas programadas para ejecutar consolidaciones/alertas y validaciones pesadas sin depender de tráfico interactivo.
+  - Configurar Celery/Redis y tareas programadas para ejecutar consolidaciones/alertas sin depender de tráfico interactivo (hoy es lazy).
   - Desarrollar UI para solicitud/aprobación de cambios de esquema más detallada (multi-niveles, comentarios).
   - Implementar pruebas unitarias/integración (actualmente no hay tests).
   - Internacionalización completa (textos mezclan español/inglés, falta traducción formal).
@@ -152,10 +153,10 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 ## 9. Próximos pasos sugeridos
 
 1. Finalizar integración de `django-otp` y `django-axes` con configuración de login/middleware.
-2. Añadir Celery y tareas programadas para ejecutar consolidaciones/alertas sin depender de requests.
+2. Añadir Celery y tareas programadas para ejecutar consolidaciones/alertas sin depender de requests (recalcular certificaciones y disparar notificaciones a horas controladas).
 3. Migrar base de datos a PostgreSQL y mover storage de archivos a un backend externo (S3, Azure Blob, etc.).
 4. Diseñar motor de validaciones de reglas basado en `ColumnDef` (rangos, regex, dependencias entre columnas).
-5. Implementar test suite (pytest/Django test runner) cubriendo flujos críticos (carga, aprobación, publicación, KPIs).
+5. Implementar test suite (pytest/Django test runner) cubriendo flujos críticos (carga, aprobación, publicación, KPIs y certificación mensual).
 6. Documentar e implementar proceso de despliegue (settings para prod, STATIC/MEDIA, WSGI/ASGI, CI/CD).
 
 ---

@@ -13,6 +13,32 @@ La idea es que avances tarea por tarea y valides cada una.
 
 ---
 
+## Recomendado - Extensiones y librerías para desarrollo/pruebas
+
+**Objetivo**  
+Evitar problemas comunes de entorno (Excel, SQLite, templates, linting) antes de empezar.
+
+**Extensiones (VS Code recomendado)**
+
+- Python (Microsoft)
+- Pylance (Microsoft)
+- Django (opcional, para templates)
+- SQLite (para inspeccionar `db.sqlite3`)
+- EditorConfig (si el repo lo usa)
+
+**Librerías Python (dentro del entorno virtual)**
+
+- Instalar dependencias del proyecto:
+  - `pip install -r requirements.txt`
+- Dependencia necesaria para carga/plantillas Excel (si no está instalada):
+  - `pip install openpyxl`
+
+**Cómo validar**
+
+- `python -c "import django; import openpyxl; print('ok')"` no debe fallar.
+
+---
+
 ## Tarea 0 – Prerrequisitos
 
 **Objetivo**  
@@ -80,6 +106,8 @@ Con el entorno virtual activado:
   - 2FA (podrás configurarlo más adelante): `pip install django-otp`
 - Para tareas en segundo plano (más adelante):
   - `pip install celery redis`
+ - Para carga/plantillas Excel:
+   - `pip install openpyxl`
 
 > Nota: para desarrollo local puedes usar SQLite (sin instalar nada extra).
 > Más adelante, cuando el entorno de producción esté definido, se podrá agregar
@@ -88,7 +116,7 @@ Con el entorno virtual activado:
 **Cómo validar**
 
 - Ejecutar: `pip list`
-  - Debes ver al menos: `Django`, `django-environ`, `django-simple-history`, `django-axes`, `django-otp`, `celery`, `redis`.
+- Debes ver al menos: `Django`, `django-environ`, `django-simple-history`, `django-axes`, `django-otp`, `celery`, `redis`.
 - Ejecutar: `python -m django --version`
   - Debe mostrar un número de versión (por ejemplo `4.x.x`) sin errores.
 
@@ -466,6 +494,148 @@ Configurar medidas de seguridad acordes a los requerimientos (2FA para Admin/Val
 - Crear un usuario de prueba con rol de Validador.
 - Activar 2FA para ese usuario y comprobar que en el siguiente login se solicita el código.
 - Probar varios intentos de login fallidos seguidos y verificar que la cuenta se bloquea según la configuración de `django-axes`.
+
+---
+
+## Tarea 16 – Variables mínimas para desempeño (captura de datos)
+
+**Objetivo**  
+Incorporar al SICGAD los datasets necesarios para registrar las "variables mínimas requeridas" del módulo de desempeño descrito en `docs/prop_desemp.docx`.
+
+**Pasos resumidos**
+
+- Identificar, por planta, qué variables ya existen en esquemas diarios/mensuales y cuáles faltan.
+- Crear (o ajustar) `DatasetType`/`ColumnDef` para capturar variables mínimas sin inflar un solo esquema:
+  - PCS: extracción/propiedades de salmuera, operaciones de piscinas/trasvases, evaporación, composición iónica (mensual), energía/consumos, residuos/contingencias.
+  - KCl: materia prima, producción, reactivos/agua/energía, colas y ley de K.
+  - Li2CO3: materia prima, producción, reactivos/agua/energía, residuos y contenido de Li.
+- Definir unidades y metadatos por columna (unidad, agregación por defecto, etc.) para facilitar KPIs.
+
+**Cómo validar**
+
+- Puedes crear instancias diarias/mensuales de ejemplo y publicarlas.
+- Los validadores pueden revisar los datos en “Draft” y “Published” sin errores de tipo.
+- Queda claro qué dataset alimenta qué indicador (documentado).
+
+---
+
+## Tarea 17 - Plantilla de variables e indicadores (definiciones y versiones)
+
+**Objetivo**  
+Definir formalmente (a) la plantilla estática de variables metodológicas y (b) el catálogo de indicadores a calcular (rendimientos, eficiencias, balances, pérdidas), con unidades, parámetros y dependencias de datos.
+
+**Pasos resumidos**
+
+- Definir la plantilla de variables metodológicas por planta (llaves estables, unidad esperada y descripción).
+- Crear una matriz "Indicador -> variables metodológicas" por planta (mínimo: los indicadores enumerados en `docs/prop_desemp.docx`).
+- Definir el mecanismo de mapeo (solo Admin): "variable metodológica -> fuente SICGAD (`DatasetType`/`ColumnDef`) + agregación + transformaciones".
+- Definir parámetros configurables:
+  - delta_t (desfase por lote en PCS).
+  - Factores de conversión (masa seca, energía equivalente, etc.).
+  - Umbrales de alerta (opcional al inicio).
+- Decidir qué conversiones se calculan vs. se cargan:
+  - Recomendación inicial: cargar explícitamente TDS/fracción de sólidos y energía equivalente, para evitar depender de modelos externos.
+
+**Cómo validar**
+
+- Para cada indicador existe: nombre, unidad, descripción, fórmula/criterio, datasets/columnas requeridas y parámetros.
+- Se puede identificar qué indicadores no serán calculables si faltan datos.
+
+---
+
+## Tarea 18 - Motor de cálculo de desempeño (backend)
+
+**Objetivo**  
+Implementar el motor que calcula indicadores por planta/mes usando datos validados/publicados, dejando trazabilidad reproducible.
+
+**Pasos resumidos**
+
+- Crear una app nueva (sugerido: `performance`) con modelos mínimos:
+  - Plantilla de variables metodológicas (estáticas).
+  - Mapeos (solo Admin) de variables -> fuentes (`DatasetType`/`ColumnDef`).
+  - Definición/versionado de indicador.
+  - Resultados calculados por planta/periodo.
+  - Trazas (fuentes usadas: `DatasetInstance` + parámetros + versión de fórmula).
+- Implementar un servicio de cálculo que:
+  - Obtenga inputs desde `PublishedDataPoint` (o instancias lockeadas) usando el mapeo Admin.
+  - Resuelva desfases delta_t (PCS: m -> m - delta_t).
+  - Calcule indicadores y registre warnings (faltantes, divisiones por cero, etc.).
+- Exponer un comando de gestión:
+  - Ejemplo: `python manage.py compute_performance --plant PCS --month 2025-10`
+
+**Cómo validar**
+
+- Con datos de prueba publicados, el comando genera resultados sin errores.
+- Cada resultado tiene trazabilidad: fuentes + parámetros + timestamp.
+
+---
+
+## Tarea 19 – Integración con certificación mensual (workflow)
+
+**Objetivo**  
+Hacer que el desempeño mensual se genere automáticamente y se alinee al flujo institucional de validación/certificación.
+
+**Pasos resumidos**
+
+- Definir si el desempeño mensual será:
+  - a) un “resultado derivado” auto-publicado cuando la certificación mensual se bloquea/publica; o
+  - b) un `DatasetInstance` mensual “calculado” que sigue el mismo flujo de validación.
+- Implementar el trigger:
+  - Al consolidar/bloquear certificación mensual, recalcular desempeño del mes.
+- Guardar enlace: certificación mensual <-> desempeño mensual <-> instancias fuente.
+
+**Cómo validar**
+
+- Al finalizar la certificación mensual, el desempeño del mes aparece calculado.
+- Si se corrige una carga diaria (antes de bloqueo) y se republica, el desempeño cambia al recalcular.
+
+---
+
+## Tarea 20 – UI de desempeño (dashboards y explicación)
+
+**Objetivo**  
+Mostrar indicadores mensuales por planta con tendencias, comparación y desglose de cálculo.
+
+**Pasos resumidos**
+
+- Crear una sección “Desempeño” en el sidebar.
+- Vista principal:
+  - Selector de planta y mes/rango.
+  - Tarjetas con KPIs clave y mini-tendencias.
+  - Tablas de indicadores con unidad y estado (calculado/no calculable).
+- Vista detalle por indicador:
+  - Serie histórica.
+  - Fuentes usadas y parámetros (delta_t, conversiones).
+  - Descarga CSV/Excel.
+
+**Cómo validar**
+
+- Un visualizador puede ver desempeño "Published" sin acceso a borradores.
+- Un validador puede ver trazas y fuentes para auditar el cálculo.
+
+---
+
+## Tarea 21 – Alertas, exportables y backfill
+
+**Objetivo**  
+Completar el módulo con alertas operativas y exportación de reportes, y permitir recalcular históricos.
+
+**Pasos resumidos**
+
+- Alertas:
+  - Configurar umbrales por indicador (min/max o bandas) y generar alertas mensuales.
+  - Alertar por faltantes críticos (variables mínimas no cargadas).
+- Exportables:
+  - CSV/Excel de indicadores por planta/mes.
+  - (Opcional) PDF de “ficha mensual” cuando se defina el formato.
+- Backfill:
+  - Comando para recalcular un rango de meses y regenerar resultados.
+
+**Cómo validar**
+
+- Se generan alertas cuando un KPI sale de rango o faltan variables.
+- Se puede exportar un mes completo de desempeño con trazabilidad.
+- Un backfill no rompe datos existentes (se versiona o se reemplaza con rastro).
 
 ---
 

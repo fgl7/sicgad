@@ -139,7 +139,13 @@ def build_manual_row_form(dataset: DatasetType):
             fields[field_name] = forms.DateField(
                 required=required,
                 label=label,
-                widget=forms.DateInput(attrs={**common_attrs, "type": "date"}),
+                widget=forms.DateInput(
+                    attrs={
+                        **common_attrs,
+                        "type": "date",
+                        "data-manual-date-field": "true",
+                    }
+                ),
             )
         elif column.data_type == "BOOLEAN":
             fields[field_name] = forms.BooleanField(
@@ -159,3 +165,16 @@ def build_manual_row_form(dataset: DatasetType):
     ManualRowForm = type("ManualRowForm", (forms.Form,), fields)
     ManualRowForm._columns = columns
     return ManualRowForm, columns
+
+
+class CertificationJustificationForm(forms.Form):
+    justification = forms.CharField(
+        label="Justificación",
+        widget=forms.Textarea(
+            attrs={
+                "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
+                "rows": 4,
+                "placeholder": "Describe por qué se ajustan los valores consolidados.",
+            }
+        ),
+    )

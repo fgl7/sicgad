@@ -33,6 +33,33 @@ document.addEventListener("DOMContentLoaded", function () {
     maximumFractionDigits: 2,
   });
 
+  function parseDateValue(raw) {
+    if (!raw && raw !== 0) {
+      return null;
+    }
+    if (raw instanceof Date) {
+      return new Date(raw.getTime());
+    }
+    const text = String(raw).trim();
+    if (!text) {
+      return null;
+    }
+
+    let match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      match = text.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+    }
+    if (match) {
+      const year = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      const day = Number(match[3]);
+      return new Date(year, month, day);
+    }
+
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   let currentData = null;
   let currentColumns = [];
   let availableDateColumn = null;
@@ -45,23 +72,6 @@ document.addEventListener("DOMContentLoaded", function () {
     return Array.from(yFieldBox.querySelectorAll('input[type="checkbox"]:checked')).map(
       (input) => input.value
     );
-  }
-
-  function filterInstancesByMode() {
-    const mode = modeSelect.value || "published";
-    Array.from(instanceSelect.options).forEach(function (opt) {
-      const optMode = opt.getAttribute("data-mode");
-      if (!optMode) {
-        return;
-      }
-      opt.hidden = optMode !== mode;
-    });
-
-    // Si la opción seleccionada no pertenece al modo actual, limpiar selección
-    const selected = instanceSelect.options[instanceSelect.selectedIndex];
-    if (selected && selected.getAttribute("data-mode") !== mode) {
-      instanceSelect.value = "";
-    }
   }
 
   function chooseDefaultFields(columns) {
@@ -183,11 +193,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function setFilterBounds(startValue, endValue) {
-    filterBounds.start = startValue ? new Date(startValue) : null;
+    filterBounds.start = startValue ? parseDateValue(startValue) : null;
     if (filterBounds.start) {
       filterBounds.start.setHours(0, 0, 0, 0);
     }
-    filterBounds.end = endValue ? new Date(endValue) : null;
+    filterBounds.end = endValue ? parseDateValue(endValue) : null;
     if (filterBounds.end) {
       filterBounds.end.setHours(23, 59, 59, 999);
     }
@@ -229,22 +239,22 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!raw) {
         return;
       }
-      const d = new Date(raw);
-      if (Number.isNaN(d.getTime())) {
+      const d = parseDateValue(raw);
+      if (!d) {
         return;
       }
-      if (!minDate || d < minDate) {
-        minDate = new Date(d);
+      if (!minDate || d.getTime() < minDate.getTime()) {
+        minDate = new Date(d.getTime());
       }
-      if (!maxDate || d > maxDate) {
-        maxDate = new Date(d);
+      if (!maxDate || d.getTime() > maxDate.getTime()) {
+        maxDate = new Date(d.getTime());
       }
     });
 
     if (!minDate || !maxDate) {
       const today = new Date();
-      minDate = new Date(today);
-      maxDate = new Date(today);
+      minDate = new Date(today.getTime());
+      maxDate = new Date(today.getTime());
     }
 
     const minStr = formatInputDate(minDate);
@@ -278,8 +288,8 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!raw) {
         return false;
       }
-      const d = new Date(raw);
-      if (Number.isNaN(d.getTime())) {
+      const d = parseDateValue(raw);
+      if (!d) {
         return false;
       }
       if (start && d < start) {
@@ -341,8 +351,8 @@ document.addEventListener("DOMContentLoaded", function () {
       const values = row.values || {};
       let xVal = values[xName] ?? null;
       if (xIsTime && xVal) {
-        const d = new Date(xVal);
-        if (!Number.isNaN(d.getTime())) {
+        const d = parseDateValue(xVal);
+        if (d) {
           const dd = String(d.getDate()).padStart(2, "0");
           const mm = String(d.getMonth() + 1).padStart(2, "0");
           const yyyy = d.getFullYear();
@@ -519,9 +529,9 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function loadInstanceData() {
-    const instanceId = instanceSelect.value;
+    const datasetId = instanceSelect.value;
     const mode = modeSelect.value || "published";
-    if (!instanceId) {
+    if (!datasetId) {
       currentData = null;
       if (chart) {
         chart.clear();
@@ -532,7 +542,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    fetch(`/kpis/data/${instanceId}/?source=${encodeURIComponent(
+    fetch(`/kpis/data/${datasetId}/?source=${encodeURIComponent(
       mode === "draft" ? "draft" : "published"
     )}`)
       .then((resp) => {
@@ -555,7 +565,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   modeSelect.addEventListener("change", function () {
-    filterInstancesByMode();
     loadInstanceData();
   });
 
@@ -570,5 +579,4 @@ document.addEventListener("DOMContentLoaded", function () {
   chartTypeSelect.addEventListener("change", updateChart);
   dateApplyButton.addEventListener("click", applyDateFilter);
 
-  filterInstancesByMode();
 });

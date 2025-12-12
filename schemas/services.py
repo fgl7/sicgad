@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from audit.utils import record_action
 from ingest.models import DatasetInstance, PublishedDataPoint
+from accounts.models import Membership
 from .models import DatasetType
 
 
@@ -139,22 +140,66 @@ def _consolidate_schema_for_period(
     if not daily_instances.exists():
         return None
 
+    pending_daily = DatasetInstance.objects.filter(
+        dataset_type=source,
+        plant=schema.plant,
+        period__gte=month_start,
+        period__lte=month_end,
+    ).exclude(state__in=PUBLISHED_STATES)
+
+    if pending_daily.exists():
+        existing = DatasetInstance.objects.filter(
+            dataset_type=schema,
+            plant=schema.plant,
+            period=month_end,
+        ).first()
+        if existing and existing.state != DatasetInstance.STATE_PUBLISHED:
+            existing.state = DatasetInstance.STATE_DRAFT
+            existing.last_error_summary = "Pendiente consolidar: faltan datos diarios aprobados para el mes."
+            existing.save(update_fields=["state", "last_error_summary"])
+        return None
+
+    required_dates = set()
+    current = month_start
+    while current <= month_end:
+        required_dates.add(current)
+        current += timedelta(days=1)
+    available_dates = set(
+        daily_instances.values_list("period", flat=True)
+    )
+    if not required_dates.issubset(available_dates):
+        return None
+
+    loader_membership = (
+        Membership.objects.filter(
+            role="LOADER",
+            is_active=True,
+            plant=schema.plant,
+        )
+        .order_by("id")
+        .first()
+    )
+
+    initial_state = DatasetInstance.STATE_DRAFT if loader_membership else DatasetInstance.STATE_SUBMITTED
+
     with transaction.atomic():
         instance, _ = DatasetInstance.objects.get_or_create(
             dataset_type=schema,
             plant=schema.plant,
             period=month_end,
             defaults={
-                "state": DatasetInstance.STATE_SUBMITTED,
+                "state": initial_state,
                 "row_count": 0,
                 "error_count": 0,
                 "last_error_summary": "",
             },
         )
-        instance.state = DatasetInstance.STATE_SUBMITTED
+        instance.state = initial_state
         instance.row_count = 1
         instance.error_count = 0
         instance.last_error_summary = ""
+        if loader_membership:
+            instance.created_by = loader_membership
         instance.save()
 
         PublishedDataPoint.objects.filter(instance=instance).delete()

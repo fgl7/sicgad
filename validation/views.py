@@ -1,11 +1,15 @@
+import calendar
+from datetime import date, datetime
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, F, Exists, OuterRef
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import Membership
-from ingest.models import DatasetInstance
+from ingest.models import DatasetInstance, PublishedDataPoint
 from ingest.utils import materialize_instance
 from schemas.models import DatasetType
 from schemas.services import collect_certification_status, previous_month_range
@@ -13,6 +17,208 @@ from schemas.services import collect_certification_status, previous_month_range
 from audit.utils import record_action
 from .forms import ValidationDecisionForm
 from .models import ValidationAction
+from .services import determine_monthly_state
+
+
+PUBLISHED_STATES = [
+    DatasetInstance.STATE_PUBLISHED,
+    DatasetInstance.STATE_LOCKED,
+]
+
+
+def _format_value_for_display(column, value):
+    if value in (None, ""):
+        return "-"
+    if column.data_type == "DATE":
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d")
+        if isinstance(value, date):
+            return value.strftime("%Y-%m-%d")
+        return str(value)
+    if column.data_type == "BOOLEAN":
+        return "Si" if bool(value) else "No"
+    return str(value)
+
+
+def _coerce_to_date(value):
+    if value in (None, ""):
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S"):
+            try:
+                return datetime.strptime(text, fmt).date()
+            except ValueError:
+                continue
+        try:
+            return datetime.fromisoformat(text).date()
+        except ValueError:
+            pass
+        if " " in text:
+            head = text.split(" ", 1)[0]
+            try:
+                return datetime.fromisoformat(head).date()
+            except ValueError:
+                pass
+    return None
+
+
+def _build_rows_from_points(instance_obj):
+    points = (
+        PublishedDataPoint.objects.filter(instance=instance_obj)
+        .select_related("column")
+        .order_by("row_index", "column__display_order", "column__name")
+    )
+    rows_map: dict[int, dict] = {}
+    for point in points:
+        row = rows_map.setdefault(point.row_index, {})
+        if point.numeric_value is not None:
+            value = point.numeric_value
+        elif point.date_value is not None:
+            value = point.date_value
+        elif point.bool_value is not None:
+            value = bool(point.bool_value)
+        else:
+            value = point.text_value
+        row[point.column.name] = value
+    return rows_map
+
+
+def _build_monthly_review_context(instance: DatasetInstance):
+    dataset = instance.dataset_type
+    source = dataset.source_dataset
+    if not source:
+        return None
+
+    monthly_columns = list(
+        dataset.columns.filter(is_active=True).order_by("display_order", "name")
+    )
+    monthly_values_map = {}
+    for point in PublishedDataPoint.objects.filter(instance=instance).select_related("column"):
+        col = point.column
+        if col.data_type in ("INTEGER", "FLOAT"):
+            value = point.numeric_value
+        elif col.data_type == "DATE":
+            value = point.date_value
+        elif col.data_type == "BOOLEAN":
+            value = point.bool_value
+        else:
+            value = point.text_value
+        monthly_values_map[col.name] = value
+
+    monthly_value_rows = [
+        {
+            "column": column,
+            "value": _format_value_for_display(column, monthly_values_map.get(column.name)),
+        }
+        for column in monthly_columns
+    ]
+
+    source_columns = list(
+        source.columns.filter(is_active=True).order_by("display_order", "name")
+    )
+    display_columns = [col for col in source_columns if col.data_type != "DATE"]
+    if not display_columns:
+        display_columns = list(source_columns)
+
+    month_start = instance.period.replace(day=1)
+    last_day = calendar.monthrange(instance.period.year, instance.period.month)[1]
+    month_end = instance.period.replace(day=last_day)
+    month_dates = [date(instance.period.year, instance.period.month, day) for day in range(1, last_day + 1)]
+
+    monthly_instances = list(
+        DatasetInstance.objects.filter(
+            dataset_type=source,
+            plant=instance.plant,
+            state__in=PUBLISHED_STATES,
+            period__gte=month_start,
+            period__lte=month_end,
+        ).order_by("period", "created_at")
+    )
+    if not monthly_instances:
+        return None
+
+    rows_cache = {inst.id: _build_rows_from_points(inst) for inst in monthly_instances}
+    date_column = next((col for col in source_columns if col.data_type == "DATE"), None)
+    date_entries: dict[date, dict] = {}
+    for daily_instance in monthly_instances:
+        cached_rows = rows_cache.get(daily_instance.id, {})
+        for row_index, row_values in cached_rows.items():
+            raw_date = row_values.get(date_column.name) if date_column else daily_instance.period
+            parsed_date = _coerce_to_date(raw_date)
+            if not parsed_date:
+                continue
+            if parsed_date < month_start or parsed_date > month_end:
+                continue
+            current = date_entries.get(parsed_date)
+            should_replace = False
+            if current is None:
+                should_replace = True
+            else:
+                current_created = current["instance"].created_at
+                if daily_instance.created_at > current_created:
+                    should_replace = True
+                elif daily_instance.id == current["instance"].id and row_index > current["row_index"]:
+                    should_replace = True
+            if should_replace:
+                date_entries[parsed_date] = {
+                    "instance": daily_instance,
+                    "row_index": row_index,
+                    "values": row_values,
+                }
+
+    changed_dates = set(
+        instance.change_requests.filter(target_period__isnull=False).values_list("target_period", flat=True)
+    )
+
+    daily_rows = []
+    for target_date in month_dates:
+        entry = date_entries.get(target_date)
+        if entry:
+            values = [
+                {
+                    "column": column,
+                    "display": _format_value_for_display(column, entry["values"].get(column.name)),
+                }
+                for column in display_columns
+            ]
+            daily_rows.append(
+                {
+                    "date": target_date,
+                    "values": values,
+                    "changed": target_date in changed_dates,
+                    "has_instance": True,
+                }
+            )
+        else:
+            values = [
+                {
+                    "column": column,
+                    "display": "-",
+                }
+                for column in display_columns
+            ]
+            daily_rows.append(
+                {
+                    "date": target_date,
+                    "values": values,
+                    "changed": target_date in changed_dates,
+                    "has_instance": False,
+                }
+            )
+
+    return {
+        "daily_rows": daily_rows,
+        "daily_display_columns": display_columns,
+        "monthly_values": monthly_value_rows,
+        "monthly_columns": monthly_columns,
+    }
 
 
 @login_required
@@ -80,7 +286,25 @@ def inbox(request):
     if has_global_monthly:
         monthly_filter |= Q(dataset_type__validation_frequency=DatasetType.MONTHLY)
 
-    items = base_qs.filter(daily_filter | monthly_filter).order_by("-created_at")
+    approval_subquery = ValidationAction.objects.filter(
+        dataset_instance=OuterRef("pk"),
+        user=user,
+        decision=ValidationAction.DECISION_APPROVE,
+    )
+    approval_since_submit = approval_subquery.filter(created_at__gte=OuterRef("submitted_at"))
+
+    items = (
+        base_qs.filter(daily_filter | monthly_filter)
+        .order_by("-created_at")
+        .annotate(
+            already_approved_history=Exists(approval_subquery),
+            already_approved_recent=Exists(approval_since_submit),
+        )
+        .filter(
+            Q(submitted_at__isnull=True, already_approved_history=False)
+            | Q(submitted_at__isnull=False, already_approved_recent=False)
+        )
+    )
 
     # Historial de validaciones realizadas por este usuario (como validador)
     history_actions = (
@@ -97,10 +321,10 @@ def inbox(request):
     if monthly_memberships.exists():
         _, previous_month_end = previous_month_range()
         pending_cert_states = [
-            DatasetInstance.STATE_DRAFT,
             DatasetInstance.STATE_SUBMITTED,
             DatasetInstance.STATE_VALIDATED_L1,
             DatasetInstance.STATE_VALIDATED_L2,
+            DatasetInstance.STATE_LOCKED,
         ]
         cert_qs = (
             DatasetInstance.objects.select_related("dataset_type", "plant")
@@ -118,7 +342,19 @@ def inbox(request):
             else:
                 cert_qs = cert_qs.none()
 
+        cert_qs = cert_qs.annotate(
+            already_approved_history=Exists(approval_subquery),
+            already_approved_recent=Exists(approval_since_submit),
+        ).filter(
+            Q(submitted_at__isnull=True, already_approved_history=False)
+            | Q(submitted_at__isnull=False, already_approved_recent=False)
+        )
         certification_alerts = list(cert_qs)
+
+    profile = getattr(request.user, "profile", None)
+    if profile and certification_alerts:
+        profile.last_seen_certification_alert = timezone.now()
+        profile.save(update_fields=["last_seen_certification_alert"])
 
     return render(
         request,
@@ -190,6 +426,15 @@ def detail(request, pk):
         messages.error(request, "No tiene permisos de validacion sobre este dataset.")
         return redirect(reverse("validation:inbox"))
 
+    if (
+        instance.dataset_type.validation_frequency == DatasetType.MONTHLY
+        and instance.dataset_type.is_certification
+    ):
+        profile = getattr(request.user, "profile", None)
+        if profile:
+            profile.last_seen_certification_alert = timezone.now()
+            profile.save(update_fields=["last_seen_certification_alert"])
+
     if request.method == "POST":
         form = ValidationDecisionForm(request.POST)
         if form.is_valid():
@@ -207,32 +452,8 @@ def detail(request, pk):
                     # Flujo diario: un solo nivel (Jefe de planta)
                     instance.state = DatasetInstance.STATE_PUBLISHED
                 else:
-                    # Flujo mensual / general: varios niveles de validacion
-                    validators = Membership.objects.filter(
-                        role="VALIDATOR",
-                        is_active=True,
-                        can_validate_monthly=True,
-                    ).filter(Q(plant=instance.plant) | Q(plant__isnull=True))
-                    if validators.exists():
-                        max_level = max(v.validation_level or 1 for v in validators)
-                    else:
-                        max_level = action.level
-
-                    previous_actions = instance.validation_actions.filter(
-                        decision=ValidationAction.DECISION_APPROVE
-                    )
-                    if previous_actions.exists():
-                        current_level = max(a.level for a in previous_actions)
-                    else:
-                        current_level = 0
-
-                    if action.level <= current_level:
-                        pass
-                    else:
-                        if action.level < max_level:
-                            instance.state = DatasetInstance.STATE_VALIDATED_L1
-                        else:
-                            instance.state = DatasetInstance.STATE_PUBLISHED
+                    # Flujo mensual / general: requiere todas las instituciones
+                    instance.state = determine_monthly_state(instance)
 
                 instance.save()
 
@@ -246,10 +467,15 @@ def detail(request, pk):
                     object_repr=f"{instance.dataset_type.name} | {instance.period}",
                     details="Aprobado",
                 )
+                return redirect(reverse("validation:inbox"))
             else:
                 instance.state = DatasetInstance.STATE_DRAFT
-                instance.last_error_summary = action.comment or ""
-                instance.save(update_fields=["state", "last_error_summary"])
+                error_summary = (action.comment or "").strip()
+                if not error_summary:
+                    error_summary = "Rechazado sin comentarios. Revisa y corrige antes de reenviar."
+                instance.last_error_summary = error_summary
+                instance.submitted_at = None
+                instance.save()
                 messages.warning(request, "Dataset rechazado y devuelto a borrador.")
                 record_action(
                     "VALIDATION",
@@ -258,12 +484,22 @@ def detail(request, pk):
                     object_repr=f"{instance.dataset_type.name} | {instance.period}",
                     details="Rechazado",
                 )
-
-            return redirect(reverse("validation:inbox"))
+                return redirect(reverse("validation:inbox"))
     else:
         form = ValidationDecisionForm()
 
     actions = instance.validation_actions.select_related("user").all()
+    change_requests = (
+        instance.change_requests.select_related("submitted_by__user")
+        .prefetch_related("attachments")
+        .all()
+    )
+    monthly_review = None
+    if (
+        instance.dataset_type.validation_frequency == DatasetType.MONTHLY
+        and instance.dataset_type.source_dataset
+    ):
+        monthly_review = _build_monthly_review_context(instance)
 
     return render(
         request,
@@ -272,5 +508,7 @@ def detail(request, pk):
             "instance": instance,
             "form": form,
             "actions": actions,
+            "change_requests": change_requests,
+            "monthly_review": monthly_review,
         },
     )

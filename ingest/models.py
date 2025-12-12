@@ -60,6 +60,7 @@ class DatasetInstance(models.Model):
     row_count = models.PositiveIntegerField(default=0)
     error_count = models.PositiveIntegerField(default=0)
     last_error_summary = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -116,3 +117,51 @@ class PublishedDataPoint(models.Model):
     def __str__(self) -> str:
         return f"{self.instance_id} - {self.column.name} - row {self.row_index}"
 
+
+class DatasetChangeRequest(models.Model):
+    instance = models.ForeignKey(
+        DatasetInstance,
+        on_delete=models.CASCADE,
+        related_name="change_requests",
+    )
+    submitted_by = models.ForeignKey(
+        Membership,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="submitted_change_requests",
+    )
+    justification = models.TextField()
+    target_instance = models.ForeignKey(
+        DatasetInstance,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="targeted_change_requests",
+    )
+    target_period = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        suffix = f" - {self.target_period}" if self.target_period else ""
+        return f"Cambio {self.instance_id}{suffix}"
+
+
+class DatasetChangeAttachment(models.Model):
+    request = models.ForeignKey(
+        DatasetChangeRequest,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    file = models.FileField(upload_to="ingest/change_support/")
+    original_name = models.CharField(max_length=255, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["uploaded_at"]
+
+    def __str__(self) -> str:
+        return self.original_name or self.file.name

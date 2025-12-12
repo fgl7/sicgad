@@ -20,31 +20,23 @@
         </select>
       </div>
       <div class="md:col-span-4 lg:col-span-5">
-        <label class="block mb-1 text-slate-300">Dataset y periodo</label>
+        <label class="block mb-1 text-slate-300">Dataset</label>
         <select
           id="kpi-instance-select"
           class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
         >
           <option value="">Selecciona un dataset...</option>
-          {% for inst in published_instances %}
+          {% for ds in datasets %}
             <option
-              value="{{ inst.id }}"
-              data-mode="published"
+              value="{{ ds.id }}"
             >
-              [{{ inst.plant.code }}] {{ inst.dataset_type.name }} — {{ inst.period }} (Oficial)
+              [{{ ds.plant.code }}] {{ ds.name }} ({{ ds.get_validation_frequency_display }})
             </option>
           {% endfor %}
-          {% if can_see_drafts %}
-            {% for inst in draft_instances %}
-              <option
-                value="{{ inst.id }}"
-                data-mode="draft"
-              >
-                [{{ inst.plant.code }}] {{ inst.dataset_type.name }} — {{ inst.period }} ({{ inst.get_state_display }})
-              </option>
-            {% endfor %}
-          {% endif %}
         </select>
+        {% if not datasets %}
+          <p class="mt-1 text-[11px] text-slate-500">Aún no existen datasets con datos cargados.</p>
+        {% endif %}
       </div>
       <div class="md:col-span-6 lg:col-span-5">
         <label class="block mb-1 text-slate-300">Rango de fechas</label>
@@ -123,5 +115,5 @@
 
 {% block extra_js %}
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <script src="{% static 'js/kpis_charts.js' %}?v=10"></script>
+  <script src="{% static 'js/kpis_charts.js' %}?v=11"></script>
 {% endblock %}

@@ -1,64 +1,10 @@
-# SICGAD – Project PRD
-
-Este documento resume todo lo necesario para entender y operar el proyecto SICGAD sin recurrir a otras fuentes. Está dirigido al equipo técnico (y especialmente al agente Codex) para conocer alcance, lógica funcional, componentes implementados y estado actual.
-
----
-
-## 1. Propósito y visión
-
-- **Nombre**: Sistema Integral de Carga, Gestión y Análisis de Datos (SICGAD).
-- **Objetivo**: Centralizar la captura diaria de producción de plantas YLB/MHE, validar la información por niveles, publicar datos confiables y proveer tableros operativos/certificados con trazabilidad completa.
-- **Usuarios meta**: Cargadores, Validadores (varios niveles), Visualizadores, Administradores operativos y Superadmins técnicos.
-- **Valor clave**:
-  - Flexibilidad para versionar esquemas sin despliegues.
-  - Automatización del flujo diario vs certificación mensual (con consolidación automática, revisión mensual y alertas escalonadas).
-  - Auditoría exhaustiva y control de seguridad (2FA planificada, rate limiting, must-change-password).
-
----
-
-## 2. Scope funcional
-
-| Módulo | Objetivo | Puntos clave |
-| --- | --- | --- |
-| **Accounts** | Gestión de usuarios, roles, membresías y políticas de acceso. | `Membership` vincula User+Planta+Rol+Nivel+Institución, `AccountProfile` fuerza cambio de contraseña y registra notificaciones (banderas `last_seen_*` para limpiar badges). Middleware especializado. |
-| **Plants** | Catálogo de plantas operativas (PCS, PICP, etc.). | Se usa para permisos y para segmentar datasets/cargas. |
-| **Schemas** | Definición y versionado de esquemas de datos por planta. | `DatasetType`/`ColumnDef` con metadatos completos, flujo de aprobación, creación de esquemas de certificación a partir de diarios. Los esquemas diarios los propone el cargador y los aprueba/rechaza el Administrador. |
-| **Ingest** | Descarga de plantillas, carga de archivos diarios (archivo o captura manual), historial del cargador y revisión de certificaciones. | `DatasetInstance` guarda estados, `submitted_at`, archivo fuente y errores. El historial muestra alertas, rechazados y un tablero de certificaciones con enlaces a `certification_review`. Las plantillas usan como encabezados los `name` de las columnas. |
-| **Validation** | Flujo de aprobación diario/mensual y publicación automática. | `ValidationAction` documenta nivel, decisión y comentarios; la bandeja filtra instancias ya aprobadas tras el último envío y actualiza `last_seen_certification_alert`. `materialize_instance` genera datos publicados cuando se llega a PUBLISHED. |
-| **KPIs** | Visualización (ECharts) de datos publicados o borradores según permisos. | Selección dinámica de instancia, eje X/Y, múltiples KPIs, filtros de fecha, tablas y modo Published/Draft que refleja datos diarios certificados. |
-| **Performance** | Cálculo de indicadores de desempeño productivo y eficiencia de procesos. | Define variables metodológicas por planta y permite al Administrador mapear columnas de esquemas a variables de las fórmulas (ej. Fórmula 1 PCS), calculando indicadores mensuales en estado Draft/Certificado. |
-| **Audit** | Registro y consulta de eventos críticos. | `AuditLog` almacena acción, módulo, objeto, usuario, detalles; vista filtrable hasta 500 eventos. |
-| **Core** | Placeholder para utilidades comunes (aún vacío). | Se espera usarlo para mixins/helpers reutilizables. |
-
----
-
-## 3. Modelos y datos clave
-
-### 3.1 Usuarios y permisos
-- Se usa el modelo estándar de `User` con extensiones:
-  - `Membership`: define rol (`LOADER`, `VALIDATOR`, `VIEWER`, `ADMIN`), planta, nivel de validación, flags `can_validate_daily/monthly` e institución (`YLB`/`MHE`).
-  - `AccountProfile`: campos `must_change_password`, `last_seen_schema_status` y `last_seen_validation_status` (para limpiar notificaciones del loader al revisar su bandeja).
-- Middleware `PasswordChangeRequiredMiddleware` fuerza cambio de contraseña antes de navegar, excepto para rutas permitidas y superadmins.
-- Decoradores y context processors detectan flags de rol para UI/notificaciones.
-
-### 3.2 Esquemas y columnas
-- `DatasetType` controla: planta, nombre (con versión), frecuencia (`DAILY`/`MONTHLY`), si es de certificación, estado (`DRAFT`→`PENDING`→`APPROVED`/`REJECTED`), slug único y metadatos.
-- `ColumnDef` almacena campos dinámicos con tipos (`INTEGER`, `FLOAT`, `STRING`, `DATE`, `BOOLEAN`, `CHOICE`), reglas (rangos, regex, choices), metadatos de visualización (unidad, rol de eje, agregación por defecto, KPI principal, orden). El campo `name` es el identificador interno (sin espacios) y además el encabezado oficial en plantillas/archivos; el campo `label` es una descripción legible que explica a qué se refiere la columna y qué datos espera.
-- Los cargadores crean/editar borradores (si no son admins) desde una pantalla guiada que incluye ayuda sobre cada columna. Los admins aprueban/rechazan y pueden generar esquemas de certificación copiando columnas desde un dataset diario.
-
 ### 3.3 Instancias y datos publicados
 - `DatasetInstance`: instancia de carga con referencias al esquema (`DatasetType`), planta, periodo (fecha), estado (DRAFT→SUBMITTED→VALIDATED_L1/L2→PUBLISHED→LOCKED), archivo cargado, métricas de error, `submitted_at` (tracking de envíos) y autor (`Membership`).
 - `PublishedDataPoint`: tabla desnormalizada que almacena cada valor publicado (numérico, texto, fecha, booleano) por fila/columna para servir a dashboards y KPIs.
 - `materialize_instance(instance)`:
   1. Limpia puntos previos del dataset.
-  2. Lee el archivo original (Excel/CSV) y mapea encabezados a columnas activas usando los `name` de las columnas como referencia principal (acepta `label` solo como compatibilidad hacia atrás).
+  2. Lee el archivo original (Excel/CSV) y mapea encabezados a columnas activas.
   3. Convierte valores al tipo correcto y crea `PublishedDataPoint` masivamente.
-
-### 3.4 Módulo de desempeño (Performance)
-- Se modelan variables metodológicas por planta (`PerformanceVariable`), siguiendo las fórmulas del documento de propuesta (`prop_desemp.docx`) para PCS, KCl y Li2CO3.
-- `PerformanceVariableMapping` permite al Administrador (rol `ADMIN`, no el superusuario técnico) asignar columnas de esquemas (`DatasetType`/`ColumnDef`) a cada variable de fórmula, especificando agregaciones (SUM/AVG/MAX/MIN/LAST/NONE), desfase de meses (`offset_months`, por ejemplo Δt en PCS) y etapa (`DRAFT`/`CERTIFIED`).
-- `PerformanceIndicator` define indicadores (por ejemplo Fórmula 1 PCS, rendimiento mensual %), con descripción de la fórmula y lista de variables requeridas.
-- `PerformanceIndicatorResult` almacena resultados por planta, mes y etapa (`DRAFT`/`CERTIFIED`), junto con trazas JSON que permiten reconstruir qué variables y fuentes se usaron.
 
 ---
 
@@ -148,7 +94,7 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 - **Suposiciones**:
   - Habrá al menos un Admin operativo distinto del superusuario para aprobar esquemas y gestionar cuentas.
   - Los validadores tienen niveles numéricos consecutivos que determinan el flujo.
-  - Los archivos de carga utilizan encabezados exactamente iguales a los `name` definidos en las columnas; los `label` se usan solo como descripciones legibles para usuarios.
+  - Los archivos de carga siguen encabezados exactamente iguales a los labels definidos para que la materialización funcione.
 - **Riesgos**:
   - Falta de validaciones de negocio en backend (solo estructura). Será necesario implementar reglas por columna/campo.
   - Escalabilidad limitada en SQLite; migración a PostgreSQL debe planificarse pronto.

@@ -114,12 +114,16 @@ def materialize_instance(instance: DatasetInstance) -> int:
     dataset = instance.dataset_type
     columns = list(dataset.columns.all())
 
-    header_map = {}
+    header_map: dict[str, ColumnDef] = {}
     for col in columns:
-        expected = (col.label or col.name or "").strip()
-        if not expected:
-            continue
-        header_map[expected.lower()] = col
+        # Por definición, el encabezado oficial es el "name" de la columna.
+        base = (col.name or "").strip()
+        if base:
+            header_map[base.lower()] = col
+        # Aceptamos también la etiqueta como encabezado, por compatibilidad hacia atrás.
+        alt = (col.label or "").strip()
+        if alt:
+            header_map.setdefault(alt.lower(), col)
 
     index_to_column: List[ColumnDef | None] = []
     for name in header:
@@ -158,4 +162,3 @@ def materialize_instance(instance: DatasetInstance) -> int:
         PublishedDataPoint.objects.bulk_create(points, batch_size=1000)
 
     return len(points)
-

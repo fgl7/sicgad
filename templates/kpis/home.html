@@ -134,4 +134,51 @@
       </section>
     </div>
   {% endif %}
+
+  {% if is_loader and not is_admin %}
+    <div class="mt-6 bg-emerald-950/40 border border-emerald-700/70 rounded-xl p-4 text-xs shadow-md shadow-emerald-900/40">
+      <h3 class="text-sm font-semibold mb-2 text-emerald-300">Guia rapida para cargadores</h3>
+      <p class="text-slate-100 mb-4">
+        Para cargar datos diarios por primera vez en SICGAD, sigue este flujo:
+      </p>
+
+      <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4 md:gap-6">
+        <div class="flex-1 bg-slate-950 border border-emerald-700/60 rounded-lg p-3">
+          <div class="text-[11px] uppercase tracking-wide text-slate-500 mb-1">Paso 1</div>
+          <div class="text-emerald-200 font-semibold text-sm mb-1">Crear esquema diario</div>
+          <p class="text-slate-300 text-[11px]">
+            Entra a <strong>Esquemas</strong> y crea un esquema diario para tu planta con todos los campos que necesitas
+            reportar (produccion, consumos, observaciones, etc.).
+          </p>
+        </div>
+
+        <div class="hidden md:flex flex-col items-center justify-center text-emerald-400">
+          <span class="text-lg font-semibold">&rarr;</span>
+        </div>
+
+        <div class="flex-1 bg-slate-950 border border-emerald-700/60 rounded-lg p-3">
+          <div class="text-[11px] uppercase tracking-wide text-slate-500 mb-1">Paso 2</div>
+          <div class="text-emerald-200 font-semibold text-sm mb-1">Enviar al Administrador</div>
+          <p class="text-slate-300 text-[11px]">
+            Envía el esquema para revision del Administrador. Si lo rechaza, revisa los comentarios, corrige el esquema
+            y vuelve a enviarlo hasta que quede aprobado.
+          </p>
+        </div>
+
+        <div class="hidden md:flex flex-col items-center justify-center text-emerald-400">
+          <span class="text-lg font-semibold">&rarr;</span>
+        </div>
+
+        <div class="flex-1 bg-slate-950 border border-emerald-700/60 rounded-lg p-3">
+          <div class="text-[11px] uppercase tracking-wide text-slate-500 mb-1">Paso 3</div>
+          <div class="text-emerald-200 font-semibold text-sm mb-1">Cargar datos diarios</div>
+          <p class="text-slate-300 text-[11px]">
+            Cuando el esquema este aprobado, ve a <strong>Carga de datos</strong>, descarga la plantilla si la necesitas
+            y sube tus archivos diarios. Corrige los errores que aparezcan y vuelve a enviar hasta que los datos queden
+            listos para validacion.
+          </p>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 {% endblock %}

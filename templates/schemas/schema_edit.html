@@ -65,9 +65,10 @@
         <button
           type="button"
           id="add-column-btn"
-          class="text-xs px-2 py-1 rounded border border-slate-700 text-slate-200 hover:bg-slate-800/60"
+          class="inline-flex items-center gap-1 text-xs px-4 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400 shadow-md shadow-emerald-900/50 ring-2 ring-emerald-300/60"
         >
-          Añadir columna
+          <span class="text-base leading-none">+</span>
+          <span>Añadir columna</span>
         </button>
       </div>
 
@@ -175,14 +176,37 @@
         </tr>
       </template>
     </section>
-
+    
     <div class="flex items-center justify-between">
       <a href="{% url 'schemas:schema_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
-        ← Volver al listado
+        ← ← Volver al listado
       </a>
       <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
         Guardar esquema
       </button>
     </div>
+
+    <section class="mt-6 bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-[11px] space-y-2">
+      <h3 class="text-sm font-semibold mb-1">¿Qué significa cada columna del esquema?</h3>
+      <p class="text-slate-300">
+        Esta tabla define la estructura de los datos que se van a cargar. Una buena definición aquí evita muchos errores
+        al momento de subir archivos.
+      </p>
+      <ul class="list-disc list-inside text-slate-300 space-y-1">
+        <li><strong>Nombre</strong>: identificador interno del campo (sin espacios). Es el nombre técnico y también el encabezado que se usará en las plantillas y archivos de carga/exportación.</li>
+        <li><strong>Etiqueta</strong>: descripción para otros usuarios; explica qué representa la columna y qué tipo de datos se espera.</li>
+        <li><strong>Tipo</strong>: tipo de dato esperado (entero, decimal, texto, fecha, sí/no, etc.).</li>
+        <li><strong>Req.</strong>: indica si el campo es obligatorio; si está marcado, no se aceptan filas vacías en esa columna.</li>
+        <li><strong>Mín. / Máx.</strong>: valores mínimo y máximo permitidos para datos numéricos (ayudan a detectar errores de dedo).</li>
+        <li><strong>Unidad</strong>: unidad de medida que se mostrará en pantallas y gráficos (por ejemplo TM/día, m³, %, kWh).</li>
+        <li><strong>Rol gráfico</strong>: cómo se usa el campo en los gráficos (eje X, eje Y, serie o filtro).</li>
+        <li><strong>Agreg.</strong>: forma en que se resume el campo al agrupar datos (suma, promedio, máximo, mínimo, etc.).</li>
+        <li><strong>KPI</strong>: marca este campo como indicador principal para que aparezca destacado en los tableros.</li>
+        <li><strong>Orden</strong>: posición en la que se mostrará la columna en tablas y formularios.</li>
+        <li><strong>Activo</strong>: indica si la columna sigue en uso. Se puede desactivar sin borrar el historial ya cargado.</li>
+        <li><strong>Eliminar</strong>: opción para quitar la columna de este esquema (no elimina los datos ya registrados en versiones anteriores).</li>
+      </ul>
+    </section>
+
   </form>
 {% endblock %}

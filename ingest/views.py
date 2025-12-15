@@ -194,7 +194,8 @@ def upload_manual(request):
 
             buffer = StringIO()
             writer = csv.writer(buffer)
-            header = [col.label or col.name for col in columns]
+            # Encabezados de plantilla manual: se usa el "name" de la columna
+            header = [col.name for col in columns]
             writer.writerow(header)
             for row in rows_data:
                 row_values = []
@@ -302,7 +303,8 @@ def download_template(request):
     ws = wb.active
     ws.title = "Plantilla"
 
-    header = [col.label or col.name for col in columns]
+    # Encabezados de plantilla descargable: se usa el "name" de la columna
+    header = [col.name for col in columns]
     ws.append(header)
 
     output = BytesIO()
@@ -402,7 +404,11 @@ def instance_detail(request, pk):
             .order_by("row_index", "column__display_order", "column__name")
         )
         if points.exists():
-            header = [col.label or col.name for col in instance.dataset_type.columns.filter(is_active=True).order_by("display_order", "name")]
+            # Encabezados del CSV exportado: usar siempre el "name"
+            header = [
+                col.name
+                for col in instance.dataset_type.columns.filter(is_active=True).order_by("display_order", "name")
+            ]
             rows_map = {}
             for p in points:
                 row = rows_map.setdefault(p.row_index, {})
@@ -414,7 +420,8 @@ def instance_detail(request, pk):
                     value = bool(p.bool_value)
                 else:
                     value = p.text_value
-                row[p.column.label or p.column.name] = value
+                # Clave de columna en exportaciones: siempre el "name"
+                row[p.column.name] = value
             rows = [
                 [row.get(col, "") for col in header]
                 for _, row in sorted(rows_map.items(), key=lambda item: item[0])

@@ -1,0 +1,9 @@
+>
+        ← Volver al listado
+      </a>
+      <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
+        Guardar esquema
+      </button>
+    </div>
+  </form>
+{% endblock %}

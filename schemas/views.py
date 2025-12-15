@@ -115,7 +115,7 @@ def schema_edit(request, slug=None):
         DatasetType,
         ColumnDef,
         form=ColumnDefForm,
-        extra=0,
+        extra=1,
         can_delete=True,
     )
 

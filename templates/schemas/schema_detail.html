@@ -11,11 +11,21 @@
         Planta: {{ dataset.plant.code }} · Versión {{ dataset.version }} · Frecuencia: {{ dataset.get_validation_frequency_display }}
       </p>
     </div>
-    {% if can_edit_schemas and not dataset.is_certification or is_admin and dataset.is_certification %}
-      <a href="{% url 'schemas:schema_edit' dataset.slug|default:dataset.pk %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
-        Editar esquema
-      </a>
-    {% endif %}
+    <div class="flex items-center gap-2">
+      {% if can_edit_schemas and not dataset.is_certification or is_admin and dataset.is_certification %}
+        <a href="{% url 'schemas:schema_edit' dataset.slug|default:dataset.pk %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-800 text-xs font-medium hover:bg-slate-700">
+          Editar esquema
+        </a>
+      {% endif %}
+      {% if can_edit_schemas and not is_admin and not dataset.is_certification and dataset.status == 'DRAFT' %}
+        <form method="post" action="{% url 'schemas:schema_submit' dataset.slug|default:dataset.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
+            Enviar a validación
+          </button>
+        </form>
+      {% endif %}
+    </div>
   </div>
 
   <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
@@ -67,4 +77,3 @@
     </a>
   </div>
 {% endblock %}
-

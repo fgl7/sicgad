@@ -131,11 +131,11 @@ class ColumnDef(models.Model):
     )
     name = models.CharField(
         max_length=100,
-        help_text="Nombre interno del campo (sin espacios).",
+        help_text="Nombre interno del campo (sin espacios). También se usa como encabezado en plantillas y archivos.",
     )
     label = models.CharField(
         max_length=255,
-        help_text="Nombre legible para usuarios.",
+        help_text="Descripción legible para usuarios (explica qué es la columna y qué datos espera).",
     )
     data_type = models.CharField(
         max_length=20,

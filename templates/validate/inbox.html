@@ -4,6 +4,56 @@
 {% block page_title %}Bandeja de validación diaria/mensual{% endblock %}
 
 {% block content %}
+  {% if pending_historical_batches %}
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
+      <h2 class="text-sm font-semibold mb-2 text-slate-100">Históricos pendientes (validación masiva)</h2>
+      <p class="text-[11px] text-slate-400 mb-3">
+        Estos históricos fueron enviados en conjunto. Puedes aprobarlos de una sola vez.
+      </p>
+      <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold">Creado</th>
+              <th class="px-3 py-2 text-left font-semibold">Planta</th>
+              <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+              <th class="px-3 py-2 text-left font-semibold">Rango</th>
+              <th class="px-3 py-2 text-left font-semibold">Pendientes</th>
+              <th class="px-3 py-2 text-left font-semibold">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for batch in pending_historical_batches %}
+              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+                <td class="px-3 py-2">{{ batch.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-3 py-2">{{ batch.plant.code }}</td>
+                <td class="px-3 py-2">{{ batch.dataset_type.name }}</td>
+                <td class="px-3 py-2">
+                  {% if batch.period_start and batch.period_end %}
+                    {{ batch.period_start }} → {{ batch.period_end }}
+                  {% elif batch.inst_period_start and batch.inst_period_end %}
+                    {{ batch.inst_period_start }} → {{ batch.inst_period_end }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2">{{ batch.pending_count }}</td>
+                <td class="px-3 py-2">
+                  <form method="post" action="{% url 'validation:approve_historical_batch' batch.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-1.5 rounded-md bg-emerald-500 text-slate-900 text-[11px] font-semibold hover:bg-emerald-400">
+                      Aprobar histórico
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
   {% if certification_alerts %}
     <section class="bg-amber-950/40 border border-amber-800 rounded-xl p-4 mb-6 text-xs">
       <h2 class="text-sm font-semibold mb-2 text-amber-200">Alertas de certificación mensual</h2>

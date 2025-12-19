@@ -40,11 +40,6 @@ def schema_list(request):
             can_edit_schemas = True
             can_create_schemas = True
 
-            profile = getattr(user, "profile", None)
-            if profile:
-                profile.last_seen_schema_status = timezone.now()
-                profile.save(update_fields=["last_seen_schema_status"])
-
     return render(
         request,
         "schemas/schema_list.html",
@@ -183,7 +178,7 @@ def schema_submit_for_approval(request, slug):
     if dataset.status == DatasetType.STATUS_DRAFT:
         dataset.status = DatasetType.STATUS_PENDING
         dataset.is_active = False
-        dataset.save(update_fields=["status", "is_active"])
+        dataset.save(update_fields=["status", "is_active", "updated_at"])
         record_action(
             "SCHEMA",
             request=request,
@@ -205,7 +200,7 @@ def schema_approve(request, slug):
     dataset.status = DatasetType.STATUS_APPROVED
     dataset.is_active = True
     dataset.status_comment = ""
-    dataset.save(update_fields=["status", "is_active", "status_comment"])
+    dataset.save(update_fields=["status", "is_active", "status_comment", "updated_at"])
     record_action(
         "SCHEMA",
         request=request,
@@ -228,7 +223,7 @@ def schema_reject(request, slug):
     dataset.status = DatasetType.STATUS_REJECTED
     dataset.is_active = False
     dataset.status_comment = comment
-    dataset.save(update_fields=["status", "is_active", "status_comment"])
+    dataset.save(update_fields=["status", "is_active", "status_comment", "updated_at"])
     record_action(
         "SCHEMA",
         request=request,

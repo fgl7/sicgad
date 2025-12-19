@@ -211,28 +211,30 @@ def admin_flags(request):
                     cert_rejected_qs = cert_rejected_qs.filter(updated_at__gt=last_seen_validation)
                 loader_certification_rejected = cert_rejected_qs.count()
 
-                # Notificaciones sobre esquemas de sus plantas aprobados y rechazados
+                # Notificaciones sobre esquemas de sus plantas aprobados y rechazados.
+                # Para loaders globales (sin planta asignada) se consideran todas las plantas.
                 loader_plants = [pid for pid in loader_plants_ids if pid]
-                if loader_plants:
-                    schema_qs = DatasetType.objects.filter(
-                        plant_id__in=loader_plants,
-                        is_certification=False,
-                        status__in=[
-                            DatasetType.STATUS_APPROVED,
-                            DatasetType.STATUS_REJECTED,
-                        ],
+                if loader_plants or has_global_loader:
+                    prev_seen_schema = (
+                        profile.last_seen_schema_status if profile else None
                     )
-                    if profile and profile.last_seen_schema_status:
-                        schema_qs = schema_qs.filter(
-                            updated_at__gt=profile.last_seen_schema_status
-                        )
+                    base_qs = DatasetType.objects.filter(
+                        is_certification=False,
+                    )
+                    if not has_global_loader:
+                        base_qs = base_qs.filter(plant_id__in=loader_plants)
 
-                    loader_schema_approved = schema_qs.filter(
-                        status=DatasetType.STATUS_APPROVED
-                    ).count()
-                    loader_schema_rejected = schema_qs.filter(
-                        status=DatasetType.STATUS_REJECTED
-                    ).count()
+                    # Aprobados: solo se muestran como "positivos nuevos" desde la
+                    # última vez que el cargador revisó la sección de esquemas.
+                    approved_qs = base_qs.filter(status=DatasetType.STATUS_APPROVED)
+                    if prev_seen_schema:
+                        approved_qs = approved_qs.filter(updated_at__gt=prev_seen_schema)
+                    loader_schema_approved = approved_qs.count()
+
+                    # Rechazados: persisten mientras sigan en estado REJECTED,
+                    # independientemente de si el cargador ya vio la sección.
+                    rejected_qs = base_qs.filter(status=DatasetType.STATUS_REJECTED)
+                    loader_schema_rejected = rejected_qs.count()
         except (OperationalError, ProgrammingError):
             pending_schema_requests = 0
             pending_validation_items = 0
@@ -243,6 +245,18 @@ def admin_flags(request):
             loader_schema_rejected = 0
 
     path = getattr(request, "path", "") or ""
+
+    # Si un cargador está viendo la sección de esquemas, marcamos la fecha/hora
+    # como "vistos" para limpiar futuras alarmas positivas de aprobados.
+    if path.startswith("/schemas/") and is_loader and not is_admin:
+        try:
+            profile = getattr(user, "profile", None)
+        except (OperationalError, ProgrammingError):
+            profile = None
+        if profile:
+            profile.last_seen_schema_status = timezone.now()
+            profile.save(update_fields=["last_seen_schema_status"])
+
     if path.startswith("/schemas/"):
         current_section = "Esquemas"
     elif path.startswith("/ingest/"):

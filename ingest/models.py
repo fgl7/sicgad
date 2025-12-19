@@ -57,6 +57,15 @@ class DatasetInstance(models.Model):
         help_text="Archivo fuente cargado (CSV/Excel).",
     )
 
+    historical_batch = models.ForeignKey(
+        "HistoricalImportBatch",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="instances",
+        help_text="Batch de importación histórica que generó esta instancia (si aplica).",
+    )
+
     row_count = models.PositiveIntegerField(default=0)
     error_count = models.PositiveIntegerField(default=0)
     last_error_summary = models.TextField(blank=True)
@@ -165,3 +174,68 @@ class DatasetChangeAttachment(models.Model):
 
     def __str__(self) -> str:
         return self.original_name or self.file.name
+
+
+class HistoricalImportBatch(models.Model):
+    STATUS_RUNNING = "RUNNING"
+    STATUS_DONE = "DONE"
+    STATUS_FAILED = "FAILED"
+
+    STATUS_CHOICES = [
+        (STATUS_RUNNING, "En proceso"),
+        (STATUS_DONE, "Completado"),
+        (STATUS_FAILED, "Fallido"),
+    ]
+
+    dataset_type = models.ForeignKey(
+        DatasetType,
+        on_delete=models.CASCADE,
+        related_name="historical_imports",
+    )
+    plant = models.ForeignKey(
+        Plant,
+        on_delete=models.CASCADE,
+        related_name="historical_imports",
+    )
+    created_by = models.ForeignKey(
+        Membership,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="historical_imports",
+    )
+    source_file = models.FileField(
+        upload_to="ingest/historical/",
+        null=True,
+        blank=True,
+        help_text="Archivo original usado para cargar el histórico.",
+    )
+    date_column_name = models.CharField(
+        max_length=100,
+        help_text="Nombre del encabezado que contiene la fecha por fila.",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_RUNNING,
+    )
+    error_summary = models.TextField(blank=True)
+
+    total_rows = models.PositiveIntegerField(default=0)
+    total_days = models.PositiveIntegerField(default=0)
+    created_instances = models.PositiveIntegerField(default=0)
+    updated_instances = models.PositiveIntegerField(default=0)
+    skipped_instances = models.PositiveIntegerField(default=0)
+
+    period_start = models.DateField(null=True, blank=True)
+    period_end = models.DateField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Histórico {self.dataset_type} ({self.plant.code}) - {self.created_at:%Y-%m-%d %H:%M}"

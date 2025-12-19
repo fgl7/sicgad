@@ -4,6 +4,66 @@
 {% block page_title %}Historial de cargas{% endblock %}
 
 {% block content %}
+  {% if historical_batches %}
+    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-100">Históricos importados</h2>
+          <p class="text-[11px] text-slate-400">
+            Importaciones históricas divididas por día. Puedes enviar el histórico completo a validación en un solo paso.
+          </p>
+        </div>
+      </div>
+      <div class="bg-slate-950/70 border border-slate-800 rounded-lg overflow-hidden">
+        <table class="min-w-full text-[11px]">
+          <thead class="bg-slate-950 text-slate-300">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold">Creado</th>
+              <th class="px-3 py-2 text-left font-semibold">Planta</th>
+              <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+              <th class="px-3 py-2 text-left font-semibold">Rango</th>
+              <th class="px-3 py-2 text-left font-semibold">Borrador</th>
+              <th class="px-3 py-2 text-left font-semibold">Enviados</th>
+              <th class="px-3 py-2 text-left font-semibold">Publicados</th>
+              <th class="px-3 py-2 text-left font-semibold">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in historical_batches %}
+              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+                <td class="px-3 py-2">{{ row.batch.created_at|date:"Y-m-d H:i" }}</td>
+                <td class="px-3 py-2">{{ row.batch.plant.code }}</td>
+                <td class="px-3 py-2">{{ row.batch.dataset_type.name }}</td>
+                <td class="px-3 py-2">
+                  {% if row.period_start and row.period_end %}
+                    {{ row.period_start }} → {{ row.period_end }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2">{{ row.draft_count }}</td>
+                <td class="px-3 py-2">{{ row.submitted_count }}</td>
+                <td class="px-3 py-2">{{ row.published_count }}</td>
+                <td class="px-3 py-2">
+                  {% if row.draft_count %}
+                    <form method="post" action="{% url 'ingest:submit_historical_batch' row.batch.id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="px-3 py-1.5 rounded-md bg-amber-400 text-slate-900 text-[11px] font-semibold hover:bg-amber-300">
+                        Enviar histórico
+                      </button>
+                    </form>
+                  {% else %}
+                    <span class="text-slate-500">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
   {% if loader_certifications_pending %}
     <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
       <div class="flex items-center justify-between mb-2">

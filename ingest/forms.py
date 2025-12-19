@@ -57,6 +57,68 @@ class DatasetInstanceUploadForm(forms.ModelForm):
         }
 
 
+class HistoricalDatasetUploadForm(forms.Form):
+    dataset_type = forms.ModelChoiceField(
+        queryset=DatasetType.objects.select_related("plant").filter(
+            is_active=True,
+            is_certification=False,
+            validation_frequency=DatasetType.DAILY,
+            status=DatasetType.STATUS_APPROVED,
+        ),
+        widget=forms.Select(
+            attrs={
+                "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
+            }
+        ),
+        label="Tipo de dataset",
+    )
+    plant = forms.ModelChoiceField(
+        queryset=Plant.objects.all(),
+        widget=forms.Select(
+            attrs={
+                "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
+            }
+        ),
+        label="Planta",
+    )
+    date_column_name = forms.CharField(
+        max_length=100,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
+                "placeholder": "Ej: fecha, date, periodo (opcional)",
+            }
+        ),
+        label="Columna fecha (encabezado, opcional)",
+        help_text="Si lo dejas vacío, se usa la primera columna DATE del esquema (por name o label).",
+    )
+    raw_file = forms.FileField(
+        widget=forms.ClearableFileInput(
+            attrs={
+                "class": "w-full text-sm text-slate-200",
+            }
+        ),
+        label="Archivo",
+    )
+
+    def __init__(self, *args, loader_plant: Plant | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if loader_plant:
+            self.fields["plant"].queryset = Plant.objects.filter(pk=loader_plant.pk)
+            self.fields["plant"].initial = loader_plant
+            self.fields["dataset_type"].queryset = (
+                DatasetType.objects.select_related("plant")
+                .filter(
+                    plant=loader_plant,
+                    is_active=True,
+                    is_certification=False,
+                    validation_frequency=DatasetType.DAILY,
+                    status=DatasetType.STATUS_APPROVED,
+                )
+            )
+
+
 class DatasetInstanceEditForm(forms.ModelForm):
     class Meta:
         model = DatasetInstance

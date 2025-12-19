@@ -12,10 +12,12 @@
       </p>
     </div>
     <div class="flex items-center gap-2">
-      {% if can_edit_schemas and not dataset.is_certification or is_admin and dataset.is_certification %}
-        <a href="{% url 'schemas:schema_edit' dataset.slug|default:dataset.pk %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-800 text-xs font-medium hover:bg-slate-700">
-          Editar esquema
-        </a>
+      {% if dataset.status == 'DRAFT' or dataset.status == 'REJECTED' %}
+        {% if can_edit_schemas and not dataset.is_certification or is_admin and dataset.is_certification %}
+          <a href="{% url 'schemas:schema_edit' dataset.slug|default:dataset.pk %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-800 text-xs font-medium hover:bg-slate-700">
+            Editar esquema
+          </a>
+        {% endif %}
       {% endif %}
       {% if can_edit_schemas and not is_admin and not dataset.is_certification and dataset.status == 'DRAFT' %}
         <form method="post" action="{% url 'schemas:schema_submit' dataset.slug|default:dataset.pk %}">

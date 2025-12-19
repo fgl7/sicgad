@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Iterable, List, Tuple
 
-from io import TextIOWrapper
+from io import TextIOWrapper, StringIO
 import csv
 
 import openpyxl
@@ -18,6 +18,79 @@ class ParsedRow:
   row_index: int
   values: List[str]
 
+
+def read_uploaded_file(uploaded_file) -> Tuple[List[str], List[List[object]]]:
+    """
+    Lee un archivo subido (CSV/Excel) y devuelve encabezado y filas (valores crudos).
+    A diferencia de `_read_instance_file`, esta función no depende de DatasetInstance.
+    """
+
+    if not uploaded_file:
+        return [], []
+
+    name = getattr(uploaded_file, "name", "") or ""
+    ext = name.lower().rsplit(".", 1)[-1] if "." in name else ""
+
+    header: List[str] = []
+    rows: List[List[object]] = []
+    try:
+        uploaded_file.seek(0)
+    except Exception:
+        pass
+
+    if ext in ("xlsx", "xlsm", "xltx", "xltm"):
+        wb = openpyxl.load_workbook(uploaded_file, read_only=True, data_only=True)
+        ws = wb.active
+        for i, row in enumerate(ws.iter_rows(values_only=True)):
+            values = list(row)
+            if i == 0:
+                header = ["" if v is None else str(v) for v in values]
+            else:
+                rows.append(values)
+    else:
+        raw_bytes = uploaded_file.read()
+        if isinstance(raw_bytes, bytes):
+            text = raw_bytes.decode("utf-8", errors="ignore")
+        else:
+            text = str(raw_bytes)
+        reader = csv.reader(StringIO(text))
+        for i, row in enumerate(reader):
+            if i == 0:
+                header = row
+            else:
+                rows.append(list(row))
+        try:
+            uploaded_file.seek(0)
+        except Exception:
+            pass
+
+    return header, rows
+
+
+def parse_date_cell(value) -> date | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    # Intentos comunes
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            parsed_dt = datetime.strptime(text, fmt)
+            return parsed_dt.date()
+        except ValueError:
+            continue
+    try:
+        parsed = date.fromisoformat(text[:10])
+        return parsed
+    except Exception:
+        return None
 
 def _read_instance_file(instance: DatasetInstance) -> Tuple[List[str], List[ParsedRow]]:
     """

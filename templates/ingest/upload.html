@@ -9,18 +9,36 @@
   <script src="{% static 'js/ingest_upload.js' %}"></script>
 {% endblock %}
 
-{% block content %}
+  {% block content %}
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4">
-    <h2 class="text-sm font-semibold">Subir archivo de datos</h2>
-    <p class="text-xs text-slate-300">
-      Selecciona el tipo de dataset, la planta y el periodo, luego sube el archivo
-      (por ejemplo CSV). Más adelante aquí se aplicarán las validaciones completas.
-    </p>
-    <div>
-      <a href="{% url 'ingest:upload_manual' %}" class="inline-flex items-center px-3 py-1.5 rounded-md border border-emerald-600 text-emerald-400 text-[11px] font-semibold hover:bg-emerald-600/10">
-        Capturar datos manualmente
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-sm font-semibold">Subir archivo de datos</h2>
+        <p class="text-xs text-slate-300">
+          Selecciona el tipo de dataset, la planta y el periodo, luego sube el archivo
+          (por ejemplo CSV). Más adelante aquí se aplicarán las validaciones completas.
+        </p>
+      </div>
+      <a
+        id="import-historical-link"
+        href="{% url 'ingest:upload_historical' %}"
+        data-has-data-url="{% url 'ingest:dataset_has_data' %}"
+        class="hidden inline-flex items-center px-4 py-2 rounded-md bg-fuchsia-600 text-slate-50 text-[11px] font-semibold hover:bg-fuchsia-500 whitespace-nowrap"
+      >
+        Importar histórico
       </a>
     </div>
+
+    <div id="historical-required-banner" class="hidden rounded-lg border border-fuchsia-700 bg-fuchsia-900/30 p-3 text-xs text-fuchsia-100">
+      Primero importa el histórico para habilitar la carga diaria.
+    </div>
+
+    <div id="daily-upload-wrapper" class="space-y-4">
+      <div>
+        <a href="{% url 'ingest:upload_manual' %}" class="inline-flex items-center px-3 py-1.5 rounded-md border border-emerald-600 text-emerald-400 text-[11px] font-semibold hover:bg-emerald-600/10">
+          Capturar datos manualmente
+        </a>
+      </div>
 
     <form method="post" enctype="multipart/form-data" class="space-y-3 text-xs">
       {% csrf_token %}
@@ -74,6 +92,7 @@
         </button>
       </div>
     </form>
+    </div>
   </section>
 
   {% if instances %}

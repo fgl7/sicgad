@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Membership
-from ingest.models import DatasetInstance, PublishedDataPoint
+from ingest.models import DatasetInstance, PublishedDataPoint, HistoricalImportBatch
 from ingest.utils import materialize_instance
 from schemas.models import DatasetType
 from schemas.services import collect_certification_status, previous_month_range
@@ -18,6 +18,8 @@ from audit.utils import record_action
 from .forms import ValidationDecisionForm
 from .models import ValidationAction
 from .services import determine_monthly_state
+
+from django.db.models import Count, Min, Max
 
 
 PUBLISHED_STATES = [
@@ -356,6 +358,37 @@ def inbox(request):
         profile.last_seen_certification_alert = timezone.now()
         profile.save(update_fields=["last_seen_certification_alert"])
 
+    pending_historical_batches = []
+    if daily_memberships.exists():
+        batch_qs = HistoricalImportBatch.objects.select_related("dataset_type", "plant").filter(
+            dataset_type__validation_frequency=DatasetType.DAILY,
+            instances__state__in=[DatasetInstance.STATE_SUBMITTED, DatasetInstance.STATE_VALIDATED_L1],
+        )
+        if not has_global_daily:
+            if daily_plants:
+                batch_qs = batch_qs.filter(plant_id__in=daily_plants)
+            else:
+                batch_qs = batch_qs.none()
+
+        batch_qs = (
+            batch_qs.distinct()
+            .annotate(
+                pending_count=Count(
+                    "instances",
+                    filter=Q(
+                        instances__state__in=[
+                            DatasetInstance.STATE_SUBMITTED,
+                            DatasetInstance.STATE_VALIDATED_L1,
+                        ]
+                    ),
+                ),
+                inst_period_start=Min("instances__period"),
+                inst_period_end=Max("instances__period"),
+            )
+            .order_by("-created_at")[:20]
+        )
+        pending_historical_batches = list(batch_qs)
+
     return render(
         request,
         "validate/inbox.html",
@@ -363,8 +396,92 @@ def inbox(request):
             "items": items,
             "history_actions": history_actions,
             "certification_alerts": certification_alerts,
+            "pending_historical_batches": pending_historical_batches,
         },
     )
+
+
+@login_required
+def approve_historical_batch(request, batch_id: int):
+    if request.method != "POST":
+        return redirect("validation:inbox")
+
+    batch = get_object_or_404(
+        HistoricalImportBatch.objects.select_related("dataset_type", "plant"),
+        pk=batch_id,
+    )
+    if batch.dataset_type.validation_frequency != DatasetType.DAILY:
+        return redirect("validation:inbox")
+
+    user = request.user
+    base_qs = Membership.objects.filter(user=user, role="VALIDATOR", is_active=True, can_validate_daily=True)
+    membership = base_qs.filter(plant=batch.plant).order_by("validation_level").first()
+    if not membership:
+        membership = base_qs.filter(plant__isnull=True).order_by("validation_level").first()
+    if not membership:
+        messages.error(request, "No tiene permisos de validación diaria para este histórico.")
+        return redirect("validation:inbox")
+
+    approval_subquery = ValidationAction.objects.filter(
+        dataset_instance=OuterRef("pk"),
+        user=user,
+        decision=ValidationAction.DECISION_APPROVE,
+    )
+    approval_since_submit = approval_subquery.filter(created_at__gte=OuterRef("submitted_at"))
+
+    target_qs = (
+        DatasetInstance.objects.filter(
+            historical_batch=batch,
+            state__in=[DatasetInstance.STATE_SUBMITTED, DatasetInstance.STATE_VALIDATED_L1],
+        )
+        .annotate(
+            already_approved_recent=Exists(approval_since_submit),
+        )
+        .filter(
+            Q(submitted_at__isnull=True, already_approved_recent=False)
+            | Q(submitted_at__isnull=False, already_approved_recent=False)
+        )
+    )
+
+    instance_ids = list(target_qs.values_list("id", flat=True))
+    if not instance_ids:
+        messages.info(request, "No hay instancias pendientes para aprobar en este histórico.")
+        return redirect("validation:inbox")
+
+    level = membership.validation_level if membership.validation_level else 1
+    now = timezone.now()
+
+    actions = [
+        ValidationAction(
+            dataset_instance_id=instance_id,
+            validator=membership,
+            user=user,
+            level=level,
+            decision=ValidationAction.DECISION_APPROVE,
+            comment="Aprobación masiva de histórico.",
+        )
+        for instance_id in instance_ids
+    ]
+    ValidationAction.objects.bulk_create(actions, batch_size=1000)
+
+    DatasetInstance.objects.filter(id__in=instance_ids).update(
+        state=DatasetInstance.STATE_PUBLISHED,
+        updated_at=now,
+    )
+
+    # Materialización: crea PublishedDataPoint para cada instancia publicada.
+    for instance in DatasetInstance.objects.filter(id__in=instance_ids).select_related("dataset_type").iterator(chunk_size=50):
+        materialize_instance(instance)
+
+    messages.success(request, f"Histórico aprobado: {len(instance_ids)} días.")
+    record_action(
+        "VALIDATION",
+        request=request,
+        module="Validation",
+        object_repr=f"Histórico {batch.dataset_type.name} | {batch.plant.code}",
+        details=f"Aprobación masiva ({len(instance_ids)} instancias)",
+    )
+    return redirect("validation:inbox")
 
 
 @login_required

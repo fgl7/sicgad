@@ -3,11 +3,12 @@ from datetime import date, datetime
 
 from django.contrib import messages
 from django.http import Http404, HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Min, Max, Count
 from django.forms import formset_factory
 from django.core.files.base import ContentFile
 from io import BytesIO, TextIOWrapper, StringIO
@@ -24,13 +25,16 @@ from .forms import (
     ManualDatasetForm,
     build_manual_row_form,
     CertificationJustificationForm,
+    HistoricalDatasetUploadForm,
 )
 from .models import (
     DatasetInstance,
     PublishedDataPoint,
     DatasetChangeRequest,
     DatasetChangeAttachment,
+    HistoricalImportBatch,
 )
+from .utils import read_uploaded_file, parse_date_cell
 
 
 def upload(request):
@@ -45,8 +49,18 @@ def upload(request):
         )
         return redirect(reverse("ingest:upload_history"))
 
+    loader_plant = None
+    if user.is_authenticated:
+        loader_membership = (
+            Membership.objects.filter(user=user, role="LOADER", is_active=True)
+            .select_related("plant")
+            .first()
+        )
+        if loader_membership and loader_membership.plant_id:
+            loader_plant = loader_membership.plant
+
     if request.method == "POST":
-        form = DatasetInstanceUploadForm(request.POST, request.FILES)
+        form = DatasetInstanceUploadForm(request.POST, request.FILES, loader_plant=loader_plant)
         if form.is_valid():
             instance: DatasetInstance = form.save(commit=False)
 
@@ -60,6 +74,9 @@ def upload(request):
                 membership = None
 
             instance.created_by = membership
+            if membership and membership.role == "LOADER":
+                # Asegura consistencia: el dataset define la planta destino.
+                instance.plant = instance.dataset_type.plant
             instance.state = DatasetInstance.STATE_DRAFT
             instance.row_count = 0
             instance.error_count = 0
@@ -79,7 +96,7 @@ def upload(request):
             )
             return redirect(reverse("ingest:upload_history"))
     else:
-        form = DatasetInstanceUploadForm()
+        form = DatasetInstanceUploadForm(loader_plant=loader_plant)
 
     if request.user.is_authenticated:
         instances = (
@@ -91,6 +108,255 @@ def upload(request):
         instances = DatasetInstance.objects.none()
 
     return render(request, "ingest/upload.html", {"form": form, "instances": instances})
+
+
+def dataset_has_data(request):
+    user = request.user
+    if not user.is_authenticated:
+        return JsonResponse({"has_data": False})
+
+    dataset_type_id = request.GET.get("dataset_type")
+    try:
+        dataset_type_id_int = int(dataset_type_id) if dataset_type_id else None
+    except (TypeError, ValueError):
+        return JsonResponse({"has_data": False})
+
+    if not dataset_type_id_int:
+        return JsonResponse({"has_data": False})
+
+    is_loader = Membership.objects.filter(user=user, role="LOADER", is_active=True).exists()
+    if not is_loader:
+        return JsonResponse({"has_data": False})
+
+    dataset = DatasetType.objects.select_related("plant").filter(pk=dataset_type_id_int).first()
+    if not dataset or not dataset.plant_id:
+        return JsonResponse({"has_data": False})
+
+    has_data = DatasetInstance.objects.filter(
+        dataset_type_id=dataset_type_id_int,
+        plant_id=dataset.plant_id,
+    ).exists()
+
+    return JsonResponse({"has_data": bool(has_data)})
+
+
+def upload_historical(request):
+    user = request.user
+    if user.is_authenticated and (
+        user.is_superuser
+        or Membership.objects.filter(user=user, role="ADMIN", is_active=True).exists()
+    ):
+        messages.info(
+            request,
+            "Los administradores no realizan cargas directas; use el historial para revisar y gestionar cargas existentes.",
+        )
+        return redirect(reverse("ingest:upload_history"))
+
+    if not user.is_authenticated:
+        return redirect("login")
+
+    loader_membership = (
+        Membership.objects.filter(user=user, role="LOADER", is_active=True)
+        .select_related("plant")
+        .first()
+    )
+    loader_plant = loader_membership.plant if loader_membership else None
+
+    if request.method == "POST":
+        form = HistoricalDatasetUploadForm(
+            request.POST,
+            request.FILES,
+            loader_plant=loader_plant,
+        )
+        if form.is_valid():
+            dataset_type = form.cleaned_data["dataset_type"]
+            plant = form.cleaned_data["plant"]
+            date_column_name = (form.cleaned_data["date_column_name"] or "").strip()
+            uploaded = form.cleaned_data["raw_file"]
+
+            membership = Membership.objects.filter(
+                user=user,
+                role="LOADER",
+                is_active=True,
+                plant=plant,
+            ).first()
+            if not membership:
+                membership = Membership.objects.filter(
+                    user=user,
+                    role="LOADER",
+                    is_active=True,
+                    plant__isnull=True,
+                ).first()
+
+            batch = HistoricalImportBatch.objects.create(
+                dataset_type=dataset_type,
+                plant=plant,
+                created_by=membership,
+                date_column_name=date_column_name or "(auto)",
+                status=HistoricalImportBatch.STATUS_RUNNING,
+            )
+
+            try:
+                header, rows = read_uploaded_file(uploaded)
+                batch.total_rows = len(rows)
+
+                header_norm = [(h or "").strip().lower() for h in (header or [])]
+                if not header_norm:
+                    raise ValueError("El archivo no tiene encabezado.")
+
+                # Determinar la columna fecha: si el usuario no la indicó, usamos
+                # la primera columna activa de tipo DATE del esquema.
+                if not date_column_name:
+                    date_col = (
+                        dataset_type.columns.filter(is_active=True, data_type="DATE")
+                        .order_by("display_order", "name")
+                        .first()
+                    )
+                    if not date_col:
+                        raise ValueError(
+                            "Este esquema no tiene una columna de tipo DATE. Indica manualmente el encabezado de fecha."
+                        )
+                    candidates = [date_col.name, date_col.label]
+                else:
+                    candidates = [date_column_name]
+
+                candidates_norm = [
+                    (c or "").strip().lower() for c in candidates if (c or "").strip()
+                ]
+                date_idx = None
+                for cand in candidates_norm:
+                    if cand in header_norm:
+                        date_idx = header_norm.index(cand)
+                        break
+                if date_idx is None:
+                    raise ValueError(
+                        "No se encontró la columna de fecha en el archivo. "
+                        "Indica el encabezado exacto o asegúrate de que exista la columna DATE del esquema (por name o label)."
+                    )
+                batch.date_column_name = header[date_idx] or candidates[0] or "(auto)"
+
+                grouped: dict[date, list[list[object]]] = {}
+                for row in rows:
+                    cell_value = row[date_idx] if date_idx < len(row) else None
+                    period = parse_date_cell(cell_value)
+                    if not period:
+                        continue
+                    grouped.setdefault(period, []).append(row)
+
+                if not grouped:
+                    raise ValueError(
+                        "No se encontraron filas con fecha válida. Revisa el formato de la columna de fecha."
+                    )
+
+                batch.total_days = len(grouped)
+                all_periods = sorted(grouped.keys())
+                batch.period_start = all_periods[0]
+                batch.period_end = all_periods[-1]
+
+                created_count = 0
+                updated_count = 0
+                skipped_count = 0
+
+                for period, day_rows in grouped.items():
+                    instance = DatasetInstance.objects.filter(
+                        dataset_type=dataset_type,
+                        plant=plant,
+                        period=period,
+                    ).first()
+
+                    if instance and instance.state != DatasetInstance.STATE_DRAFT:
+                        skipped_count += 1
+                        continue
+
+                    if not instance:
+                        instance = DatasetInstance(
+                            dataset_type=dataset_type,
+                            plant=plant,
+                            period=period,
+                        )
+                        created_count += 1
+                    else:
+                        updated_count += 1
+
+                    instance.created_by = membership
+                    instance.historical_batch = batch
+                    instance.state = DatasetInstance.STATE_DRAFT
+                    instance.row_count = len(day_rows)
+                    instance.error_count = 0
+                    instance.last_error_summary = ""
+                    instance.submitted_at = None
+
+                    csv_buffer = StringIO()
+                    writer = csv.writer(csv_buffer)
+                    writer.writerow(header)
+                    for row in day_rows:
+                        normalized = ["" if v is None else str(v) for v in row]
+                        writer.writerow(normalized)
+
+                    file_name = f"historico_{slugify(dataset_type.name) or 'dataset'}_{plant.code}_{period.isoformat()}.csv"
+                    instance.raw_file.save(
+                        file_name,
+                        ContentFile(csv_buffer.getvalue().encode("utf-8")),
+                        save=False,
+                    )
+                    instance.save()
+
+                uploaded.seek(0)
+                batch.source_file.save(
+                    getattr(uploaded, "name", "historico") or "historico",
+                    uploaded,
+                    save=False,
+                )
+                batch.created_instances = created_count
+                batch.updated_instances = updated_count
+                batch.skipped_instances = skipped_count
+                batch.status = HistoricalImportBatch.STATUS_DONE
+                batch.finished_at = timezone.now()
+                batch.save(
+                    update_fields=[
+                        "source_file",
+                        "status",
+                        "finished_at",
+                        "date_column_name",
+                        "total_rows",
+                        "total_days",
+                        "period_start",
+                        "period_end",
+                        "created_instances",
+                        "updated_instances",
+                        "skipped_instances",
+                    ]
+                )
+
+                messages.success(
+                    request,
+                    f"Histórico importado: {created_count} creados, {updated_count} actualizados, {skipped_count} omitidos.",
+                )
+                record_action(
+                    "UPLOAD",
+                    request=request,
+                    module="Ingest",
+                    object_repr=f"Histórico {dataset_type.name} ({plant.code})",
+                    details=f"Filas {batch.total_rows}, días {batch.total_days}",
+                )
+                return redirect(reverse("ingest:upload_history"))
+            except Exception as exc:
+                batch.status = HistoricalImportBatch.STATUS_FAILED
+                batch.error_summary = str(exc)
+                batch.finished_at = timezone.now()
+                batch.save(update_fields=["status", "error_summary", "finished_at"])
+                messages.error(request, f"Error al importar histórico: {exc}")
+    else:
+        form = HistoricalDatasetUploadForm(loader_plant=loader_plant)
+
+    return render(
+        request,
+        "ingest/upload_historical.html",
+        {
+            "form": form,
+            "loader_default_plant": loader_plant,
+        },
+    )
 
 
 def upload_manual(request):
@@ -242,7 +508,7 @@ def upload_manual(request):
                 object_repr=f"{instance.dataset_type.name} | {instance.period}",
                 details=f"Captura manual en planta {instance.plant.code}",
             )
-            return redirect(reverse("ingest:upload_history"))
+            return redirect(reverse("ingest:upload"))
 
     if request.user.is_authenticated:
         instances = (
@@ -1225,6 +1491,38 @@ def upload_history(request):
                 history_qs = history_qs.none()
         loader_certifications_history = list(history_qs[:10])
 
+    historical_batches = []
+    if request.user.is_authenticated and loader_memberships:
+        batch_qs = HistoricalImportBatch.objects.select_related("dataset_type", "plant").order_by(
+            "-created_at"
+        )
+        if not has_global_loader:
+            if loader_plants:
+                batch_qs = batch_qs.filter(plant_id__in=loader_plants)
+            else:
+                batch_qs = batch_qs.none()
+
+        batch_qs = batch_qs[:10]
+        for batch in batch_qs:
+            inst_qs = DatasetInstance.objects.filter(historical_batch=batch)
+            counts = inst_qs.aggregate(
+                draft=Count("id", filter=Q(state=DatasetInstance.STATE_DRAFT)),
+                submitted=Count("id", filter=Q(state=DatasetInstance.STATE_SUBMITTED)),
+                published=Count("id", filter=Q(state=DatasetInstance.STATE_PUBLISHED)),
+                start=Min("period"),
+                end=Max("period"),
+            )
+            historical_batches.append(
+                {
+                    "batch": batch,
+                    "draft_count": counts["draft"] or 0,
+                    "submitted_count": counts["submitted"] or 0,
+                    "published_count": counts["published"] or 0,
+                    "period_start": batch.period_start or counts["start"],
+                    "period_end": batch.period_end or counts["end"],
+                }
+            )
+
     is_validator = (
         Membership.objects.filter(
             user=request.user,
@@ -1256,6 +1554,7 @@ def upload_history(request):
             "loader_certifications_pending": loader_certifications_pending,
             "loader_certifications_rejected": loader_certifications_rejected,
             "loader_certifications_history": loader_certifications_history,
+            "historical_batches": historical_batches,
         },
     )
 
@@ -1297,6 +1596,58 @@ def submit_instance(request, pk):
         _submit_instance_to_validation(instance, request)
 
     return redirect("ingest:upload")
+
+
+def submit_historical_batch(request, batch_id: int):
+    if request.method != "POST":
+        return redirect("ingest:upload_history")
+
+    user = request.user
+    if not user.is_authenticated:
+        return redirect("login")
+
+    batch = (
+        HistoricalImportBatch.objects.select_related("dataset_type", "plant")
+        .filter(pk=batch_id)
+        .first()
+    )
+    if not batch:
+        raise Http404("Importación histórica no encontrada.")
+
+    is_loader = Membership.objects.filter(user=user, role="LOADER", is_active=True).exists()
+    if not is_loader:
+        return redirect("ingest:upload_history")
+
+    can_access_plant = Membership.objects.filter(
+        user=user, role="LOADER", is_active=True
+    ).filter(Q(plant=batch.plant) | Q(plant__isnull=True)).exists()
+    if not can_access_plant:
+        return redirect("ingest:upload_history")
+
+    now = timezone.now()
+    updated = DatasetInstance.objects.filter(
+        historical_batch=batch,
+        state=DatasetInstance.STATE_DRAFT,
+    ).update(
+        state=DatasetInstance.STATE_SUBMITTED,
+        last_error_summary="",
+        submitted_at=now,
+        updated_at=now,
+    )
+
+    if updated:
+        messages.success(request, f"Histórico enviado a validación: {updated} días.")
+        record_action(
+            "SUBMIT",
+            request=request,
+            module="Ingest",
+            object_repr=f"Histórico {batch.dataset_type.name} | {batch.plant.code}",
+            details=f"Envío masivo ({updated} instancias)",
+        )
+    else:
+        messages.info(request, "No hay instancias en borrador para enviar en este histórico.")
+
+    return redirect("ingest:upload_history")
 
 
 def edit_instance(request, pk):

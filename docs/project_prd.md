@@ -23,7 +23,7 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 | **Accounts** | Gestión de usuarios, roles, membresías y políticas de acceso. | `Membership` vincula User+Planta+Rol+Nivel+Institución, `AccountProfile` fuerza cambio de contraseña y registra notificaciones (banderas `last_seen_*` para limpiar badges). Middleware especializado. |
 | **Plants** | Catálogo de plantas operativas (PCS, PICP, etc.). | Se usa para permisos y para segmentar datasets/cargas. |
 | **Schemas** | Definición y versionado de esquemas de datos por planta. | `DatasetType`/`ColumnDef` con metadatos completos, flujo de aprobación, creación de esquemas de certificación a partir de diarios. Los esquemas diarios los propone el cargador y los aprueba/rechaza el Administrador. |
-| **Ingest** | Descarga de plantillas, carga de archivos diarios (archivo o captura manual), historial del cargador y revisión de certificaciones. | `DatasetInstance` guarda estados, `submitted_at`, archivo fuente y errores. El historial muestra alertas, rechazados y un tablero de certificaciones con enlaces a `certification_review`. Las plantillas usan como encabezados los `name` de las columnas. |
+| **Ingest** | Descarga de plantillas, carga de archivos diarios (archivo o captura manual) y carga histórica inicial obligatoria. | Soporta importación histórica masiva (`HistoricalImportBatch`) que crea múltiples `DatasetInstance` y permite envío/validación en conjunto. `ingest/upload` bloquea la carga diaria hasta que exista histórico y luego oculta “Importar histórico”. Las plantillas usan como encabezados los `name` de las columnas (export Excel). |
 | **Validation** | Flujo de aprobación diario/mensual y publicación automática. | `ValidationAction` documenta nivel, decisión y comentarios; la bandeja filtra instancias ya aprobadas tras el último envío y actualiza `last_seen_certification_alert`. `materialize_instance` genera datos publicados cuando se llega a PUBLISHED. |
 | **KPIs** | Visualización (ECharts) de datos publicados o borradores según permisos. | Selección dinámica de instancia, eje X/Y, múltiples KPIs, filtros de fecha, tablas y modo Published/Draft que refleja datos diarios certificados. |
 | **Performance** | Cálculo de indicadores de desempeño productivo y eficiencia de procesos. | Define variables metodológicas por planta y permite al Administrador mapear columnas de esquemas a variables de las fórmulas (ej. Fórmula 1 PCS), calculando indicadores mensuales en estado Draft/Certificado. |
@@ -48,6 +48,7 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 
 ### 3.3 Instancias y datos publicados
 - `DatasetInstance`: instancia de carga con referencias al esquema (`DatasetType`), planta, periodo (fecha), estado (DRAFT→SUBMITTED→VALIDATED_L1/L2→PUBLISHED→LOCKED), archivo cargado, métricas de error, `submitted_at` (tracking de envíos) y autor (`Membership`).
+- `HistoricalImportBatch`: agrupa una importación histórica (un archivo) por `DatasetType`+planta, con rango detectado (`period_start`/`period_end`) y estado (`RUNNING`/`DONE`/`FAILED`). Cada fila del archivo crea una `DatasetInstance` ligada por `DatasetInstance.historical_batch` para habilitar envío/validación masiva.
 - `PublishedDataPoint`: tabla desnormalizada que almacena cada valor publicado (numérico, texto, fecha, booleano) por fila/columna para servir a dashboards y KPIs.
 - `materialize_instance(instance)`:
   1. Limpia puntos previos del dataset.
@@ -71,12 +72,15 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 4. Para certificación mensual, Admin clona columnas seleccionadas de un dataset diario y crea un `DatasetType` `MONTHLY`/`is_certification=True`.
 
 ### 4.2 Carga y envío de datos
-1. Usuario descarga plantilla generada a partir del esquema aprobado **o** ingresa manualmente los datos desde `ingest/upload/manual`. La captura manual crea filas dinámicas (agregar/quitar), copia la fecha del periodo automáticamente y obliga a justificar cambios con adjuntos.
-2. Sube archivo diario (CSV/XLSX) o guarda el registro manual; ambos crean un `DatasetInstance` en borrador.
-3. Instancia queda en `STATE_DRAFT`. Puede editar/volver a subir mientras detecta errores.
-4. Al estar listo, envía (`submit_instance`) → estado `STATE_SUBMITTED` y se marca `submitted_at`. El historial del cargador muestra alertas amarillas (pendientes), rojas (rechazados) y el histórico de certificaciones con enlaces a la revisión mensual.
+1. **Primera carga (histórico obligatorio)**: si el dataset aún no tiene datos, `ingest/upload` bloquea la carga diaria (UI borrosa/inhabilitada) y solo habilita “Importar histórico” con descarga de plantilla Excel.
+2. La importación histórica (XLSX/CSV) crea un `HistoricalImportBatch` y genera múltiples `DatasetInstance` (uno por fecha/período) en `STATE_DRAFT`, vinculadas al batch.
+3. El cargador envía el histórico completo a validación con un solo botón (`submit_historical_batch`), marcando todas las instancias del batch como `STATE_SUBMITTED` y registrando `submitted_at`.
+4. **Carga diaria**: una vez publicado el histórico, se habilita el flujo normal: subir archivo diario (CSV/XLSX) **o** capturar manualmente desde `ingest/upload/manual`; ambos crean un `DatasetInstance` en borrador.
+5. Al estar listo, envía (`submit_instance`) → estado `STATE_SUBMITTED` y se marca `submitted_at`. El historial del cargador muestra alertas amarillas (pendientes), rojas (rechazados) y el histórico de certificaciones con enlaces a la revisión mensual.
 
 ### 4.3 Validación
+- **Histórico (validación masiva)**:
+  - La bandeja incluye una sección de históricos pendientes (por batch). Al aprobar un histórico (`approve_historical_batch`), se publican todas las instancias del batch y se materializan para consumo/KPIs.
 - **Diaria (operativa)**:
   - Solo nivel operativo (ej. Jefe de planta). Al aprobar, pasa directo a `PUBLISHED`, se materializa y alimenta KPIs diarios.
 - **Mensual/certificación**:
@@ -118,6 +122,9 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 - Modelos y vistas implementan el flujo completo básico (carga → validación → publicación → KPIs) usando SQLite.
 - Consolidación automática del mes anterior para esquemas de certificación, con revisión mensual (justificaciones y adjuntos por día/mes), alertas sincronizadas con sidebar y lógica multi-nivel corregida.
 - Historial del cargador ampliado con panel de certificaciones (pendientes, rechazadas e histórico) y badges por estado.
+- UI de esquemas ajustada: edición solo en `DRAFT`/`REJECTED`; la lista/detalle muestran aprobador/estado y fecha de aprobación.
+- Notificaciones en sidebar para cargadores: rechazos persisten hasta que el cargador modifique y re-envíe; aprobaciones se limpian al visitar la sección de esquemas.
+- Importación histórica implementada: `ingest/upload` exige cargar histórico antes de habilitar carga diaria; el histórico se envía y valida en bloque (batch) y, una vez publicado, “Importar histórico” deja de mostrarse.
 - Auditoría operativa y paneles básicos completados.
 - Pendiente:
   - Integrar `django-otp` y `django-axes` en settings/login.
@@ -135,8 +142,9 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
   - `config/settings.py` – configuración general, apps registradas y middleware custom.
   - `accounts/context_processors.py` – banderas de permisos, contadores y sección actual.
   - `schemas/views.py` – lógica de CRUD/versionado de esquemas.
-  - `ingest/views.py` + `ingest/utils.py` – carga de archivos y materialización.
-  - `validation/views.py` – bandejas y reglas de estado.
+  - `ingest/models.py` + `ingest/views.py` + `ingest/utils.py` – carga diaria/histórica, batches y materialización.
+  - `templates/ingest/upload.html`, `templates/ingest/upload_historical.html`, `templates/ingest/upload_history.html`, `static/js/ingest_upload.js` – UI de carga, gating y plantilla Excel.
+  - `validation/views.py` + `templates/validate/inbox.html` – bandejas, reglas de estado y validación masiva de históricos.
   - `kpis/views.py` + `static/js/kpis_charts.js` – dashboard de datos.
   - `audit/utils.py` + `audit/views.py` – registro y consulta de auditorías.
 - **Docs complementarios**: `docs/logic.md` (visión funcional alta) y `docs/tasks.md` (roadmap paso a paso). Este PRD actúa como índice operativo unificado.
@@ -149,11 +157,13 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
   - Habrá al menos un Admin operativo distinto del superusuario para aprobar esquemas y gestionar cuentas.
   - Los validadores tienen niveles numéricos consecutivos que determinan el flujo.
   - Los archivos de carga utilizan encabezados exactamente iguales a los `name` definidos en las columnas; los `label` se usan solo como descripciones legibles para usuarios.
+  - Todo dataset requiere una carga histórica inicial antes de habilitar la carga diaria (gating en `ingest/upload`).
 - **Riesgos**:
   - Falta de validaciones de negocio en backend (solo estructura). Será necesario implementar reglas por columna/campo.
   - Escalabilidad limitada en SQLite; migración a PostgreSQL debe planificarse pronto.
   - Falta de test coverage incrementa riesgo de regresiones.
   - Seguridad parcial (2FA/axes no conectados aún) puede dejar huecos si se despliega sin completar.
+  - Procesamiento síncrono de archivos históricos grandes puede ser lento; ideal mover import/validación masiva a jobs asíncronos (Celery).
 
 ---
 

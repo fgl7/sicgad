@@ -31,6 +31,8 @@
           <th class="px-3 py-2 text-left font-semibold">Versión</th>
           <th class="px-3 py-2 text-left font-semibold">Frecuencia</th>
           <th class="px-3 py-2 text-left font-semibold">Estado</th>
+          <th class="px-3 py-2 text-left font-semibold">Aprobación</th>
+          <th class="px-3 py-2 text-left font-semibold">Fecha aprobación</th>
           <th class="px-3 py-2 text-left font-semibold">Activo</th>
           <th class="px-3 py-2"></th>
         </tr>
@@ -67,6 +69,32 @@
               {% endif %}
             </td>
             <td class="px-3 py-2 align-top">
+              {% if ds.status == 'PENDING' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
+                  Administrador (pendiente)
+                </span>
+              {% elif ds.status == 'APPROVED' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-300">
+                  Administrador (aprobado)
+                </span>
+              {% elif ds.status == 'REJECTED' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">
+                  Administrador (rechazado)
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-700 text-slate-300">
+                  —
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 align-top">
+              {% if ds.status == 'APPROVED' %}
+                {{ ds.updated_at|date:"d/m/Y H:i" }}
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 align-top">
               {% if ds.is_active %}
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-300">Sí</span>
               {% else %}
@@ -79,10 +107,12 @@
                   Ver
                 </a>
               {% endif %}
-              {% if can_edit_schemas and not ds.is_certification or is_admin and ds.is_certification %}
-                <a href="{% url 'schemas:schema_edit' ds.slug|default:ds.pk %}" class="text-xs text-slate-300 hover:text-emerald-400">
-                  Editar
-                </a>
+              {% if ds.status == 'DRAFT' or ds.status == 'REJECTED' %}
+                {% if can_edit_schemas and not ds.is_certification or is_admin and ds.is_certification %}
+                  <a href="{% url 'schemas:schema_edit' ds.slug|default:ds.pk %}" class="text-xs text-slate-300 hover:text-emerald-400">
+                    Editar
+                  </a>
+                {% endif %}
               {% endif %}
               {% if can_edit_schemas and ds.status == 'DRAFT' %}
                 <form method="post" action="{% url 'schemas:schema_submit' ds.slug|default:ds.pk %}" class="inline">
@@ -113,7 +143,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="7" class="px-3 py-4 text-center text-slate-400">
+            <td colspan="8" class="px-3 py-4 text-center text-slate-400">
               No hay esquemas definidos todavía.
             </td>
           </tr>

@@ -74,7 +74,9 @@
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-4">
     <div class="grid gap-4 md:grid-cols-12">
       <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
-        <div id="kpi-chart" class="w-full" style="height: 420px;"></div>
+        <div class="rounded-2xl border border-slate-800/80 bg-slate-950/70 shadow-2xl shadow-slate-950/60 ring-1 ring-emerald-500/10 p-2">
+          <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
+        </div>
       </div>
       <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 space-y-4 text-xs">
         <div>
@@ -108,12 +110,33 @@
   </section>
 
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-    <h2 class="text-sm font-semibold mb-2">Datos tabulares</h2>
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
+      <h2 class="text-sm font-semibold">Datos tabulares</h2>
+      <div class="flex items-center gap-2">
+        <button
+          id="kpi-export-csv"
+          type="button"
+          class="px-3 py-1 rounded bg-emerald-500 text-slate-900 font-semibold text-[11px] hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled
+        >
+          Descargar CSV
+        </button>
+        <button
+          id="kpi-export-excel"
+          type="button"
+          class="px-3 py-1 rounded bg-amber-300 text-slate-900 font-semibold text-[11px] hover:bg-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled
+        >
+          Descargar Excel
+        </button>
+      </div>
+    </div>
     <div id="kpi-table-container" class="max-h-80 overflow-auto border border-slate-800 rounded-lg bg-slate-950/80"></div>
   </section>
 {% endblock %}
 
 {% block extra_js %}
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <script src="{% static 'js/kpis_charts.js' %}?v=11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="{% static 'js/kpis_charts.js' %}?v=13"></script>
 {% endblock %}

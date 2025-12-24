@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const dateApplyButton = document.getElementById("kpi-date-apply");
   const chartContainer = document.getElementById("kpi-chart");
   const tableContainer = document.getElementById("kpi-table-container");
+  const exportCsvButton = document.getElementById("kpi-export-csv");
+  const exportExcelButton = document.getElementById("kpi-export-excel");
 
   if (
     !modeSelect ||
@@ -375,7 +377,8 @@ document.addEventListener("DOMContentLoaded", function () {
       stack = "total";
     }
 
-    const series = yCols.map(function (yCol) {
+    const seriesColors = ["#38bdf8", "#fbbf24", "#34d399", "#a855f7", "#f97316", "#60a5fa"];
+    const series = yCols.map(function (yCol, idx) {
       const values = rows.map(function (row) {
         const raw = (row.values || {})[yCol.name];
         return raw != null && raw !== "" ? Number(raw) : null;
@@ -386,19 +389,30 @@ document.addEventListener("DOMContentLoaded", function () {
         smooth: smooth,
         stack: stack,
         showSymbol: seriesType === "line" ? false : true,
+        lineStyle: { width: 2 },
+        itemStyle: { color: seriesColors[idx % seriesColors.length] },
         data: values,
       };
     });
 
-    const gridTop = yCols.length > 1 ? 52 : 28;
+    const gridTop = yCols.length > 1 ? 56 : 32;
 
     return {
-      tooltip: { trigger: "axis" },
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: "rgba(15, 23, 42, 0.95)",
+        borderColor: "#1f2937",
+        textStyle: { color: "#e2e8f0", fontSize: 11 },
+        axisPointer: {
+          type: "line",
+          lineStyle: { color: "#38bdf8", width: 1 },
+        },
+      },
       legend: {
         show: yCols.length > 1,
         top: 0,
         textStyle: {
-          color: "#cbd5f5",
+          color: "#e2e8f0",
           fontSize: 11,
         },
       },
@@ -427,21 +441,25 @@ document.addEventListener("DOMContentLoaded", function () {
         },
       ],
       grid: {
-        left: 40,
-        right: 16,
+        left: 46,
+        right: 24,
         top: gridTop,
-        bottom: (xIsTime ? 45 : 28) + 40,
+        bottom: (xIsTime ? 48 : 30) + 40,
         containLabel: true,
       },
       xAxis: {
         type: "category",
         data: xValues,
         name: xCol.label || xCol.name,
+        axisLine: { lineStyle: { color: "#1f2937" } },
+        axisTick: { show: false },
         axisLabel: {
           rotate: xIsTime ? 30 : 0,
           fontSize: 9,
+          color: "#94a3b8",
           margin: 6,
         },
+        splitLine: { show: false },
       },
       yAxis: {
         type: "value",
@@ -450,16 +468,33 @@ document.addEventListener("DOMContentLoaded", function () {
             ? (yCols[0].label || yCols[0].name) +
               (yCols[0].unit ? ` (${yCols[0].unit})` : "")
             : "Valores",
+        axisLine: { show: false },
+        axisTick: { show: false },
         axisLabel: {
           margin: 6,
           fontSize: 9,
+          color: "#94a3b8",
           formatter: function (value) {
             return numberFormatter.format(value);
           },
         },
+        splitLine: {
+          show: true,
+          lineStyle: { color: "rgba(148, 163, 184, 0.12)" },
+        },
       },
       series: series,
     };
+  }
+
+  function updateExportState(rows) {
+    const hasRows = rows && rows.length;
+    if (exportCsvButton) {
+      exportCsvButton.disabled = !hasRows;
+    }
+    if (exportExcelButton) {
+      exportExcelButton.disabled = !hasRows;
+    }
   }
 
   function renderTable(data, rowsOverride) {
@@ -469,6 +504,7 @@ document.addEventListener("DOMContentLoaded", function () {
     tableContainer.innerHTML = "";
 
     if (!data || !data.columns) {
+      updateExportState([]);
       return;
     }
 
@@ -479,6 +515,7 @@ document.addEventListener("DOMContentLoaded", function () {
       empty.className = "p-3 text-[11px] text-slate-400";
       empty.textContent = "No hay datos para mostrar.";
       tableContainer.appendChild(empty);
+      updateExportState([]);
       return;
     }
 
@@ -491,7 +528,7 @@ document.addEventListener("DOMContentLoaded", function () {
     data.columns.forEach(function (col) {
       const th = document.createElement("th");
       th.className = "px-3 py-1 text-left font-semibold";
-      th.textContent = col.label || col.name;
+      th.textContent = col.name;
       headRow.appendChild(th);
     });
     thead.appendChild(headRow);
@@ -513,6 +550,107 @@ document.addEventListener("DOMContentLoaded", function () {
     table.appendChild(thead);
     table.appendChild(tbody);
     tableContainer.appendChild(table);
+    updateExportState(rows);
+  }
+
+  function sanitizeFileName(text) {
+    if (!text) {
+      return "datos";
+    }
+    return text
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function buildFileBaseName() {
+    if (!currentData || !currentData.dataset) {
+      return "sicgad_datos";
+    }
+    const dataset = currentData.dataset || {};
+    const name = sanitizeFileName(dataset.name);
+    const plant = sanitizeFileName(dataset.plant_code);
+    const mode = sanitizeFileName(modeSelect.value || "published");
+    let range = "";
+    if (filterBounds.start && filterBounds.end) {
+      range = `${formatInputDate(filterBounds.start)}_a_${formatInputDate(filterBounds.end)}`;
+    }
+    const pieces = ["sicgad", plant, name, mode, range].filter(Boolean);
+    return pieces.join("_");
+  }
+
+  function escapeCsv(value) {
+    if (value == null) {
+      return "";
+    }
+    const text = String(value);
+    if (/[",\n]/.test(text)) {
+      return `"${text.replace(/"/g, '""')}"`;
+    }
+    return text;
+  }
+
+  function buildExportRows() {
+    if (!currentData || !currentData.columns) {
+      return { columns: [], rows: [] };
+    }
+    const rows = getFilteredRows(currentData.rows || []);
+    return { columns: currentData.columns || [], rows };
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function exportCsv() {
+    const data = buildExportRows();
+    if (!data.rows.length) {
+      return;
+    }
+    const header = data.columns.map((col) => escapeCsv(col.name)).join(",");
+    const lines = data.rows.map((row) => {
+      return data.columns
+        .map((col) => escapeCsv((row.values || {})[col.name]))
+        .join(",");
+    });
+    const csv = [header, ...lines].join("\n");
+    const filename = `${buildFileBaseName()}.csv`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    downloadBlob(blob, filename);
+  }
+
+  function exportExcel() {
+    const data = buildExportRows();
+    if (!data.rows.length) {
+      return;
+    }
+    if (!window.XLSX) {
+      console.error("XLSX no disponible para exportar.");
+      return;
+    }
+
+    const header = data.columns.map((col) => col.name);
+    const rows = data.rows.map((row) => {
+      return data.columns.map((col) => {
+        const value = (row.values || {})[col.name];
+        return value != null ? value : "";
+      });
+    });
+
+    const worksheet = window.XLSX.utils.aoa_to_sheet([header, ...rows]);
+    const workbook = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Datos");
+
+    const filename = `${buildFileBaseName()}.xlsx`;
+    window.XLSX.writeFile(workbook, filename);
   }
 
   function updateChart() {
@@ -539,6 +677,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (tableContainer) {
         tableContainer.innerHTML = "";
       }
+      updateExportState([]);
       return;
     }
 
@@ -578,5 +717,11 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   chartTypeSelect.addEventListener("change", updateChart);
   dateApplyButton.addEventListener("click", applyDateFilter);
+  if (exportCsvButton) {
+    exportCsvButton.addEventListener("click", exportCsv);
+  }
+  if (exportExcelButton) {
+    exportExcelButton.addEventListener("click", exportExcel);
+  }
 
 });

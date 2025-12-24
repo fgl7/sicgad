@@ -27,7 +27,11 @@ def _collect_monthly_requirements(instance: DatasetInstance) -> Dict[str, int]:
 
     requirements: Dict[str, int] = {}
     for membership in validators:
-        institution = membership.institution or UNKNOWN_INSTITUTION
+        institution = (
+            membership.institution.code
+            if membership.institution
+            else UNKNOWN_INSTITUTION
+        )
         level = membership.validation_level or 1
         current = requirements.get(institution, 0)
         if level > current:
@@ -49,7 +53,11 @@ def determine_monthly_state(instance: DatasetInstance) -> str:
     progress: Dict[str, int] = defaultdict(int)
     for action in approvals:
         if action.validator:
-            institution = action.validator.institution or UNKNOWN_INSTITUTION
+            institution = (
+                action.validator.institution.code
+                if action.validator.institution
+                else UNKNOWN_INSTITUTION
+            )
         else:
             institution = UNKNOWN_INSTITUTION
         level = action.level or 1

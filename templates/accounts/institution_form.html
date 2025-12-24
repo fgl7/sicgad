@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}{% if plant %}Editar unidad operativa{% else %}Nueva unidad operativa{% endif %} - SICGAD{% endblock %}
-{% block page_title %}{% if plant %}Editar unidad operativa{% else %}Nueva unidad operativa{% endif %}{% endblock %}
+{% block title %}{% if institution %}Editar institucion{% else %}Nueva institucion{% endif %} - SICGAD{% endblock %}
+{% block page_title %}{% if institution %}Editar institucion{% else %}Nueva institucion{% endif %}{% endblock %}
 
 {% block content %}
   <section class="max-w-xl bg-slate-950/60 border border-slate-800 rounded-xl p-5 text-xs">
     <h2 class="text-sm font-semibold mb-3">
-      {% if plant %}Editar unidad operativa{% else %}Datos de la unidad operativa{% endif %}
+      {% if institution %}Editar institucion{% else %}Datos de la institucion{% endif %}
     </h2>
 
     <form method="post" class="space-y-3">
@@ -30,12 +30,12 @@
 
       <div class="flex items-center gap-2 mt-1">
         {{ form.is_active }}
-        <span class="text-slate-300 text-[11px]">Unidad operativa activa</span>
+        <span class="text-slate-300 text-[11px]">Institucion activa</span>
       </div>
 
       <div class="flex items-center justify-between pt-2">
-        <a href="{% url 'plants:plant_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
-          ← Volver al listado
+        <a href="{% url 'accounts:institution_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+          <-- Volver al listado
         </a>
         <button
           type="submit"

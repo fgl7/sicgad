@@ -6,16 +6,28 @@ from django.dispatch import receiver
 from plants.models import Plant
 
 
+class Institution(models.Model):
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["code"]
+
+    def __str__(self) -> str:
+        return f"{self.code} - {self.name}"
+
+
 class Membership(models.Model):
     ROLE_CHOICES = [
         ("LOADER", "Cargador"),
         ("VALIDATOR", "Validador"),
         ("VIEWER", "Visualizador"),
         ("ADMIN", "Administrador"),
-    ]
-    INSTITUTION_CHOICES = [
-        ("YLB", "YLB"),
-        ("MHE", "MHE"),
     ]
 
     user = models.ForeignKey(
@@ -45,11 +57,13 @@ class Membership(models.Model):
         default=False,
         help_text="Si es validador, puede participar en el flujo mensual/certificacion.",
     )
-    institution = models.CharField(
-        max_length=10,
-        choices=INSTITUTION_CHOICES,
-        default="YLB",
-        help_text="Institucion a la que pertenece este rol (YLB o MHE).",
+    institution = models.ForeignKey(
+        Institution,
+        on_delete=models.PROTECT,
+        related_name="memberships",
+        null=True,
+        blank=True,
+        help_text="Institucion a la que pertenece este rol.",
     )
     is_active = models.BooleanField(default=True)
 

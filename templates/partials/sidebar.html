@@ -12,6 +12,7 @@
     {% url 'validation:inbox' as validation_url %}
     {% url 'plants:plant_list' as plants_url %}
     {% url 'accounts:admin_user_list' as users_url %}
+    {% url 'accounts:institution_list' as institutions_url %}
     {% url 'audit:log_list' as audit_url %}
     {% url 'performance:pcs_formula_1' as performance_url %}
 
@@ -113,9 +114,12 @@
         Administracion
       </div>
       <a href='{{ plants_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":8" == "/plants/" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
-        <span>Plantas</span>
+        <span>Unidades operativas</span>
       </a>
-      <a href='{{ users_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":10" == "/accounts/" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
+      <a href='{{ institutions_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":22" == "/accounts/institutions/" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
+        <span>Instituciones</span>
+      </a>
+      <a href='{{ users_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":15" == "/accounts/users" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
         <span>Usuarios y roles</span>
       </a>
     {% endif %}

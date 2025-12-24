@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 
 from plants.models import Plant
-from .models import Membership
+from .models import Institution, Membership
 
 
 User = get_user_model()
@@ -75,15 +75,16 @@ class AdminUserCreateForm(forms.ModelForm):
             }
         ),
     )
-    institution = forms.ChoiceField(
+    institution = forms.ModelChoiceField(
         label="Institucion",
-        choices=Membership.INSTITUTION_CHOICES,
+        queryset=Institution.objects.filter(is_active=True).order_by("code"),
+        required=False,
+        empty_label="(sin institucion)",
         widget=forms.Select(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
             }
         ),
-        initial="YLB",
     )
 
     class Meta:
@@ -123,13 +124,15 @@ class AdminUserCreateForm(forms.ModelForm):
         if p1 and p2 and p1 != p2:
             self.add_error("password2", "Las contrasenas no coinciden.")
 
-        # La planta es obligatoria para roles por planta (LOADER, VIEWER),
-        # pero puede quedar vacia para roles globales (ADMIN o VALIDATOR global).
-        if role not in ["ADMIN", "VALIDATOR"] and plant is None:
+        # La planta es obligatoria para cargadores; otros roles pueden ser globales.
+        if role == "LOADER" and plant is None:
             self.add_error("plant", "La planta es obligatoria para este rol.")
 
         if role == "VALIDATOR" and not validation_level:
             self.add_error("validation_level", "Debe definir un nivel de validacion para un Validador.")
+
+        if role == "VALIDATOR" and not cleaned.get("institution"):
+            self.add_error("institution", "Debe definir una institucion para un Validador.")
 
         return cleaned
 
@@ -147,7 +150,31 @@ class AdminUserCreateForm(forms.ModelForm):
                 validation_level=self.cleaned_data.get("validation_level"),
                 can_validate_daily=self.cleaned_data.get("can_validate_daily", False),
                 can_validate_monthly=self.cleaned_data.get("can_validate_monthly", False),
-                 institution=self.cleaned_data.get("institution", "YLB"),
+                institution=self.cleaned_data.get("institution"),
                 is_active=True,
             )
         return user
+
+
+class InstitutionForm(forms.ModelForm):
+    class Meta:
+        model = Institution
+        fields = ["code", "name", "description", "is_active"]
+        widgets = {
+            "code": forms.TextInput(
+                attrs={
+                    "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
+                }
+            ),
+            "name": forms.TextInput(
+                attrs={
+                    "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
+                }
+            ),
+            "description": forms.Textarea(
+                attrs={
+                    "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
+                    "rows": 3,
+                }
+            ),
+        }

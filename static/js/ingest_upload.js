@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
   const btn = document.getElementById("download-template-btn");
   const select = document.getElementById("id_dataset_type");
+  let datasetMeta = null;
   if (btn && select) {
     const url = btn.getAttribute("data-download-url");
     if (url) {
@@ -19,24 +20,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const hint = document.getElementById("dataset-validation-hint");
   if (hint) {
-    const normalizeText = function (text) {
-      return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    };
-
     const updateHint = function () {
-      const option = select.options[select.selectedIndex];
-      if (!option) {
-        hint.textContent = "";
-        return;
+      if (datasetMeta && datasetMeta.validation_frequency) {
+        const freq = String(datasetMeta.validation_frequency || "").toUpperCase();
+        const isCertification = Boolean(datasetMeta.is_certification);
+
+        if (isCertification && freq === "MONTHLY") {
+          hint.textContent =
+            "Este dataset es de certificacion mensual. Al enviarlo se genera una consolidacion automatica.";
+          return;
+        }
+        if (freq === "DAILY") {
+          hint.textContent =
+            "Este dataset se valida de forma diaria. Recuerda enviarlo despues de cargarlo.";
+          return;
+        }
+        if (freq === "WEEKLY") {
+          hint.textContent =
+            "Este dataset se valida de forma semanal. Recuerda enviarlo despues de cargarlo.";
+          return;
+        }
+        if (freq === "MONTHLY") {
+          hint.textContent =
+            "Este dataset se valida de forma mensual. Recuerda enviarlo despues de cargarlo.";
+          return;
+        }
+        if (freq === "FLEXIBLE") {
+          hint.textContent =
+            "Este dataset es de proyecciones (periodicidad no definida). Se valida con el flujo mensual.";
+          return;
+        }
       }
-      const label = normalizeText(option.textContent.toLowerCase());
-      if (label.includes("certificacion")) {
-        hint.textContent =
-          "Este dataset es de certificacion mensual. Al enviarlo se genera una consolidacion automatica.";
-      } else {
-        hint.textContent =
-          "Este dataset se valida de forma diaria. Recuerda enviarlo despues de cargarlo.";
-      }
+
+      hint.textContent = "";
     };
 
     updateHint();
@@ -110,6 +126,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // Si aún no se eligió dataset, no bloqueamos la UI (el usuario necesita poder seleccionarlo),
     // y mantenemos oculta la opción de importar histórico hasta que se seleccione un dataset.
     if (!datasetTypeId) {
+      datasetMeta = null;
+      if (hint) {
+        hint.textContent = "";
+      }
       if (requiredBanner) {
         requiredBanner.classList.add("hidden");
       }
@@ -132,9 +152,16 @@ document.addEventListener("DOMContentLoaded", function () {
       .then((resp) => (resp.ok ? resp.json() : { has_data: false }))
       .then((data) => {
         const hasData = data && data.has_data;
-        setHistoricalRequired(!hasData);
+        datasetMeta = data || null;
+        select.dispatchEvent(new Event("change"));
+
+        const freq = String((data && data.validation_frequency) || "").toUpperCase();
+        const requiresHistorical = freq === "DAILY";
+        setHistoricalRequired(requiresHistorical && !hasData);
       })
       .catch(() => {
+        datasetMeta = null;
+        select.dispatchEvent(new Event("change"));
         setHistoricalRequired(true);
       });
   }

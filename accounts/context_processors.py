@@ -92,6 +92,18 @@ def admin_flags(request):
                     is_active=True,
                     can_validate_daily=True,
                 )
+                weekly_memberships = Membership.objects.filter(
+                    user=user,
+                    role="VALIDATOR",
+                    is_active=True,
+                    can_validate_weekly=True,
+                )
+                projections_memberships = Membership.objects.filter(
+                    user=user,
+                    role="VALIDATOR",
+                    is_active=True,
+                    can_validate_projections=True,
+                )
                 monthly_memberships = Membership.objects.filter(
                     user=user,
                     role="VALIDATOR",
@@ -100,9 +112,13 @@ def admin_flags(request):
                 )
 
                 daily_plants = [m.plant_id for m in daily_memberships if m.plant_id]
+                weekly_plants = [m.plant_id for m in weekly_memberships if m.plant_id]
+                projections_plants = [m.plant_id for m in projections_memberships if m.plant_id]
                 monthly_plants = [m.plant_id for m in monthly_memberships if m.plant_id]
 
                 has_global_daily = any(m.plant_id is None for m in daily_memberships)
+                has_global_weekly = any(m.plant_id is None for m in weekly_memberships)
+                has_global_projections = any(m.plant_id is None for m in projections_memberships)
                 has_global_monthly = any(m.plant_id is None for m in monthly_memberships)
 
                 base_qs = DatasetInstance.objects.filter(
@@ -119,6 +135,13 @@ def admin_flags(request):
                 if has_global_daily:
                     daily_filter |= Q(dataset_type__validation_frequency=DatasetType.DAILY)
 
+                weekly_filter = Q(
+                    dataset_type__validation_frequency=DatasetType.WEEKLY,
+                    plant_id__in=weekly_plants,
+                )
+                if has_global_weekly:
+                    weekly_filter |= Q(dataset_type__validation_frequency=DatasetType.WEEKLY)
+
                 monthly_filter = Q(
                     dataset_type__validation_frequency=DatasetType.MONTHLY,
                     plant_id__in=monthly_plants,
@@ -128,7 +151,16 @@ def admin_flags(request):
                         dataset_type__validation_frequency=DatasetType.MONTHLY
                     )
 
-                pending_validation_items = base_qs.filter(daily_filter | monthly_filter).count()
+                projections_filter = Q(
+                    dataset_type__validation_frequency=DatasetType.FLEXIBLE,
+                    plant_id__in=projections_plants,
+                )
+                if has_global_projections:
+                    projections_filter |= Q(dataset_type__validation_frequency=DatasetType.FLEXIBLE)
+
+                pending_validation_items = base_qs.filter(
+                    daily_filter | weekly_filter | projections_filter | monthly_filter
+                ).count()
 
                 if monthly_memberships.exists():
                     _, prev_month_end = previous_month_range()

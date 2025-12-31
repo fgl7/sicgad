@@ -25,11 +25,6 @@
                 {{ dataset.plant.code }} - {{ dataset.plant.name }}
               </div>
               <input type="hidden" name="{{ form.plant.name }}" value="{{ dataset.plant.id }}">
-            {% elif loader_plant %}
-              <div class="text-slate-200 text-xs">
-                {{ loader_plant.code }} - {{ loader_plant.name }}
-              </div>
-              <input type="hidden" name="{{ form.plant.name }}" value="{{ loader_plant.id }}">
             {% else %}
               {{ form.plant }}
             {% endif %}
@@ -45,12 +40,7 @@
         </div>
         <div>
           <label class="block mb-1 text-slate-300">Frecuencia de validación</label>
-          {% if is_admin %}
-            {{ form.validation_frequency }}
-          {% else %}
-            <div class="text-slate-200 text-xs">Diaria</div>
-            <input type="hidden" name="{{ form.validation_frequency.name }}" value="DAILY">
-          {% endif %}
+          {{ form.validation_frequency }}
         </div>
         <div class="flex items-center gap-2 mt-2">
           {{ form.is_active }}

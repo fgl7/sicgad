@@ -21,10 +21,9 @@
   </head>
   <body class="min-h-screen">
     <div class="relative min-h-screen flex items-center justify-center">
-      <div
-        class="absolute inset-0 bg-cover bg-center"
-        style="background-image: url('{% static "background.png" %}');"
-      ></div>
+      <div class="absolute inset-0 z-0">
+        <img src="{% static 'background.png' %}" alt="Background" class="w-full h-full object-cover object-center">
+      </div>
       <div class="absolute inset-0 bg-slate-900/85"></div>
 
       <div class="relative z-10 w-full max-w-sm mx-auto px-4">

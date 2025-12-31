@@ -100,6 +100,8 @@ def admin_user_edit(request, user_id):
                 "validation_level": membership.validation_level,
                 "can_validate_daily": membership.can_validate_daily,
                 "can_validate_monthly": membership.can_validate_monthly,
+                "can_validate_weekly": membership.can_validate_weekly,
+                "can_validate_projections": membership.can_validate_projections,
                 "institution": membership.institution,
             }
         )
@@ -112,7 +114,12 @@ def admin_user_edit(request, user_id):
             user.first_name = data["first_name"]
             user.last_name = data["last_name"]
             user.email = data["email"]
-            user.set_password(data["password1"])
+            password = (data.get("password1") or "").strip()
+            if password:
+                user.set_password(password)
+                profile, _ = AccountProfile.objects.get_or_create(user=user)
+                profile.must_change_password = True
+                profile.save(update_fields=["must_change_password"])
             user.save()
 
             if membership is None:
@@ -123,6 +130,8 @@ def admin_user_edit(request, user_id):
             membership.validation_level = data.get("validation_level")
             membership.can_validate_daily = data.get("can_validate_daily", False)
             membership.can_validate_monthly = data.get("can_validate_monthly", False)
+            membership.can_validate_weekly = data.get("can_validate_weekly", False)
+            membership.can_validate_projections = data.get("can_validate_projections", False)
             membership.institution = data.get("institution")
             membership.is_active = True
             membership.save()

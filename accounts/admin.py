@@ -5,8 +5,28 @@ from .models import AccountProfile, Institution, Membership
 
 @admin.register(Membership)
 class MembershipAdmin(admin.ModelAdmin):
-    list_display = ("user", "plant", "role", "institution", "validation_level", "can_validate_daily", "can_validate_monthly", "is_active")
-    list_filter = ("role", "institution", "is_active", "plant", "can_validate_daily", "can_validate_monthly")
+    list_display = (
+        "user",
+        "plant",
+        "role",
+        "institution",
+        "validation_level",
+        "can_validate_daily",
+        "can_validate_weekly",
+        "can_validate_projections",
+        "can_validate_monthly",
+        "is_active",
+    )
+    list_filter = (
+        "role",
+        "institution",
+        "is_active",
+        "plant",
+        "can_validate_daily",
+        "can_validate_weekly",
+        "can_validate_projections",
+        "can_validate_monthly",
+    )
     search_fields = ("user__username", "user__email", "plant__code", "plant__name")
 
 

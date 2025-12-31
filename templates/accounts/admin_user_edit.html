@@ -34,6 +34,7 @@
         <div>
           <label class="block mb-1 text-slate-300 text-[11px]">Nueva contrasena temporal</label>
           {{ form.password1 }}
+          <p class="mt-1 text-[10px] text-slate-500">Dejar en blanco para mantener la contraseña actual.</p>
         </div>
         <div>
           <label class="block mb-1 text-slate-300 text-[11px]">Confirmar contrasena</label>
@@ -66,11 +67,23 @@
         </div>
       </div>
 
-      <div class="grid md:grid-cols-2 gap-3">
+      <div class="grid md:grid-cols-4 gap-3">
         <div class="flex items-center gap-2">
           {{ form.can_validate_daily }}
           <span class="text-slate-300 text-[11px]">
             Puede validar flujo diario
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          {{ form.can_validate_weekly }}
+          <span class="text-slate-300 text-[11px]">
+            Puede validar flujo semanal
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          {{ form.can_validate_projections }}
+          <span class="text-slate-300 text-[11px]">
+            Puede validar proyecciones
           </span>
         </div>
         <div class="flex items-center gap-2">

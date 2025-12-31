@@ -85,7 +85,7 @@ def upload(request):
 
             messages.success(
                 request,
-                "Archivo subido correctamente. Revisa tus cargas y envía el dataset a validación diaria.",
+                "Archivo subido correctamente. Revisa tus cargas y envía el dataset a validación cuando corresponda.",
             )
             record_action(
                 "UPLOAD",
@@ -113,31 +113,78 @@ def upload(request):
 def dataset_has_data(request):
     user = request.user
     if not user.is_authenticated:
-        return JsonResponse({"has_data": False})
+        return JsonResponse(
+            {
+                "has_data": False,
+                "validation_frequency": None,
+                "is_certification": False,
+            }
+        )
 
     dataset_type_id = request.GET.get("dataset_type")
     try:
         dataset_type_id_int = int(dataset_type_id) if dataset_type_id else None
     except (TypeError, ValueError):
-        return JsonResponse({"has_data": False})
+        return JsonResponse(
+            {
+                "has_data": False,
+                "validation_frequency": None,
+                "is_certification": False,
+            }
+        )
 
     if not dataset_type_id_int:
-        return JsonResponse({"has_data": False})
+        return JsonResponse(
+            {
+                "has_data": False,
+                "validation_frequency": None,
+                "is_certification": False,
+            }
+        )
 
     is_loader = Membership.objects.filter(user=user, role="LOADER", is_active=True).exists()
     if not is_loader:
-        return JsonResponse({"has_data": False})
+        return JsonResponse(
+            {
+                "has_data": False,
+                "validation_frequency": None,
+                "is_certification": False,
+            }
+        )
 
     dataset = DatasetType.objects.select_related("plant").filter(pk=dataset_type_id_int).first()
     if not dataset or not dataset.plant_id:
-        return JsonResponse({"has_data": False})
+        return JsonResponse(
+            {
+                "has_data": False,
+                "validation_frequency": None,
+                "is_certification": False,
+            }
+        )
+
+    # El gating de histórico aplica solo a datasets diarios. Para semanales/mensuales
+    # se considera habilitado (no bloquea la UI).
+    if dataset.validation_frequency != DatasetType.DAILY:
+        return JsonResponse(
+            {
+                "has_data": True,
+                "validation_frequency": dataset.validation_frequency,
+                "is_certification": bool(dataset.is_certification),
+            }
+        )
 
     has_data = DatasetInstance.objects.filter(
         dataset_type_id=dataset_type_id_int,
         plant_id=dataset.plant_id,
     ).exists()
 
-    return JsonResponse({"has_data": bool(has_data)})
+    return JsonResponse(
+        {
+            "has_data": bool(has_data),
+            "validation_frequency": dataset.validation_frequency,
+            "is_certification": bool(dataset.is_certification),
+        }
+    )
 
 
 def upload_historical(request):
@@ -954,6 +1001,15 @@ def _submit_instance_to_validation(instance: DatasetInstance, request) -> None:
     ):
         success_message = "Consolidacion enviada a validacion mensual."
         details = "Enviado a validacion mensual"
+    elif instance.dataset_type.validation_frequency == DatasetType.WEEKLY:
+        success_message = "Dataset enviado a validacion semanal."
+        details = "Enviado a validacion semanal"
+    elif instance.dataset_type.validation_frequency == DatasetType.MONTHLY:
+        success_message = "Dataset enviado a validacion mensual."
+        details = "Enviado a validacion mensual"
+    elif instance.dataset_type.validation_frequency == DatasetType.FLEXIBLE:
+        success_message = "Dataset de proyecciones enviado a validacion."
+        details = "Enviado a validacion (proyecciones)"
     else:
         success_message = "Dataset enviado a validacion diaria."
         details = "Enviado a validacion diaria"

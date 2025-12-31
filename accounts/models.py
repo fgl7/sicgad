@@ -57,6 +57,14 @@ class Membership(models.Model):
         default=False,
         help_text="Si es validador, puede participar en el flujo mensual/certificacion.",
     )
+    can_validate_weekly = models.BooleanField(
+        default=False,
+        help_text="Si es validador, puede participar en el flujo semanal.",
+    )
+    can_validate_projections = models.BooleanField(
+        default=False,
+        help_text="Si es validador, puede participar en el flujo de proyecciones (periodicidad no definida).",
+    )
     institution = models.ForeignKey(
         Institution,
         on_delete=models.PROTECT,

@@ -1,18 +1,19 @@
 # SICGAD – Project PRD
 
-Este documento resume todo lo necesario para entender y operar el proyecto SICGAD sin recurrir a otras fuentes. Está dirigido al equipo técnico (y especialmente al agente Codex) para conocer alcance, lógica funcional, componentes implementados y estado actual.
+Este documento resume lo necesario para entender y operar el proyecto SICGAD sin recurrir a otras fuentes. Está dirigido al equipo técnico (y especialmente al agente Codex) para conocer alcance, lógica funcional, componentes implementados y estado actual.
 
 ---
 
 ## 1. Propósito y visión
 
 - **Nombre**: Sistema Integral de Carga, Gestión y Análisis de Datos (SICGAD).
-- **Objetivo**: Centralizar la captura diaria de producción de plantas YLB/MHE, validar la información por niveles, publicar datos confiables y proveer tableros operativos/certificados con trazabilidad completa.
+- **Objetivo**: centralizar la captura de datos operativos (principalmente producción), validarlos por niveles e institución, publicar datos confiables y proveer tableros operativos/certificados con trazabilidad completa.
 - **Usuarios meta**: Cargadores, Validadores (varios niveles), Visualizadores, Administradores operativos y Superadmins técnicos.
 - **Valor clave**:
   - Flexibilidad para versionar esquemas sin despliegues.
-  - Automatización del flujo diario vs certificación mensual (con consolidación automática, revisión mensual y alertas escalonadas).
-  - Auditoría exhaustiva y control de seguridad (2FA planificada, rate limiting, must-change-password).
+  - Soporte de datasets por periodicidad: **diaria**, **semanal**, **mensual** y **proyecciones** (periodicidad no definida).
+  - Automatización del flujo diario vs certificación mensual (con consolidación automática del mes anterior, revisión mensual y alertas).
+  - Auditoría exhaustiva y control de seguridad (forzado de cambio de contraseña; 2FA/rate limiting planificados).
 
 ---
 
@@ -20,164 +21,126 @@ Este documento resume todo lo necesario para entender y operar el proyecto SICGA
 
 | Módulo | Objetivo | Puntos clave |
 | --- | --- | --- |
-| **Accounts** | Gestión de usuarios, roles, membresías y políticas de acceso. | `Membership` vincula User+Planta+Rol+Nivel+Institución, `AccountProfile` fuerza cambio de contraseña y registra notificaciones (banderas `last_seen_*` para limpiar badges). Middleware especializado. |
+| **Accounts** | Gestión de usuarios, roles, memberships y políticas de acceso. | `Membership` vincula User+Planta+Rol+Nivel+Institución, y flags de validación: `can_validate_daily`, `can_validate_weekly`, `can_validate_monthly`, `can_validate_projections`. `AccountProfile` fuerza cambio de contraseña (`must_change_password`) y registra “last seen” para notificaciones. Edición de usuarios permite modificar datos sin reingresar contraseña; si se cambia password, se vuelve a forzar `must_change_password`. |
 | **Plants** | Catálogo de plantas operativas (PCS, PICP, etc.). | Se usa para permisos y para segmentar datasets/cargas. |
-| **Schemas** | Definición y versionado de esquemas de datos por planta. | `DatasetType`/`ColumnDef` con metadatos completos, flujo de aprobación, creación de esquemas de certificación a partir de diarios. Los esquemas diarios los propone el cargador y los aprueba/rechaza el Administrador. |
-| **Ingest** | Descarga de plantillas, carga de archivos diarios (archivo o captura manual) y carga histórica inicial obligatoria. | Soporta importación histórica masiva (`HistoricalImportBatch`) que crea múltiples `DatasetInstance` y permite envío/validación en conjunto. `ingest/upload` bloquea la carga diaria hasta que exista histórico y luego oculta “Importar histórico”. Las plantillas usan como encabezados los `name` de las columnas (export Excel). |
-| **Validation** | Flujo de aprobación diario/mensual y publicación automática. | `ValidationAction` documenta nivel, decisión y comentarios; la bandeja filtra instancias ya aprobadas tras el último envío y actualiza `last_seen_certification_alert`. `materialize_instance` genera datos publicados cuando se llega a PUBLISHED. |
-| **KPIs** | Visualización (ECharts) de datos publicados o borradores según permisos. | Selección dinámica de instancia, eje X/Y, múltiples KPIs, filtros de fecha, tablas y modo Published/Draft que refleja datos diarios certificados. |
-| **Performance** | Cálculo de indicadores de desempeño productivo y eficiencia de procesos. | Define variables metodológicas por planta y permite al Administrador mapear columnas de esquemas a variables de las fórmulas (ej. Fórmula 1 PCS), calculando indicadores mensuales en estado Draft/Certificado. |
-| **Audit** | Registro y consulta de eventos críticos. | `AuditLog` almacena acción, módulo, objeto, usuario, detalles; vista filtrable hasta 500 eventos. |
-| **Core** | Placeholder para utilidades comunes (aún vacío). | Se espera usarlo para mixins/helpers reutilizables. |
+| **Schemas** | Definición y versionado de esquemas por planta y periodicidad. | `DatasetType`/`ColumnDef` con metadatos completos, flujo de aprobación. El cargador puede crear esquemas **DAILY/WEEKLY/MONTHLY/FLEXIBLE (proyecciones)** para plantas habilitadas por el admin (puede tener múltiples plantas o rol global). Los esquemas no-certificación se aprueban/rechazan por el Administrador. El admin puede crear esquemas de certificación mensual derivados de esquemas diarios. |
+| **Ingest** | Descarga de plantillas, carga de archivos (archivo o captura manual) y carga histórica para diarios. | La importación histórica (`HistoricalImportBatch`) aplica a **datasets diarios**. `ingest/upload` bloquea solo la **carga diaria** hasta que exista histórico; para **semanal/mensual/proyecciones** no hay gating por histórico. Plantillas usan como encabezados los `name` de las columnas. |
+| **Validation** | Flujo de aprobación por periodicidad y publicación automática. | `ValidationAction` documenta nivel, decisión y comentarios. Diarios: aprobación directa a `PUBLISHED`. Semanal/Mensual/Proyecciones: flujo multi-institución (según `Membership.validation_level` por institución) y permisos separados por flag. `materialize_instance` genera `PublishedDataPoint` al publicar. |
+| **KPIs** | Visualización (ECharts) de datos publicados o borradores según permisos. | Selección dinámica de instancia, eje X/Y, múltiples KPIs, filtros de fecha, tablas y modo Published/Draft. |
+| **Performance** | Cálculo de indicadores de desempeño productivo y eficiencia. | Define variables metodológicas por planta y permite al admin mapear columnas de esquemas a variables de fórmulas, calculando indicadores (enfoque mensual). |
+| **Audit** | Registro y consulta de eventos críticos. | `AuditLog` almacena acción, módulo, objeto, usuario y detalles; vista filtrable. |
+| **Core** | Utilidades comunes. | Placeholder para helpers/mixins reutilizables. |
 
 ---
 
 ## 3. Modelos y datos clave
 
 ### 3.1 Usuarios y permisos
+
 - Se usa el modelo estándar de `User` con extensiones:
-  - `Membership`: define rol (`LOADER`, `VALIDATOR`, `VIEWER`, `ADMIN`), planta, nivel de validación, flags `can_validate_daily/monthly` e institución (`YLB`/`MHE`).
-  - `AccountProfile`: campos `must_change_password`, `last_seen_schema_status` y `last_seen_validation_status` (para limpiar notificaciones del loader al revisar su bandeja).
-- Middleware `PasswordChangeRequiredMiddleware` fuerza cambio de contraseña antes de navegar, excepto para rutas permitidas y superadmins.
-- Decoradores y context processors detectan flags de rol para UI/notificaciones.
+  - `Membership`: rol (`LOADER`, `VALIDATOR`, `VIEWER`, `ADMIN`), planta (opcional para rol global), institución, nivel de validación, y flags de participación: `can_validate_daily`, `can_validate_weekly`, `can_validate_monthly`, `can_validate_projections`.
+  - `AccountProfile`: `must_change_password` y marcas `last_seen_*` (notificaciones / badges).
+- Middleware `accounts.middleware.PasswordChangeRequiredMiddleware` fuerza cambio de contraseña antes de navegar (exceptúa rutas permitidas y superadmins).
+- El admin puede editar datos de un usuario sin reingresar contraseña; si define una nueva, se marca `must_change_password=True` para el próximo login.
 
 ### 3.2 Esquemas y columnas
-- `DatasetType` controla: planta, nombre (con versión), frecuencia (`DAILY`/`MONTHLY`), si es de certificación, estado (`DRAFT`→`PENDING`→`APPROVED`/`REJECTED`), slug único y metadatos.
-- `ColumnDef` almacena campos dinámicos con tipos (`INTEGER`, `FLOAT`, `STRING`, `DATE`, `BOOLEAN`, `CHOICE`), reglas (rangos, regex, choices), metadatos de visualización (unidad, rol de eje, agregación por defecto, KPI principal, orden). El campo `name` es el identificador interno (sin espacios) y además el encabezado oficial en plantillas/archivos; el campo `label` es una descripción legible que explica a qué se refiere la columna y qué datos espera.
-- Los cargadores crean/editar borradores (si no son admins) desde una pantalla guiada que incluye ayuda sobre cada columna. Los admins aprueban/rechazan y pueden generar esquemas de certificación copiando columnas desde un dataset diario.
+
+- `DatasetType` controla: planta, nombre (con versión), periodicidad (`DAILY`, `WEEKLY`, `MONTHLY`, `FLEXIBLE`), si es de certificación (`is_certification`), estado (`DRAFT`/`PENDING`/`APPROVED`/`REJECTED`), slug único y metadatos.
+  - `FLEXIBLE` se usa para **proyecciones** (periodicidad no definida: anual/mensual según el detalle). A nivel de flujo se valida con un permiso propio (`can_validate_projections`).
+  - Esquemas de certificación mensual son `MONTHLY` y `is_certification=True`, con `source_dataset` apuntando al esquema diario base.
+- `ColumnDef` almacena campos dinámicos con tipos (`INTEGER`, `FLOAT`, `STRING`, `DATE`, `BOOLEAN`, `CHOICE`) y metadatos de visualización (unidad, rol de eje, agregación por defecto, KPI principal, orden, reglas simples como rangos/regex/choices).
+- El campo `name` es el identificador interno (sin espacios) y el encabezado oficial en plantillas/archivos; `label` es descripción legible.
 
 ### 3.3 Instancias y datos publicados
-- `DatasetInstance`: instancia de carga con referencias al esquema (`DatasetType`), planta, periodo (fecha), estado (DRAFT→SUBMITTED→VALIDATED_L1/L2→PUBLISHED→LOCKED), archivo cargado, métricas de error, `submitted_at` (tracking de envíos) y autor (`Membership`).
-- `HistoricalImportBatch`: agrupa una importación histórica (un archivo) por `DatasetType`+planta, con rango detectado (`period_start`/`period_end`) y estado (`RUNNING`/`DONE`/`FAILED`). Cada fila del archivo crea una `DatasetInstance` ligada por `DatasetInstance.historical_batch` para habilitar envío/validación masiva.
-- `PublishedDataPoint`: tabla desnormalizada que almacena cada valor publicado (numérico, texto, fecha, booleano) por fila/columna para servir a dashboards y KPIs.
-- `materialize_instance(instance)`:
-  1. Limpia puntos previos del dataset.
-  2. Lee el archivo original (Excel/CSV) y mapea encabezados a columnas activas usando los `name` de las columnas como referencia principal (acepta `label` solo como compatibilidad hacia atrás).
-  3. Convierte valores al tipo correcto y crea `PublishedDataPoint` masivamente.
 
-### 3.4 Módulo de desempeño (Performance)
-- Se modelan variables metodológicas por planta (`PerformanceVariable`), siguiendo las fórmulas del documento de propuesta (`prop_desemp.docx`) para PCS, KCl y Li2CO3.
-- `PerformanceVariableMapping` permite al Administrador (rol `ADMIN`, no el superusuario técnico) asignar columnas de esquemas (`DatasetType`/`ColumnDef`) a cada variable de fórmula, especificando agregaciones (SUM/AVG/MAX/MIN/LAST/NONE), desfase de meses (`offset_months`, por ejemplo Δt en PCS) y etapa (`DRAFT`/`CERTIFIED`).
-- `PerformanceIndicator` define indicadores (por ejemplo Fórmula 1 PCS, rendimiento mensual %), con descripción de la fórmula y lista de variables requeridas.
-- `PerformanceIndicatorResult` almacena resultados por planta, mes y etapa (`DRAFT`/`CERTIFIED`), junto con trazas JSON que permiten reconstruir qué variables y fuentes se usaron.
+- `DatasetInstance` representa una carga para un `DatasetType`, planta y `period` (fecha de referencia). Estados: `DRAFT`, `SUBMITTED`, `VALIDATED_L1`, `VALIDATED_L2`, `PUBLISHED`, `LOCKED`.
+- `PublishedDataPoint` guarda valores publicados por celda para consumo por KPIs/Performance.
 
 ---
 
-## 4. Flujos principales
+## 4. Flujos principales (resumen)
 
-### 4.1 Definición/aprobación de esquemas
-1. Loader crea/edita esquema y columnas desde el frontend (`schemas/schema_edit`).
-2. Envía a aprobación (`STATUS_PENDING`); queda inactivo hasta que Admin actúe.
-3. Admin revisa, aprueba (activo) o rechaza con comentario.
-4. Para certificación mensual, Admin clona columnas seleccionadas de un dataset diario y crea un `DatasetType` `MONTHLY`/`is_certification=True`.
-
-### 4.2 Carga y envío de datos
-1. **Primera carga (histórico obligatorio)**: si el dataset aún no tiene datos, `ingest/upload` bloquea la carga diaria (UI borrosa/inhabilitada) y solo habilita “Importar histórico” con descarga de plantilla Excel.
-2. La importación histórica (XLSX/CSV) crea un `HistoricalImportBatch` y genera múltiples `DatasetInstance` (uno por fecha/período) en `STATE_DRAFT`, vinculadas al batch.
-3. El cargador envía el histórico completo a validación con un solo botón (`submit_historical_batch`), marcando todas las instancias del batch como `STATE_SUBMITTED` y registrando `submitted_at`.
-4. **Carga diaria**: una vez publicado el histórico, se habilita el flujo normal: subir archivo diario (CSV/XLSX) **o** capturar manualmente desde `ingest/upload/manual`; ambos crean un `DatasetInstance` en borrador.
-5. Al estar listo, envía (`submit_instance`) → estado `STATE_SUBMITTED` y se marca `submitted_at`. El historial del cargador muestra alertas amarillas (pendientes), rojas (rechazados) y el histórico de certificaciones con enlaces a la revisión mensual.
-
-### 4.3 Validación
-- **Histórico (validación masiva)**:
-  - La bandeja incluye una sección de históricos pendientes (por batch). Al aprobar un histórico (`approve_historical_batch`), se publican todas las instancias del batch y se materializan para consumo/KPIs.
-- **Diaria (operativa)**:
-  - Solo nivel operativo (ej. Jefe de planta). Al aprobar, pasa directo a `PUBLISHED`, se materializa y alimenta KPIs diarios.
-- **Mensual/certificación**:
-  - A partir de los datasets diarios publicados, el sistema consolida automáticamente el mes anterior en una instancia mensual (cuando se crea el esquema y cada vez que cierra un mes). Los validadores reciben alertas el primer día hábil del nuevo mes hasta revisar la consolidación.
-  - El cargador revisa la consolidación desde `certification_review`: ve todos los días del mes, se marcan los modificados, cada cambio requiere una justificación y soportes y puede enviarse a validación directamente desde esa pantalla (se registra `submitted_at`).
-  - Secuencia de validadores `can_validate_monthly` por nivel. Cada `ValidationAction` registra decisión/comentario y la lógica compara los niveles ya aprobados (ignorando la acción actual) para fijar el estado real: `SUBMITTED` → `VALIDATED_L1` → … → `PUBLISHED`.
-  - Rechazo devuelve a `DRAFT`, limpia `submitted_at` y guarda comentario en `last_error_summary`.
-
-### 4.4 Visualización y consumo
-- `kpis/charts` lista instancias publicadas y, si corresponde, borradores visibles para loaders/validadores/admins.
-- El script `static/js/kpis_charts.js`:
-  - Filtra instancias por modo (published/draft).
-  - Permite elegir columnas para eje X y múltiples KPIs en eje Y.
-  - Aplica filtros de fecha cuando exista una columna DATE en el eje X.
-  - Permite alternar entre datos publicados o borradores (según permisos).
-- `dataset_data` sirve JSON estructurado con metadatos, filas y estado actual.
-
-### 4.5 Auditoría y notificaciones
-- `record_action` registra cada evento relevante en `AuditLog`.
-- Vistas y context processors muestran contadores de elementos pendientes para admins/validadores, notificaciones de esquemas aprobados/rechazados para cargadores y alertas de certificación mensual (chips en menú y panel en la bandeja). Los contadores consideran `last_seen_certification_alert` y si el validador ya aprobó el envío vigente.
-- `validation/admin_overview` incluye un resumen de cobertura (último día diario publicado y última consolidación generada) para cada esquema de certificación.
-- `audit/logs` permite filtrar logs por usuario, acción, rango de fechas o “solo mis eventos”.
-
----
-
-## 5. Stack tecnológico
-
-- **Backend**: Python 3.x, Django 5.2.8, SQLite (dev), `django-environ` para configuración.
-- **Seguridad**: `django-axes`, `django-otp` (pendiente de integrar en vistas), 2FA planificado.
-- **Asíncronía**: Celery + Redis contemplados en requirements (sin `config/celery.py`), mientras que las consolidaciones automáticas se ejecutan hoy mediante verificación lazy al iniciar sesión o con `manage.py consolidate_certifications`.
-- **Frontend**: Plantillas Django, TailwindCSS via CDN, HTMX 2.0, Alpine.js 3.x, Apache ECharts para gráficos.
-- **Recursos estáticos**: `static/css/app.css` (tema oscuro), `static/js` con scripts específicos por módulo.
+1. **Definición de esquema** (loader o admin) → **envío** (`PENDING`) → **aprobación/rechazo** por admin.
+2. **Carga de datos** (archivo/manual):
+   - Diarios: requiere histórico inicial (gating) y permite importación histórica masiva.
+   - Semanal/Mensual/Proyecciones: sin gating de histórico.
+3. **Validación**:
+   - Diaria: aprobación directa a `PUBLISHED`.
+   - Semanal/Mensual/Proyecciones: aprobación multi-institución por niveles → `PUBLISHED` al completar requisitos.
+4. **Publicación**: al llegar a `PUBLISHED`, `materialize_instance` genera `PublishedDataPoint`.
+5. **Certificación mensual**: consolidación automática del mes anterior (si hay cobertura diaria completa y publicada) para esquemas `is_certification=True`.
 
 ---
 
 ## 6. Estado actual
 
-- Proyecto inicializado con todas las apps y rutas principales funcionales.
-- Modelos y vistas implementan el flujo completo básico (carga → validación → publicación → KPIs) usando SQLite.
-- Consolidación automática del mes anterior para esquemas de certificación, con revisión mensual (justificaciones y adjuntos por día/mes), alertas sincronizadas con sidebar y lógica multi-nivel corregida.
-- Historial del cargador ampliado con panel de certificaciones (pendientes, rechazadas e histórico) y badges por estado.
-- UI de esquemas ajustada: edición solo en `DRAFT`/`REJECTED`; la lista/detalle muestran aprobador/estado y fecha de aprobación.
-- Notificaciones en sidebar para cargadores: rechazos persisten hasta que el cargador modifique y re-envíe; aprobaciones se limpian al visitar la sección de esquemas.
-- Importación histórica implementada: `ingest/upload` exige cargar histórico antes de habilitar carga diaria; el histórico se envía y valida en bloque (batch) y, una vez publicado, “Importar histórico” deja de mostrarse.
-- Auditoría operativa y paneles básicos completados.
-- Pendiente:
-  - Integrar `django-otp` y `django-axes` en settings/login.
-  - Configurar Celery/Redis y tareas programadas para ejecutar consolidaciones/alertas sin depender de tráfico interactivo (hoy es lazy).
-  - Desarrollar UI para solicitud/aprobación de cambios de esquema más detallada (multi-niveles, comentarios).
-  - Implementar pruebas unitarias/integración (actualmente no hay tests).
-  - Internacionalización completa (textos mezclan español/inglés, falta traducción formal).
-  - Ajustes para despliegue a PostgreSQL y manejo de storage de archivos fuera del filesystem local.
+Implementado:
+
+- CRUD de esquemas y columnas con aprobación de admin.
+- Periodicidades soportadas en esquemas: **DAILY**, **WEEKLY**, **MONTHLY**, **FLEXIBLE (proyecciones)**.
+- Validaciones con permisos por periodicidad: `can_validate_daily`, `can_validate_weekly`, `can_validate_monthly`, `can_validate_projections`.
+- Consolidación automática del mes anterior para **certificación mensual** derivada de diarios, con sincronización lazy de estado/alertas.
+- Importación histórica masiva para datasets diarios (`HistoricalImportBatch`) y validación masiva.
+- Gating de histórico: bloquea solo la **carga diaria** hasta que exista histórico; semanal/mensual/proyecciones no bloquean.
+- Edición de usuario por admin sin reingresar contraseña; cambio de password vuelve a forzar `must_change_password`.
+- Ajustes de UX: `templates/landing.html` muestra “Volver a Home” si el usuario está autenticado y optimiza carga (fonts + imágenes).
+- Configuración de UTF-8 para el repo: `.editorconfig` y `.vscode/settings.json`.
+
+Pendiente / por completar:
+
+- Integrar `django-otp` y `django-axes` en settings/login.
+- Configurar Celery/Redis y tareas programadas para consolidaciones/alertas (hoy es lazy).
+- Definir convención de `period` para WEEKLY/MONTHLY/FLEXIBLE (ej. inicio de semana / fin de mes / año) y ajustar UI para reducir errores.
+- Implementar pruebas unitarias/integración (actualmente no hay tests).
+- Internacionalización completa (textos mezclan español/inglés en algunas vistas/JS).
+- Ajustes para despliegue a PostgreSQL y storage de archivos fuera del filesystem local.
 
 ---
 
 ## 7. Referencias rápidas
 
-- **Entradas principales**:
-  - `config/settings.py` – configuración general, apps registradas y middleware custom.
-  - `accounts/context_processors.py` – banderas de permisos, contadores y sección actual.
-  - `schemas/views.py` – lógica de CRUD/versionado de esquemas.
-  - `ingest/models.py` + `ingest/views.py` + `ingest/utils.py` – carga diaria/histórica, batches y materialización.
-  - `templates/ingest/upload.html`, `templates/ingest/upload_historical.html`, `templates/ingest/upload_history.html`, `static/js/ingest_upload.js` – UI de carga, gating y plantilla Excel.
-  - `validation/views.py` + `templates/validate/inbox.html` – bandejas, reglas de estado y validación masiva de históricos.
-  - `kpis/views.py` + `static/js/kpis_charts.js` – dashboard de datos.
-  - `audit/utils.py` + `audit/views.py` – registro y consulta de auditorías.
-- **Docs complementarios**: `docs/logic.md` (visión funcional alta) y `docs/tasks.md` (roadmap paso a paso). Este PRD actúa como índice operativo unificado.
+- `config/settings.py`: configuración general, apps registradas y middleware custom.
+- `config/urls.py`: rutas principales (`landing`, `home`, `kpis`, `ingest`, `validate`, etc.).
+- `accounts/models.py`, `accounts/forms.py`, `accounts/views.py`: roles, permisos por periodicidad, creación/edición de usuarios.
+- `schemas/models.py`, `schemas/views.py`, `schemas/services.py`: CRUD/versionado de esquemas + consolidación de certificación mensual.
+- `ingest/models.py`, `ingest/views.py`, `ingest/utils.py`: carga diaria/histórica, batches y materialización.
+- `validation/views.py`, `validation/services.py`: bandejas y lógica de estado por periodicidad.
+- `kpis/views.py`, `static/js/kpis_charts.js`: dashboards y API de datos para gráficos.
+- `audit/utils.py`, `audit/views.py`: registro y consulta de auditoría.
+- Docs complementarios: `docs/logic.md` (visión funcional alta) y `docs/tasks.md` (roadmap).
 
 ---
 
 ## 8. Suposiciones y riesgos
 
-- **Suposiciones**:
-  - Habrá al menos un Admin operativo distinto del superusuario para aprobar esquemas y gestionar cuentas.
-  - Los validadores tienen niveles numéricos consecutivos que determinan el flujo.
-  - Los archivos de carga utilizan encabezados exactamente iguales a los `name` definidos en las columnas; los `label` se usan solo como descripciones legibles para usuarios.
-  - Todo dataset requiere una carga histórica inicial antes de habilitar la carga diaria (gating en `ingest/upload`).
-- **Riesgos**:
-  - Falta de validaciones de negocio en backend (solo estructura). Será necesario implementar reglas por columna/campo.
-  - Escalabilidad limitada en SQLite; migración a PostgreSQL debe planificarse pronto.
-  - Falta de test coverage incrementa riesgo de regresiones.
-  - Seguridad parcial (2FA/axes no conectados aún) puede dejar huecos si se despliega sin completar.
-  - Procesamiento síncrono de archivos históricos grandes puede ser lento; ideal mover import/validación masiva a jobs asíncronos (Celery).
+Suposiciones:
+
+- Habrá al menos un Admin operativo distinto del superusuario para aprobar esquemas y gestionar cuentas.
+- Los validadores tienen niveles numéricos consecutivos (por institución) que determinan el flujo.
+- Los archivos de carga usan encabezados exactamente iguales a los `name` definidos en columnas.
+- El gating de histórico aplica solo a datasets **diarios**.
+
+Riesgos:
+
+- Validaciones de negocio por columna aún son básicas (principalmente estructura/tipos). Falta motor de reglas.
+- Escalabilidad limitada en SQLite; migración a PostgreSQL debe planificarse.
+- Falta de tests incrementa riesgo de regresiones.
+- Seguridad parcial (2FA/axes no conectados aún) puede dejar huecos si se despliega sin completar.
+- Importaciones históricas grandes pueden ser lentas (ideal mover a jobs asíncronos).
 
 ---
 
 ## 9. Próximos pasos sugeridos
 
-1. Finalizar integración de `django-otp` y `django-axes` con configuración de login/middleware.
-2. Añadir Celery y tareas programadas para ejecutar consolidaciones/alertas sin depender de requests (recalcular certificaciones y disparar notificaciones a horas controladas).
-3. Migrar base de datos a PostgreSQL y mover storage de archivos a un backend externo (S3, Azure Blob, etc.).
-4. Diseñar motor de validaciones de reglas basado en `ColumnDef` (rangos, regex, dependencias entre columnas).
-5. Implementar test suite (pytest/Django test runner) cubriendo flujos críticos (carga, aprobación, publicación, KPIs y certificación mensual).
-6. Documentar e implementar proceso de despliegue (settings para prod, STATIC/MEDIA, WSGI/ASGI, CI/CD).
+1. Completar `django-otp` + `django-axes` y endurecer seguridad de login.
+2. Definir y documentar convención de `period` para WEEKLY/MONTHLY/FLEXIBLE (y ajustar UI/validaciones).
+3. Añadir Celery y tareas programadas para consolidaciones/alertas.
+4. Diseñar motor de validaciones de reglas basado en `ColumnDef` (rangos, regex, dependencias).
+5. Implementar test suite (pytest/Django test runner) cubriendo flujos críticos (carga, validación, publicación, KPIs, certificación).
+6. Planificar despliegue: PostgreSQL, STATIC/MEDIA, WSGI/ASGI, CI/CD.
 
 ---
 
 ### Resumen final
 
-Con este PRD puedes iniciar o continuar el desarrollo de SICGAD entendiendo: quiénes participan, cómo se modelan los datos, qué flujos existen, qué módulos conforman la solución y qué queda pendiente. Es el punto de partida para cualquier mejora o diagnóstico rápido del sistema.
+Con este PRD puedes continuar el desarrollo de SICGAD entendiendo: quiénes participan, cómo se modelan los datos, qué flujos existen, qué módulos conforman la solución y qué queda pendiente.

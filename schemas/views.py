@@ -1,4 +1,4 @@
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.forms import inlineformset_factory
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -8,6 +8,7 @@ from accounts.decorators import admin_required
 from django.utils import timezone
 
 from accounts.models import Membership
+from plants.models import Plant
 from audit.utils import record_action
 
 from .models import ColumnDef, DatasetType
@@ -97,14 +98,31 @@ def schema_edit(request, slug=None):
     if is_admin and dataset and not dataset.is_certification:
         return redirect("schemas:schema_detail", slug=dataset.slug)
     loader_plant = None
-    if not is_admin and request.user.is_authenticated:
-        loader_membership = (
+    allowed_plants_qs = None
+    allowed_plant_ids: list[int] = []
+    has_global_loader = False
+    if not is_admin:
+        if not request.user.is_authenticated:
+            return redirect("login")
+
+        loader_memberships = (
             Membership.objects.filter(user=request.user, role="LOADER", is_active=True)
             .select_related("plant")
-            .first()
+            .order_by("id")
         )
-        if loader_membership:
-            loader_plant = loader_membership.plant
+        if not loader_memberships.exists():
+            return redirect("schemas:schema_list")
+
+        has_global_loader = any(m.plant_id is None for m in loader_memberships)
+        allowed_plant_ids = [m.plant_id for m in loader_memberships if m.plant_id]
+        allowed_plants_qs = (
+            Plant.objects.all().order_by("code")
+            if has_global_loader
+            else Plant.objects.filter(id__in=allowed_plant_ids).order_by("code")
+        )
+        loader_plant = next((m.plant for m in loader_memberships if m.plant_id), None)
+        if dataset and not has_global_loader and dataset.plant_id not in allowed_plant_ids:
+            return redirect("schemas:schema_list")
 
     DatasetColumnFormSet = inlineformset_factory(
         DatasetType,
@@ -115,14 +133,26 @@ def schema_edit(request, slug=None):
     )
 
     if request.method == "POST":
-        form = DatasetTypeForm(request.POST, instance=dataset)
+        form = DatasetTypeForm(
+            request.POST,
+            instance=dataset,
+            allowed_plants_qs=allowed_plants_qs,
+            allow_set_active=is_admin,
+        )
         formset = DatasetColumnFormSet(request.POST, instance=dataset)
         if form.is_valid() and formset.is_valid():
             dataset = form.save(commit=False)
             if not is_admin:
-                dataset.validation_frequency = DatasetType.DAILY
+                dataset.is_certification = False
+                dataset.source_dataset = None
                 if loader_plant and not dataset.plant_id:
                     dataset.plant = loader_plant
+                if (
+                    not has_global_loader
+                    and dataset.plant_id
+                    and dataset.plant_id not in allowed_plant_ids
+                ):
+                    return redirect("schemas:schema_list")
                 dataset.status = DatasetType.STATUS_DRAFT
                 dataset.is_active = False
             dataset.save()
@@ -135,11 +165,19 @@ def schema_edit(request, slug=None):
                 request=request,
                 module="Schemas",
                 object_repr=f"Esquema {dataset.name} v{dataset.version} ({dataset.plant.code}) {verb}",
-                details="Esquema de datos diario" if not dataset.is_certification else "Esquema de certificación",
+                details=(
+                    "Esquema de certificación mensual"
+                    if dataset.is_certification
+                    else f"Esquema de datos ({dataset.get_validation_frequency_display()})"
+                ),
             )
             return redirect(reverse("schemas:schema_detail", args=[dataset.slug]))
     else:
-        form = DatasetTypeForm(instance=dataset)
+        form = DatasetTypeForm(
+            instance=dataset,
+            allowed_plants_qs=allowed_plants_qs,
+            allow_set_active=is_admin,
+        )
         if not is_admin and loader_plant and not dataset:
             form.fields["plant"].initial = loader_plant
         formset = DatasetColumnFormSet(instance=dataset)
@@ -167,12 +205,12 @@ def schema_submit_for_approval(request, slug):
     if not request.user.is_authenticated or is_admin:
         return redirect("schemas:schema_list")
 
-    loader_membership = (
-        Membership.objects.filter(user=request.user, role="LOADER", is_active=True)
-        .select_related("plant")
-        .first()
-    )
-    if not loader_membership or loader_membership.plant_id != dataset.plant_id:
+    can_submit = Membership.objects.filter(
+        user=request.user,
+        role="LOADER",
+        is_active=True,
+    ).filter(Q(plant=dataset.plant) | Q(plant__isnull=True)).exists()
+    if not can_submit:
         return redirect("schemas:schema_list")
 
     if dataset.status == DatasetType.STATUS_DRAFT:

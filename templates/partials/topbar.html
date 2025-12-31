@@ -8,14 +8,7 @@
     </h1>
   </div>
   <div class='flex items-center gap-3 text-xs md:text-sm'>
-    <div class='hidden sm:flex items-center gap-2'>
-      <span class='text-slate-400'>Planta:</span>
-      <select class='bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs'>
-        <option>PCS</option>
-        <option>PICP</option>
-        <option>PICL</option>
-      </select>
-    </div>
+
     {% if request.user.is_authenticated %}
       <div class='flex items-center gap-2'>
         <span class='text-slate-400 hidden sm:inline'>Usuario:</span>

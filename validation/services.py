@@ -19,11 +19,22 @@ def _collect_monthly_requirements(instance: DatasetInstance) -> Dict[str, int]:
     """
     Obtiene el nivel máximo requerido por institución para el dataset mensual indicado.
     """
-    validators = Membership.objects.filter(
-        role="VALIDATOR",
-        is_active=True,
-        can_validate_monthly=True,
-    ).filter(Q(plant=instance.plant) | Q(plant__isnull=True))
+    freq = instance.dataset_type.validation_frequency
+    if freq == DatasetType.WEEKLY:
+        freq_filter = Q(can_validate_weekly=True)
+    elif freq == DatasetType.FLEXIBLE:
+        freq_filter = Q(can_validate_projections=True)
+    else:
+        freq_filter = Q(can_validate_monthly=True)
+
+    validators = (
+        Membership.objects.filter(
+            role="VALIDATOR",
+            is_active=True,
+        )
+        .filter(freq_filter)
+        .filter(Q(plant=instance.plant) | Q(plant__isnull=True))
+    )
 
     requirements: Dict[str, int] = {}
     for membership in validators:
@@ -75,11 +86,18 @@ def determine_monthly_state(instance: DatasetInstance) -> str:
     return DatasetInstance.STATE_SUBMITTED
 
 
+def determine_periodic_state(instance: DatasetInstance) -> str:
+    """
+    Datasets semanales y mensuales usan la misma lІgica multi-instituciІn.
+    """
+    return determine_monthly_state(instance)
+
+
 def ensure_monthly_state(instance: DatasetInstance, *, save: bool = True) -> str:
     """
     Recalcula el estado mensual y lo guarda si es necesario.
     """
-    desired_state = determine_monthly_state(instance)
+    desired_state = determine_periodic_state(instance)
     if save and desired_state != instance.state:
         instance.state = desired_state
         instance.save(update_fields=["state"])

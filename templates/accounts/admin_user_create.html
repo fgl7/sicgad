@@ -70,11 +70,23 @@
         </div>
       </div>
 
-      <div class="grid md:grid-cols-2 gap-3">
+      <div class="grid md:grid-cols-4 gap-3">
         <div class="flex items-center gap-2">
           {{ form.can_validate_daily }}
           <span class="text-slate-300 text-[11px]">
             Puede validar flujo diario
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          {{ form.can_validate_weekly }}
+          <span class="text-slate-300 text-[11px]">
+            Puede validar flujo semanal
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          {{ form.can_validate_projections }}
+          <span class="text-slate-300 text-[11px]">
+            Puede validar proyecciones
           </span>
         </div>
         <div class="flex items-center gap-2">

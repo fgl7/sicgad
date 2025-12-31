@@ -6,11 +6,15 @@ from plants.models import Plant
 
 class DatasetType(models.Model):
     DAILY = "DAILY"
+    WEEKLY = "WEEKLY"
     MONTHLY = "MONTHLY"
+    FLEXIBLE = "FLEXIBLE"
 
     VALIDATION_FREQUENCY_CHOICES = [
         (DAILY, "Diaria"),
+        (WEEKLY, "Semanal"),
         (MONTHLY, "Mensual"),
+        (FLEXIBLE, "No definida (proyecciones)"),
     ]
 
     STATUS_DRAFT = "DRAFT"
@@ -47,7 +51,7 @@ class DatasetType(models.Model):
         max_length=20,
         choices=VALIDATION_FREQUENCY_CHOICES,
         default=DAILY,
-        help_text="Define si este dataset se valida a diario o como consolidado mensual.",
+        help_text="Define si este dataset se valida a diario, semanal o como consolidado mensual.",
     )
     is_certification = models.BooleanField(
         default=False,

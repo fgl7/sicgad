@@ -155,7 +155,17 @@
                       <form method="post" action="{% url 'ingest:submit_instance' inst.pk %}" class="inline">
                         {% csrf_token %}
                         <button type="submit" class="text-[10px] text-amber-300 hover:text-amber-200">
-                          Enviar a validación diaria
+                          {% if inst.dataset_type.is_certification and inst.dataset_type.validation_frequency == inst.dataset_type.MONTHLY %}
+                            Enviar a validación mensual
+                          {% elif inst.dataset_type.validation_frequency == inst.dataset_type.WEEKLY %}
+                            Enviar a validación semanal
+                          {% elif inst.dataset_type.validation_frequency == inst.dataset_type.MONTHLY %}
+                            Enviar a validación mensual
+                          {% elif inst.dataset_type.validation_frequency == inst.dataset_type.FLEXIBLE %}
+                            Enviar a validación (proyecciones)
+                          {% else %}
+                            Enviar a validación diaria
+                          {% endif %}
                         </button>
                       </form>
                     {% endif %}

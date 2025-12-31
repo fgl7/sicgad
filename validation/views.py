@@ -17,7 +17,7 @@ from schemas.services import collect_certification_status, previous_month_range
 from audit.utils import record_action
 from .forms import ValidationDecisionForm
 from .models import ValidationAction
-from .services import determine_monthly_state
+from .services import determine_periodic_state
 
 from django.db.models import Count, Min, Max
 
@@ -257,6 +257,18 @@ def inbox(request):
         is_active=True,
         can_validate_daily=True,
     )
+    weekly_memberships = Membership.objects.filter(
+        user=user,
+        role="VALIDATOR",
+        is_active=True,
+        can_validate_weekly=True,
+    )
+    projections_memberships = Membership.objects.filter(
+        user=user,
+        role="VALIDATOR",
+        is_active=True,
+        can_validate_projections=True,
+    )
     monthly_memberships = Membership.objects.filter(
         user=user,
         role="VALIDATOR",
@@ -265,9 +277,13 @@ def inbox(request):
     )
 
     daily_plants = [m.plant_id for m in daily_memberships if m.plant_id]
+    weekly_plants = [m.plant_id for m in weekly_memberships if m.plant_id]
+    projections_plants = [m.plant_id for m in projections_memberships if m.plant_id]
     monthly_plants = [m.plant_id for m in monthly_memberships if m.plant_id]
 
     has_global_daily = any(m.plant_id is None for m in daily_memberships)
+    has_global_weekly = any(m.plant_id is None for m in weekly_memberships)
+    has_global_projections = any(m.plant_id is None for m in projections_memberships)
     has_global_monthly = any(m.plant_id is None for m in monthly_memberships)
 
     base_qs = DatasetInstance.objects.select_related("dataset_type", "plant").filter(
@@ -280,6 +296,20 @@ def inbox(request):
     )
     if has_global_daily:
         daily_filter |= Q(dataset_type__validation_frequency=DatasetType.DAILY)
+
+    weekly_filter = Q(
+        dataset_type__validation_frequency=DatasetType.WEEKLY,
+        plant_id__in=weekly_plants,
+    )
+    if has_global_weekly:
+        weekly_filter |= Q(dataset_type__validation_frequency=DatasetType.WEEKLY)
+
+    projections_filter = Q(
+        dataset_type__validation_frequency=DatasetType.FLEXIBLE,
+        plant_id__in=projections_plants,
+    )
+    if has_global_projections:
+        projections_filter |= Q(dataset_type__validation_frequency=DatasetType.FLEXIBLE)
 
     monthly_filter = Q(
         dataset_type__validation_frequency=DatasetType.MONTHLY,
@@ -296,7 +326,7 @@ def inbox(request):
     approval_since_submit = approval_subquery.filter(created_at__gte=OuterRef("submitted_at"))
 
     items = (
-        base_qs.filter(daily_filter | monthly_filter)
+        base_qs.filter(daily_filter | weekly_filter | projections_filter | monthly_filter)
         .order_by("-created_at")
         .annotate(
             already_approved_history=Exists(approval_subquery),
@@ -503,7 +533,13 @@ def admin_overview(request):
     )
     monthly_instances = (
         DatasetInstance.objects.select_related("dataset_type", "plant")
-        .filter(dataset_type__validation_frequency=DatasetType.MONTHLY)
+        .filter(
+            dataset_type__validation_frequency__in=[
+                DatasetType.WEEKLY,
+                DatasetType.MONTHLY,
+                DatasetType.FLEXIBLE,
+            ]
+        )
         .order_by("-created_at")[:100]
     )
     certification_status = collect_certification_status()
@@ -531,6 +567,10 @@ def detail(request, pk):
     base_qs = Membership.objects.filter(user=request.user, role="VALIDATOR", is_active=True)
     if freq == DatasetType.DAILY:
         base_qs = base_qs.filter(can_validate_daily=True)
+    elif freq == DatasetType.WEEKLY:
+        base_qs = base_qs.filter(can_validate_weekly=True)
+    elif freq == DatasetType.FLEXIBLE:
+        base_qs = base_qs.filter(can_validate_projections=True)
     else:
         base_qs = base_qs.filter(can_validate_monthly=True)
 
@@ -569,8 +609,8 @@ def detail(request, pk):
                     # Flujo diario: un solo nivel (Jefe de planta)
                     instance.state = DatasetInstance.STATE_PUBLISHED
                 else:
-                    # Flujo mensual / general: requiere todas las instituciones
-                    instance.state = determine_monthly_state(instance)
+                    # Flujo semanal/mensual: requiere todas las instituciones
+                    instance.state = determine_periodic_state(instance)
 
                 instance.save()
 

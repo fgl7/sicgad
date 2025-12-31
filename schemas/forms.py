@@ -4,6 +4,19 @@ from .models import ColumnDef, DatasetType
 
 
 class DatasetTypeForm(forms.ModelForm):
+    def __init__(
+        self,
+        *args,
+        allowed_plants_qs=None,
+        allow_set_active: bool = True,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        if allowed_plants_qs is not None:
+            self.fields["plant"].queryset = allowed_plants_qs
+        if not allow_set_active:
+            self.fields["is_active"].disabled = True
+
     class Meta:
         model = DatasetType
         fields = ["plant", "name", "version", "validation_frequency", "is_active"]

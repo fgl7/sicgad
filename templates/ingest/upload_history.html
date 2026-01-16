@@ -32,8 +32,21 @@
             {% for row in historical_batches %}
               <tr class="border-t border-slate-800 hover:bg-slate-900/60">
                 <td class="px-3 py-2">{{ row.batch.created_at|date:"Y-m-d H:i" }}</td>
-                <td class="px-3 py-2">{{ row.batch.plant.code }}</td>
-                <td class="px-3 py-2">{{ row.batch.dataset_type.name }}</td>
+                <td class="px-3 py-2">
+                  {% if row.batch.plant %}
+                    {{ row.batch.plant.code }}
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2">
+                  {{ row.batch.dataset_type.name }}
+                  {% if row.batch.dataset_type.is_one_time %}
+                    <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
+                      Carga unica
+                    </span>
+                  {% endif %}
+                </td>
                 <td class="px-3 py-2">
                   {% if row.period_start and row.period_end %}
                     {{ row.period_start }} → {{ row.period_end }}
@@ -78,9 +91,23 @@
         {% for inst in loader_certifications_pending %}
           <div class="border border-slate-800 rounded-lg p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between bg-slate-950/70">
             <div>
-              <div class="text-slate-100 font-semibold text-sm">{{ inst.dataset_type.name }}</div>
+              <div class="text-slate-100 font-semibold text-sm">
+                {{ inst.dataset_type.name }}
+                {% if inst.dataset_type.is_one_time %}
+                  <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
+                    Carga unica
+                  </span>
+                {% endif %}
+              </div>
               <div class="text-[11px] text-slate-400">
-                Planta {{ inst.plant.code }} - periodo {{ inst.period }}
+                {% if inst.plant %}
+                  Planta {{ inst.plant.code }}
+                {% elif inst.project %}
+                  Proyecto {{ inst.project.name }}
+                {% else %}
+                  Sin origen
+                {% endif %}
+                - periodo {{ inst.period }}
               </div>
               <div class="text-[11px] text-slate-500">
                 Estado actual: {{ inst.get_state_display }}
@@ -117,9 +144,23 @@
         {% for inst in loader_certifications_rejected %}
           <div class="border border-red-800 rounded-lg p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between bg-red-900/30">
             <div>
-              <div class="text-slate-100 font-semibold text-sm">{{ inst.dataset_type.name }}</div>
+              <div class="text-slate-100 font-semibold text-sm">
+                {{ inst.dataset_type.name }}
+                {% if inst.dataset_type.is_one_time %}
+                  <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
+                    Carga unica
+                  </span>
+                {% endif %}
+              </div>
               <div class="text-[11px] text-slate-300">
-                Planta {{ inst.plant.code }} - periodo {{ inst.period }}
+                {% if inst.plant %}
+                  Planta {{ inst.plant.code }}
+                {% elif inst.project %}
+                  Proyecto {{ inst.project.name }}
+                {% else %}
+                  Sin origen
+                {% endif %}
+                - periodo {{ inst.period }}
               </div>
               <div class="text-[11px] text-red-200">
                 Motivo del rechazo: {{ inst.last_error_summary|default:"Sin detalles" }}
@@ -162,8 +203,23 @@
           {% for inst in loader_certifications_history %}
             <tr class="border-t border-slate-800 hover:bg-slate-900/60">
               <td class="px-3 py-2">{{ inst.updated_at|date:"Y-m-d H:i" }}</td>
-              <td class="px-3 py-2">{{ inst.plant.code }}</td>
-              <td class="px-3 py-2">{{ inst.dataset_type.name }}</td>
+              <td class="px-3 py-2">
+                {% if inst.plant %}
+                  {{ inst.plant.code }}
+                {% elif inst.project %}
+                  {{ inst.project.name }}
+                {% else %}
+                  &mdash;
+                {% endif %}
+              </td>
+              <td class="px-3 py-2">
+                {{ inst.dataset_type.name }}
+                {% if inst.dataset_type.is_one_time %}
+                  <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
+                    Carga unica
+                  </span>
+                {% endif %}
+              </td>
               <td class="px-3 py-2">{{ inst.period }}</td>
               <td class="px-3 py-2">
                 {{ inst.get_state_display }}
@@ -207,7 +263,7 @@
       <thead class="bg-slate-950/80 text-slate-300">
         <tr>
           <th class="px-3 py-2 text-left font-semibold">Fecha</th>
-          <th class="px-3 py-2 text-left font-semibold">Planta</th>
+          <th class="px-3 py-2 text-left font-semibold">Planta / Proyecto</th>
           <th class="px-3 py-2 text-left font-semibold">Dataset</th>
           <th class="px-3 py-2 text-left font-semibold">Periodo</th>
           <th class="px-3 py-2 text-left font-semibold">Cargado por</th>
@@ -222,8 +278,23 @@
         {% for inst in instances %}
           <tr class="border-t border-slate-800 hover:bg-slate-900/60">
             <td class="px-3 py-2 align-top">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
-            <td class="px-3 py-2 align-top">{{ inst.plant.code }}</td>
-            <td class="px-3 py-2 align-top">{{ inst.dataset_type.name }}</td>
+            <td class="px-3 py-2 align-top">
+              {% if inst.plant %}
+                {{ inst.plant.code }}
+              {% elif inst.project %}
+                {{ inst.project.name }}
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 align-top">
+              {{ inst.dataset_type.name }}
+              {% if inst.dataset_type.is_one_time %}
+                <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
+                  Carga unica
+                </span>
+              {% endif %}
+            </td>
             <td class="px-3 py-2 align-top">{{ inst.period }}</td>
             <td class="px-3 py-2 align-top">
               {% if inst.created_by and inst.created_by.user %}

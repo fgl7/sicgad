@@ -1,7 +1,10 @@
 from django.db import models
+from django.db.models import Q
+from django.core.exceptions import ValidationError
 
 from accounts.models import Membership
 from plants.models import Plant
+from projects.models import Project
 from schemas.models import DatasetType, ColumnDef
 
 
@@ -31,6 +34,15 @@ class DatasetInstance(models.Model):
         Plant,
         on_delete=models.CASCADE,
         related_name="dataset_instances",
+        null=True,
+        blank=True,
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="dataset_instances",
+        null=True,
+        blank=True,
     )
     period = models.DateField(
         help_text="Fecha o día de referencia del dataset (para diarios).",
@@ -76,7 +88,18 @@ class DatasetInstance(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        unique_together = ("dataset_type", "plant", "period")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["dataset_type", "plant", "period"],
+                condition=Q(plant__isnull=False),
+                name="uniq_instance_dataset_plant_period",
+            ),
+            models.UniqueConstraint(
+                fields=["dataset_type", "project", "period"],
+                condition=Q(project__isnull=False),
+                name="uniq_instance_dataset_project_period",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.dataset_type} - {self.period}"
@@ -87,6 +110,21 @@ class DatasetInstance(models.Model):
             self.STATE_SUBMITTED,
             self.STATE_VALIDATED_L1,
         }
+
+    def clean(self):
+        if bool(self.plant_id) == bool(self.project_id):
+            raise ValidationError(
+                "Debe seleccionar una planta o un proyecto (solo uno)."
+            )
+        if self.dataset_type_id:
+            if self.dataset_type.plant_id and self.plant_id != self.dataset_type.plant_id:
+                raise ValidationError(
+                    "La planta no coincide con el esquema seleccionado."
+                )
+            if self.dataset_type.project_id and self.project_id != self.dataset_type.project_id:
+                raise ValidationError(
+                    "El proyecto no coincide con el esquema seleccionado."
+                )
 
 
 class PublishedDataPoint(models.Model):

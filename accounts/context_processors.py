@@ -23,9 +23,11 @@ def admin_flags(request):
     loader_schema_approved = 0
     loader_schema_rejected = 0
     loader_default_plant = None
+    loader_default_project = None
     pending_certification_alerts = 0
     loader_pending_certification_alerts = 0
     loader_plants_ids = []
+    loader_projects_ids = []
     loader_memberships_list = []
     has_global_loader = False
     if user and user.is_authenticated:
@@ -39,7 +41,7 @@ def admin_flags(request):
                 user=user,
                 role="LOADER",
                 is_active=True,
-            ).select_related("plant")
+            ).select_related("plant", "project")
             loader_memberships_list = list(loader_memberships)
             is_loader = bool(loader_memberships_list)
             is_validator = Membership.objects.filter(
@@ -50,12 +52,22 @@ def admin_flags(request):
 
             if is_loader:
                 loader_plants_ids = [m.plant_id for m in loader_memberships_list if m.plant_id]
-                has_global_loader = any(m.plant_id is None for m in loader_memberships_list)
+                loader_projects_ids = [m.project_id for m in loader_memberships_list if m.project_id]
+                has_global_loader = any(
+                    m.plant_id is None and m.project_id is None for m in loader_memberships_list
+                )
                 loader_membership = next(
-                    (m for m in loader_memberships_list if m.plant_id),
+                    (
+                        m
+                        for m in loader_memberships_list
+                        if m.plant_id is not None or m.project_id is not None
+                    ),
                     loader_memberships_list[0],
                 )
-                loader_default_plant = loader_membership.plant
+                loader_default_plant = loader_membership.plant if loader_membership.plant_id else None
+                loader_default_project = (
+                    loader_membership.project if loader_membership.project_id else None
+                )
 
                 _, prev_month_end = previous_month_range()
                 loader_cert_states = [DatasetInstance.STATE_DRAFT]
@@ -91,35 +103,50 @@ def admin_flags(request):
                     role="VALIDATOR",
                     is_active=True,
                     can_validate_daily=True,
-                )
+                ).select_related("plant", "project")
                 weekly_memberships = Membership.objects.filter(
                     user=user,
                     role="VALIDATOR",
                     is_active=True,
                     can_validate_weekly=True,
-                )
+                ).select_related("plant", "project")
                 projections_memberships = Membership.objects.filter(
                     user=user,
                     role="VALIDATOR",
                     is_active=True,
                     can_validate_projections=True,
-                )
+                ).select_related("plant", "project")
                 monthly_memberships = Membership.objects.filter(
                     user=user,
                     role="VALIDATOR",
                     is_active=True,
                     can_validate_monthly=True,
-                )
+                ).select_related("plant", "project")
 
                 daily_plants = [m.plant_id for m in daily_memberships if m.plant_id]
                 weekly_plants = [m.plant_id for m in weekly_memberships if m.plant_id]
                 projections_plants = [m.plant_id for m in projections_memberships if m.plant_id]
                 monthly_plants = [m.plant_id for m in monthly_memberships if m.plant_id]
 
-                has_global_daily = any(m.plant_id is None for m in daily_memberships)
-                has_global_weekly = any(m.plant_id is None for m in weekly_memberships)
-                has_global_projections = any(m.plant_id is None for m in projections_memberships)
-                has_global_monthly = any(m.plant_id is None for m in monthly_memberships)
+                daily_projects = [m.project_id for m in daily_memberships if m.project_id]
+                weekly_projects = [m.project_id for m in weekly_memberships if m.project_id]
+                projections_projects = [
+                    m.project_id for m in projections_memberships if m.project_id
+                ]
+                monthly_projects = [m.project_id for m in monthly_memberships if m.project_id]
+
+                has_global_daily = any(
+                    m.plant_id is None and m.project_id is None for m in daily_memberships
+                )
+                has_global_weekly = any(
+                    m.plant_id is None and m.project_id is None for m in weekly_memberships
+                )
+                has_global_projections = any(
+                    m.plant_id is None and m.project_id is None for m in projections_memberships
+                )
+                has_global_monthly = any(
+                    m.plant_id is None and m.project_id is None for m in monthly_memberships
+                )
 
                 base_qs = DatasetInstance.objects.filter(
                     state__in=[
@@ -128,35 +155,48 @@ def admin_flags(request):
                     ]
                 )
 
-                daily_filter = Q(
-                    dataset_type__validation_frequency=DatasetType.DAILY,
-                    plant_id__in=daily_plants,
-                )
-                if has_global_daily:
-                    daily_filter |= Q(dataset_type__validation_frequency=DatasetType.DAILY)
+                def _build_freq_scope(freq, plant_ids, project_ids, has_global):
+                    if has_global:
+                        return Q(dataset_type__validation_frequency=freq)
+                    scope_filter = Q()
+                    if plant_ids:
+                        scope_filter |= Q(
+                            dataset_type__validation_frequency=freq,
+                            plant_id__in=plant_ids,
+                        )
+                    if project_ids:
+                        scope_filter |= Q(
+                            dataset_type__validation_frequency=freq,
+                            project_id__in=project_ids,
+                        )
+                    if not plant_ids and not project_ids:
+                        scope_filter = Q(pk__in=[])
+                    return scope_filter
 
-                weekly_filter = Q(
-                    dataset_type__validation_frequency=DatasetType.WEEKLY,
-                    plant_id__in=weekly_plants,
+                daily_filter = _build_freq_scope(
+                    DatasetType.DAILY,
+                    daily_plants,
+                    daily_projects,
+                    has_global_daily,
                 )
-                if has_global_weekly:
-                    weekly_filter |= Q(dataset_type__validation_frequency=DatasetType.WEEKLY)
-
-                monthly_filter = Q(
-                    dataset_type__validation_frequency=DatasetType.MONTHLY,
-                    plant_id__in=monthly_plants,
+                weekly_filter = _build_freq_scope(
+                    DatasetType.WEEKLY,
+                    weekly_plants,
+                    weekly_projects,
+                    has_global_weekly,
                 )
-                if has_global_monthly:
-                    monthly_filter |= Q(
-                        dataset_type__validation_frequency=DatasetType.MONTHLY
-                    )
-
-                projections_filter = Q(
-                    dataset_type__validation_frequency=DatasetType.FLEXIBLE,
-                    plant_id__in=projections_plants,
+                monthly_filter = _build_freq_scope(
+                    DatasetType.MONTHLY,
+                    monthly_plants,
+                    monthly_projects,
+                    has_global_monthly,
                 )
-                if has_global_projections:
-                    projections_filter |= Q(dataset_type__validation_frequency=DatasetType.FLEXIBLE)
+                projections_filter = _build_freq_scope(
+                    DatasetType.FLEXIBLE,
+                    projections_plants,
+                    projections_projects,
+                    has_global_projections,
+                )
 
                 pending_validation_items = base_qs.filter(
                     daily_filter | weekly_filter | projections_filter | monthly_filter
@@ -243,10 +283,11 @@ def admin_flags(request):
                     cert_rejected_qs = cert_rejected_qs.filter(updated_at__gt=last_seen_validation)
                 loader_certification_rejected = cert_rejected_qs.count()
 
-                # Notificaciones sobre esquemas de sus plantas aprobados y rechazados.
-                # Para loaders globales (sin planta asignada) se consideran todas las plantas.
+                # Notificaciones sobre esquemas de sus plantas/proyectos aprobados y rechazados.
+                # Para loaders globales (sin planta/proyecto asignado) se consideran todos.
                 loader_plants = [pid for pid in loader_plants_ids if pid]
-                if loader_plants or has_global_loader:
+                loader_projects = [pid for pid in loader_projects_ids if pid]
+                if loader_plants or loader_projects or has_global_loader:
                     prev_seen_schema = (
                         profile.last_seen_schema_status if profile else None
                     )
@@ -254,7 +295,9 @@ def admin_flags(request):
                         is_certification=False,
                     )
                     if not has_global_loader:
-                        base_qs = base_qs.filter(plant_id__in=loader_plants)
+                        base_qs = base_qs.filter(
+                            Q(plant_id__in=loader_plants) | Q(project_id__in=loader_projects)
+                        )
 
                     # Aprobados: solo se muestran como "positivos nuevos" desde la
                     # última vez que el cargador revisó la sección de esquemas.
@@ -303,6 +346,8 @@ def admin_flags(request):
         current_section = "Auditoría"
     elif path.startswith("/performance/"):
         current_section = "Desempeño"
+    elif path.startswith("/projects/"):
+        current_section = "Proyectos"
     elif path.startswith("/home/"):
         current_section = "Inicio"
     else:
@@ -323,4 +368,5 @@ def admin_flags(request):
         "loader_schema_approved": loader_schema_approved,
         "loader_schema_rejected": loader_schema_rejected,
         "loader_default_plant": loader_default_plant,
+        "loader_default_project": loader_default_project,
     }

@@ -8,10 +8,34 @@
     <div>
       <h2 class="text-sm font-semibold">{{ dataset.name }}</h2>
       <p class="text-xs text-slate-400">
-        Planta: {{ dataset.plant.code }} · Versión {{ dataset.version }} · Frecuencia: {{ dataset.get_validation_frequency_display }}
+        {% if dataset.plant %}
+          Planta: {{ dataset.plant.code }}
+        {% elif dataset.project %}
+          Proyecto: {{ dataset.project.name }}
+        {% else %}
+          Origen: &mdash;
+        {% endif %}
+        · Versión {{ dataset.version }} · Frecuencia: {{ dataset.get_validation_frequency_display }}
+        {% if dataset.is_one_time %}
+          <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
+            Carga unica
+          </span>
+        {% endif %}
       </p>
     </div>
     <div class="flex items-center gap-2">
+      {% if is_admin %}
+        <form method="post" action="{% url 'schemas:schema_toggle_one_time' dataset.slug|default:dataset.pk %}">
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="inline-flex items-center px-3 py-1.5 rounded-md border border-slate-700 text-xs font-medium hover:bg-slate-800"
+            onclick="return confirm('{% if dataset.is_one_time %}Quitar carga unica?{% else %}Marcar como carga unica?{% endif %}');"
+          >
+            {% if dataset.is_one_time %}Quitar carga unica{% else %}Marcar carga unica{% endif %}
+          </button>
+        </form>
+      {% endif %}
       {% if dataset.status == 'DRAFT' or dataset.status == 'REJECTED' %}
         {% if can_edit_schemas and not dataset.is_certification or is_admin and dataset.is_certification %}
           <a href="{% url 'schemas:schema_edit' dataset.slug|default:dataset.pk %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-800 text-xs font-medium hover:bg-slate-700">

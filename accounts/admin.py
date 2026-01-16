@@ -8,6 +8,7 @@ class MembershipAdmin(admin.ModelAdmin):
     list_display = (
         "user",
         "plant",
+        "project",
         "role",
         "institution",
         "validation_level",
@@ -22,12 +23,20 @@ class MembershipAdmin(admin.ModelAdmin):
         "institution",
         "is_active",
         "plant",
+        "project",
         "can_validate_daily",
         "can_validate_weekly",
         "can_validate_projections",
         "can_validate_monthly",
     )
-    search_fields = ("user__username", "user__email", "plant__code", "plant__name")
+    search_fields = (
+        "user__username",
+        "user__email",
+        "plant__code",
+        "plant__name",
+        "project__code",
+        "project__name",
+    )
 
 
 @admin.register(AccountProfile)

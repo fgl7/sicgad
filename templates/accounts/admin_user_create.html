@@ -41,7 +41,7 @@
         </div>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-3">
+      <div class="grid md:grid-cols-4 gap-3">
         <div>
           <label class="block mb-1 text-slate-300 text-[11px]">Rol</label>
           {{ form.role }}
@@ -52,6 +52,13 @@
           <p class="mt-1 text-[10px] text-slate-500">
             Seleccione una planta especifica o deje "GLOBAL (todas las plantas)"
             para que el rol aplique a todas las plantas.
+          </p>
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Proyecto</label>
+          {{ form.project }}
+          <p class="mt-1 text-[10px] text-slate-500">
+            Opcional. Seleccione un proyecto cuando el rol aplique a proyectos.
           </p>
         </div>
         <div>

@@ -47,6 +47,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Third-party apps
+    "axes",
+    "django_otp",
+    "django_otp.plugins.otp_static",
+    "django_otp.plugins.otp_totp",
     # Project apps
     "accounts",
     "plants",
@@ -57,6 +62,7 @@ INSTALLED_APPS = [
     "audit",
     "performance",
     "core",
+    "projects",
 ]
 
 MIDDLEWARE = [
@@ -65,6 +71,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
+    "axes.middleware.AxesMiddleware",
     "accounts.middleware.PasswordChangeRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -124,7 +132,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "es"
 
 TIME_ZONE = "UTC"
 
@@ -150,3 +158,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Auth redirects
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "landing"
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+AXES_FAILURE_LIMIT = env.int("AXES_FAILURE_LIMIT", default=5)
+AXES_COOLOFF_TIME = env.int("AXES_COOLOFF_TIME", default=1)
+AXES_RESET_ON_SUCCESS = True
+
+OTP_TOTP_ISSUER = env("OTP_TOTP_ISSUER", default="SICGAD")

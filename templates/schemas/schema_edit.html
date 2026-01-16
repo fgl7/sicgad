@@ -20,7 +20,7 @@
           {% if is_admin %}
             {{ form.plant }}
           {% else %}
-            {% if dataset %}
+            {% if dataset and dataset.plant %}
               <div class="text-slate-200 text-xs">
                 {{ dataset.plant.code }} - {{ dataset.plant.name }}
               </div>
@@ -29,6 +29,22 @@
               {{ form.plant }}
             {% endif %}
           {% endif %}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300">Proyecto</label>
+          {% if is_admin %}
+            {{ form.project }}
+          {% else %}
+            {% if dataset and dataset.project %}
+              <div class="text-slate-200 text-xs">
+                {{ dataset.project.name }}
+              </div>
+              <input type="hidden" name="{{ form.project.name }}" value="{{ dataset.project.id }}">
+            {% else %}
+              {{ form.project }}
+            {% endif %}
+          {% endif %}
+          <p class="text-[10px] text-slate-500 mt-1">Seleccione una planta o un proyecto.</p>
         </div>
         <div>
           <label class="block mb-1 text-slate-300">Nombre del dataset</label>
@@ -45,6 +61,10 @@
         <div class="flex items-center gap-2 mt-2">
           {{ form.is_active }}
           <span class="text-slate-300">Esquema activo</span>
+        </div>
+        <div class="flex items-center gap-2 mt-2">
+          {{ form.is_one_time }}
+          <span class="text-slate-300">Carga unica (solo una vez)</span>
         </div>
       </div>
     </section>

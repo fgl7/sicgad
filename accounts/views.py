@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 
 from plants.models import Plant
+from projects.models import Project
 from audit.utils import record_action
 
 from .decorators import admin_required
@@ -31,10 +32,12 @@ class ForcePasswordChangeView(PasswordChangeView):
 def admin_user_list(request):
     role = request.GET.get("role") or ""
     plant_id = request.GET.get("plant") or ""
+    project_id = request.GET.get("project") or ""
     institution = request.GET.get("institution") or ""
 
     users_qs = User.objects.filter(is_superuser=False).prefetch_related(
         "memberships__plant",
+        "memberships__project",
         "memberships__institution",
     )
 
@@ -42,6 +45,8 @@ def admin_user_list(request):
         users_qs = users_qs.filter(memberships__role=role)
     if plant_id:
         users_qs = users_qs.filter(memberships__plant_id=plant_id)
+    if project_id:
+        users_qs = users_qs.filter(memberships__project_id=project_id)
     if institution:
         users_qs = users_qs.filter(memberships__institution_id=institution)
 
@@ -50,6 +55,7 @@ def admin_user_list(request):
     roles = Membership.ROLE_CHOICES
     plants = Plant.objects.all().order_by("code")
     institutions = Institution.objects.all().order_by("code")
+    projects = Project.objects.filter(is_active=True).order_by("name")
 
     return render(
         request,
@@ -59,8 +65,10 @@ def admin_user_list(request):
             "roles": roles,
             "plants": plants,
             "institutions": institutions,
+            "projects": projects,
             "filter_role": role,
             "filter_plant": plant_id,
+            "filter_project": project_id,
             "filter_institution": institution,
         },
     )
@@ -72,12 +80,17 @@ def admin_user_create(request):
         form = AdminUserCreateForm(request.POST)
         if form.is_valid():
             user = form.save()
+            scope_label = "GLOBAL"
+            if form.cleaned_data.get("plant"):
+                scope_label = f"Planta {form.cleaned_data.get('plant')}"
+            elif form.cleaned_data.get("project"):
+                scope_label = f"Proyecto {form.cleaned_data.get('project')}"
             record_action(
                 "USER",
                 request=request,
                 module="Accounts",
                 object_repr=f"Usuario {user.username} creado",
-                details=f"Rol {form.cleaned_data.get('role')} - Planta {form.cleaned_data.get('plant') or 'GLOBAL'}",
+                details=f"Rol {form.cleaned_data.get('role')} - {scope_label}",
             )
             return redirect("accounts:admin_user_list")
     else:
@@ -97,6 +110,7 @@ def admin_user_edit(request, user_id):
             {
                 "role": membership.role,
                 "plant": membership.plant,
+                "project": membership.project,
                 "validation_level": membership.validation_level,
                 "can_validate_daily": membership.can_validate_daily,
                 "can_validate_monthly": membership.can_validate_monthly,
@@ -126,6 +140,7 @@ def admin_user_edit(request, user_id):
                 membership = Membership(user=user)
 
             membership.plant = data.get("plant")
+            membership.project = data.get("project")
             membership.role = data["role"]
             membership.validation_level = data.get("validation_level")
             membership.can_validate_daily = data.get("can_validate_daily", False)
@@ -136,12 +151,17 @@ def admin_user_edit(request, user_id):
             membership.is_active = True
             membership.save()
 
+            scope_label = "GLOBAL"
+            if membership.plant:
+                scope_label = f"Planta {membership.plant}"
+            elif membership.project:
+                scope_label = f"Proyecto {membership.project}"
             record_action(
                 "USER",
                 request=request,
                 module="Accounts",
                 object_repr=f"Usuario {user.username} editado",
-                details=f"Rol {membership.role} - Planta {membership.plant or 'GLOBAL'}",
+                details=f"Rol {membership.role} - {scope_label}",
             )
             return redirect("accounts:admin_user_list")
     else:

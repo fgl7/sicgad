@@ -33,8 +33,17 @@ def _collect_monthly_requirements(instance: DatasetInstance) -> Dict[str, int]:
             is_active=True,
         )
         .filter(freq_filter)
-        .filter(Q(plant=instance.plant) | Q(plant__isnull=True))
     )
+    if instance.plant_id:
+        validators = validators.filter(
+            Q(plant=instance.plant) | Q(plant__isnull=True, project__isnull=True)
+        )
+    elif instance.project_id:
+        validators = validators.filter(
+            Q(project=instance.project) | Q(plant__isnull=True, project__isnull=True)
+        )
+    else:
+        validators = validators.filter(plant__isnull=True, project__isnull=True)
 
     requirements: Dict[str, int] = {}
     for membership in validators:
@@ -88,7 +97,7 @@ def determine_monthly_state(instance: DatasetInstance) -> str:
 
 def determine_periodic_state(instance: DatasetInstance) -> str:
     """
-    Datasets semanales y mensuales usan la misma lІgica multi-instituciІn.
+    Datasets semanales y mensuales usan la misma lógica multi-institución.
     """
     return determine_monthly_state(instance)
 

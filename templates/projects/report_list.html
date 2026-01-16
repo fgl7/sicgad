@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes de proyectos - SICGAD{% endblock %}
+{% block page_title %}Reportes de proyectos{% endblock %}
+
+{% block content %}
+  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-semibold">Reportes disponibles</h2>
+      {% if is_admin %}
+        <a href="{% url 'projects:report_config_list' %}" class="text-xs text-emerald-400 hover:underline">
+          Configurar reportes
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {% for config in configs %}
+        <a
+          href="{% url 'projects:report_detail' config.id %}"
+          class="block rounded-lg border border-slate-800 bg-slate-950/70 p-4 hover:border-emerald-500/60 hover:bg-slate-900/60 transition"
+        >
+          <div class="text-[11px] uppercase tracking-wide text-slate-400">Proyecto</div>
+          <div class="text-sm font-semibold">{{ config.project.name }}</div>
+          <div class="text-[11px] text-slate-500 mt-1">{{ config.name }}</div>
+          <div class="mt-2 text-[11px] text-slate-400">
+            Curva ejecutada: {{ config.curve_executed_dataset.get_validation_frequency_display }}
+          </div>
+        </a>
+      {% empty %}
+        <div class="col-span-full text-center text-slate-400 py-6">
+          No hay reportes configurados.
+          {% if is_admin %}
+            <div class="mt-2">
+              <a href="{% url 'projects:report_config_create' %}" class="text-xs text-emerald-400 hover:underline">
+                Crear configuracion de reporte
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

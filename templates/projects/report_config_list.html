@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Configuracion de reportes - SICGAD{% endblock %}
+{% block page_title %}Configuracion de reportes{% endblock %}
+
+{% block content %}
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold">Reportes configurados</h2>
+    <a href="{% url 'projects:report_config_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
+      Nuevo reporte
+    </a>
+  </div>
+
+  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
+    <table class="min-w-full text-xs">
+      <thead class="bg-slate-950/80 text-slate-300">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold">Proyecto</th>
+          <th class="px-3 py-2 text-left font-semibold">Nombre</th>
+          <th class="px-3 py-2 text-left font-semibold">Curva ejecutada</th>
+          <th class="px-3 py-2 text-left font-semibold">Activo</th>
+          <th class="px-3 py-2 text-right font-semibold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for config in configs %}
+          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
+            <td class="px-3 py-2 align-top">{{ config.project.name }}</td>
+            <td class="px-3 py-2 align-top">{{ config.name }}</td>
+            <td class="px-3 py-2 align-top">
+              {{ config.curve_executed_dataset.get_validation_frequency_display }}
+            </td>
+            <td class="px-3 py-2 align-top">
+              {% if config.is_active %}Si{% else %}No{% endif %}
+            </td>
+            <td class="px-3 py-2 align-top text-right space-x-2">
+              <a href="{% url 'projects:report_config_edit' config.id %}" class="text-xs text-emerald-400 hover:underline">
+                Editar
+              </a>
+              <a href="{% url 'projects:report_config_delete' config.id %}" class="text-xs text-red-300 hover:underline">
+                Eliminar
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="px-3 py-4 text-center text-slate-400">
+              No hay reportes configurados.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

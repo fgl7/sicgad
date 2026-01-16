@@ -1,74 +1,115 @@
-1. AVANCE SICGAD PARA DATA DIARIO Y CERTIFICACION MENSUAL
-
-A. Mejoras en la interfaz y experiencia de uso
-
-- Se reorganizó la presentación visual del sistema, restringiendo el inicio de sesión solo a personal registrado. Temporalmente se deshabilitó el acceso sin registro a la visualización de datos publicados mientras se completan las pruebas, lo que ayuda a proteger la información sensible. (colocar captura de la pantalla de inicio de sesión con acceso restringido)
-- Se implementó una barra lateral de navegación (sidebar) con secciones que se muestran u ocultan según el tipo de usuario. Por ejemplo, el administrador ve todas las secciones (usuarios, esquemas, carga, validación, indicadores y auditoría), mientras que el cargador solo ve las opciones relacionadas con la carga y revisión de sus datos. Esto reduce la complejidad y evita que los usuarios se confundan con opciones que no necesitan. (colocar captura del sidebar visto por un administrador y por un cargador)
-- Se mejoró la interfaz para cada tipo de usuario (cargadores, validadores y administradores), adaptando formularios, menús y ventanas modales para que el flujo sea más claro y ordenado. Se trabajó especialmente en los mensajes y botones para que cada usuario sepa en todo momento qué paso sigue (por ejemplo, “revisar borrador”, “enviar a validación” o “aprobar certificación”). (colocar captura de un formulario de carga y de una ventana de aprobación)
-- Se añadieron tablas de visualización de datos en estado “borrador”, de manera que los validadores puedan revisar la información preliminar antes de aprobarla o rechazarla, sin necesidad de que esté publicada. Esto permite discutir y corregir datos internamente antes de que aparezcan como información oficial. (colocar captura de la tabla con datos en estado borrador)
-- Se ajustó la gestión de usuarios para permitir definir perfiles a nivel global (todas las plantas) o por planta específica, y además indicar si cada validador puede revisar datos diarios, datos mensuales o ambos. Con esto se refleja de mejor manera la realidad organizacional de YLB y MHE, donde hay roles con alcance nacional y otros centrados en una planta concreta.
-- Se habilitó la visualización de datos en borrador para los usuarios que participan en la carga y validación (cargadores y validadores), manteniendo el acceso a datos oficiales solo para quienes corresponda. Así, los equipos pueden detectar inconsistencias a tiempo sin exponer información incompleta a terceros.
-- Se reforzó el flujo de aprobación según institución, diferenciando claramente los roles de YLB y del Ministerio de Hidrocarburos y Energías (MHE). En particular, se configuró el sistema para que la certificación mensual solo se considere “publicada” cuando se cumplan los pasos de aprobación definidos para ambas instituciones. (colocar captura de la pantalla de detalle de certificación con los niveles de aprobación YLB/MHE)
-- Se implementó un sistema de alertas de validación que hoy está en etapa de prueba con varios validadores. Estas alertas aparecen como indicadores visibles en la interfaz (por ejemplo, en la barra lateral y en la bandeja de validación) y ayudan a que cada usuario vea cuántos conjuntos de datos tiene pendientes. (colocar captura de la bandeja de validación mostrando las alertas)
-- Se completó la funcionalidad para crear esquemas de certificación mensual de producción, junto con su flujo de carga y validación de datos. Además, cuando se completa la carga y aprobación de todos los días de un mes, el sistema genera automáticamente el esquema mensual de certificación correspondiente, basado en los datos diarios ya aprobados. Esto reduce el trabajo manual y mejora la trazabilidad entre los datos diarios y la certificación mensual. (colocar captura del esquema de certificación mensual generado a partir de datos diarios)
-
-Pruebas funcionales con datos reales
-
-- Carga de datos diarios:  
-  Se realizaron pruebas del flujo completo para la carga diaria, incluyendo creación y validación del esquema, carga de archivos, detección de errores, aprobación/rechazo, publicación, visualización y auditoría de acciones. Estas pruebas permitieron identificar errores en el código, sobre los que ya se trabajó para aplicar correcciones y ajustes, buscando que el flujo sea estable desde la carga hasta la publicación. (colocar captura de la pantalla de carga diaria y del resumen de errores)  
-  La información que antes se almacenaba únicamente en archivos Excel dentro del sistema ahora se guarda en una base de datos interna (SQLite3) durante la etapa de desarrollo. Este cambio facilita el análisis histórico, la búsqueda de problemas y la futura integración con tableros de indicadores (KPIs). Está previsto migrar esta base de datos a PostgreSQL cuando el sistema pase a un entorno de producción. (colocar captura de un ejemplo de datos diarios ya publicados en el tablero de indicadores)
-
-- Carga de datos mensuales y certificación mensual de producción:  
-  Se están ejecutando pruebas del flujo completo para la certificación mensual, utilizando datos de ejemplo y escenarios similares a los que se presentarán en la operación real. Este flujo incluye:
-  - La consolidación automática de los datos diarios en un resumen mensual.
-  - La revisión por parte de distintos niveles de validadores (por ejemplo, responsables de planta, niveles superiores en YLB y representantes de MHE).
-  - La publicación final de la certificación mensual, que será la referencia oficial para reportes y cálculo de regalías.  
-  Durante estas pruebas se siguen identificando detalles de comportamiento (por ejemplo, qué ocurre cuando falta la aprobación de un nivel o cuando hay cambios de último momento en los datos diarios), que se están corrigiendo para garantizar la estabilidad del flujo completo. Actualmente, los datos se guardan en SQLite3, con la previsión de migrar a PostgreSQL en la etapa de producción. A la fecha de este informe, las pruebas continúan en coordinación con los equipos funcionales. (colocar captura de la pantalla de revisión de certificación mensual con el resumen consolidado)
-
-Mejora de validaciones y reglas de aprobación
-
-- Se optimizaron los mensajes de error para que sean más claros para los usuarios no técnicos, reemplazando textos genéricos por explicaciones que indican qué campo tiene el problema y cómo puede corregirse. (colocar captura de un ejemplo de mensaje de error en la pantalla de carga)
-- Se ajustaron criterios de verificación y pasos del flujo de aprobación, con el objetivo de reforzar la calidad y precisión de los datos reportados. Por ejemplo, se revisa que no existan periodos duplicados, que los estados de los datos sigan el orden correcto y que no se pueda publicar información con errores pendientes. (colocar captura del flujo de estados de un dataset desde borrador hasta publicado)
-- Se alineó el comportamiento del sistema con el modelo de validación por niveles, de manera que los distintos roles (por ejemplo, niveles de YLB y MHE) intervengan en el orden previsto. Esto evita que se salten pasos y garantiza que la certificación mensual cuente con el visto bueno de todas las instancias necesarias. (colocar captura del historial de aprobaciones mostrando los distintos niveles)
-- Se reforzó el registro de acciones (auditoría) para que quede constancia de quién cargó los datos, quién los aprobó o rechazó y en qué momento. Este historial será clave para aclarar dudas futuras y para cumplir con los requisitos de trazabilidad y control. (colocar captura de la pantalla de auditoría con el listado de eventos)
+AVANCE SICGAD (AL MOMENTO)
+Alcance de este documento: registro de esquemas de produccion (diario) y certificacion mensual.
 
 
-B. ACTIVIDADES PENDIENTES
+1) SISTEMAS CONCLUIDOS Y PROBADOS (PRODUCCION DIARIA Y CERTIFICACION MENSUAL)
 
-- Concluir las pruebas del flujo de carga y publicación tanto para datos diarios como para la certificación mensual de producción, incluyendo los distintos niveles de aprobación (YLB y MHE), hasta lograr un conjunto de escenarios validados y documentados.
-- A partir de los resultados de las pruebas, realizar ajustes adicionales en la estructura y en la interfaz del sistema para simplificar el uso por parte de los equipos operativos, reduciendo al mínimo la cantidad de pasos y pantallas necesarias para completar cada tarea.
-- Implementar y afinar los mecanismos de seguridad (control de accesos, protección frente a intentos de intrusión, manejo seguro de contraseñas, entre otros) antes del uso en un entorno productivo. Esto incluye la integración de mecanismos de autenticación reforzada y límites a los intentos fallidos de inicio de sesión.
-- Documentación y capacitación: elaborar guías de usuario y organizar sesiones de capacitación para el personal de YLB y del VMEERE, de modo que puedan utilizar el sistema de forma autónoma y segura. Se prevé contar con material diferenciado para cargadores, validadores y administradores.
-- Preparar el entorno para pruebas piloto: una vez finalizados los ajustes principales, habilitar un entorno controlado donde se carguen datos reales de producción y se pueda evaluar el desempeño del sistema en condiciones operativas, en coordinación con YLB y las demás instituciones involucradas. A partir de los resultados de este piloto se definirán los últimos ajustes antes del despliegue definitivo.
+1.1 Autenticacion y control de accesos (base del sistema)
+
+- El sistema opera con inicio de sesion restringido a usuarios registrados.
+- Se implemento una navegacion (sidebar) por rol para reducir errores operativos y evitar accesos a pantallas no relevantes.
+- Roles reconocidos actualmente:
+  - SUPERADMIN (tecnico, creado con createsuperuser): administracion del Django admin y configuracion tecnica.
+  - ADMIN (rol del sistema): gestiona usuarios, esquemas, proyectos y configuraciones funcionales.
+  - LOADER (cargador): realiza cargas de datos (borradores) y envio a validacion.
+  - VALIDATOR (validador): revisa y decide (aprobar/rechazar) segun reglas y niveles.
+  - VIEWER (visualizador): acceso a vistas permitidas (principalmente datos publicados).
+- El alcance de permisos puede definirse como global o por planta/proyecto, segun membership.
+
+1.2 Esquemas (tablas flexibles) para produccion y certificacion
+
+- Se consolidaron componentes para crear y administrar "esquemas" (DatasetType) con sus columnas (ColumnDef).
+- Los esquemas operan como tablas flexibles: el sistema valida estructura a partir del esquema, y materializa datos publicados en un modelo por celda (PublishedDataPoint) para consulta y auditoria.
+- Se soportan periodos por dataset y se establece periodicidad (diaria, semanal, mensual o flexible) como parte del esquema.
+- Se habilito un flujo de aprobacion de esquemas (borrador -> pendiente -> aprobado/rechazado) para asegurar que solo esquemas aprobados sean usados en carga.
+
+1.3 Flujo de carga de datos y estados (borrador -> validacion -> publicado)
+
+- Se concluyo el flujo base de carga de datos por archivo:
+  - Cargar archivo (CSV/Excel) con periodo y esquema aprobado.
+  - Crear instancia en estado borrador (DatasetInstance).
+  - Revisar y corregir (si esta en borrador).
+  - Enviar a validacion.
+- Se concluyo el soporte de captura manual para ciertos escenarios, generando tambien instancias en estado borrador.
+- Se habilito historial de cargas y detalle de instancia, para rastrear lo cargado, estado, errores y acciones.
+
+1.4 Certificacion mensual (produccion) y trazabilidad
+
+- Se concluyo el flujo de certificacion mensual de produccion, apoyado en:
+  - Reglas de periodicidad y periodos del mes.
+  - Revision y correccion con trazabilidad (cuando corresponde).
+  - Publicacion final segun reglas definidas de aprobacion.
+- Se reforzo la trazabilidad con registro de auditoria (AuditLog) y registro de decisiones/acciones de validacion.
+
+1.5 Controles de seguridad y calidad de datos (aplicados al flujo de produccion/certificacion)
+
+- Restriccion de acciones por estado: solo borradores pueden corregirse/eliminarse.
+- Separacion clara entre datos borrador y datos publicados:
+  - Los validadores y participantes del flujo pueden revisar borradores.
+  - Los datos oficiales se visualizan desde instancias publicadas/materializadas.
+- Auditoria de acciones: carga, correccion, envio a validacion, validacion, publicacion y eliminacion, con detalle del objeto afectado.
 
 
-2. AVANCE CUANTIFICACIÓN DEL RENDIMIENTO PRODUCTIVO Y LA EFICIENCIA DE PROCESOS
+2) PRUEBAS (PRODUCCION DIARIA Y CERTIFICACION MENSUAL)
 
-En el marco de la propuesta metodológica para medir rendimiento productivo y eficiencia de procesos (plantas PCS, KCl y Li2CO3), se inició la construcción del componente de “Desempeño” dentro de SICGAD. El objetivo de este avance es que el sistema no solo reciba y valide datos, sino que también pueda transformar esa información en indicadores mensuales comparables, con trazabilidad y posibilidad de actualización cuando cambien los esquemas de datos.
+2.1 Enfoque de pruebas
 
-Principales mejoras implementadas hasta el momento:
+- Se realizaron pruebas funcionales iterativas con datos reales y casos representativos:
+  - Carga por archivo y captura manual.
+  - Correcciones en borrador y re-envio a validacion.
+  - Aprobacion y rechazo por validadores.
+  - Publicacion y verificacion de lectura de datos publicados.
+  - Certificacion mensual y consistencia entre flujos.
+- Cada prueba fue acompanada de ajustes puntuales cuando se encontraron problemas de:
+  - Estructura del esquema (nombres de columnas, orden, tipos).
+  - Comportamiento del flujo (permisos por rol, alcance por planta/proyecto, estados).
+  - Visualizacion (lectura de datos publicados vs borradores).
 
-- Se incorporó una nueva sección “Desempeño” en la interfaz (visible para el usuario Administrador del sistema) para centralizar el trabajo relacionado con rendimiento y eficiencia.
-- Se definió que el usuario Administrador (rol ADMIN dentro del sistema, no el superusuario técnico) será el único responsable de realizar estas asignaciones de variables. Esto ayuda a mantener un criterio institucional único y reduce el riesgo de que existan cálculos distintos por cada usuario.
-- Se implementó un enfoque flexible de “asignación de variables”, donde el Administrador puede vincular las variables de las fórmulas (por ejemplo Msales(m), Msalmuera(m-Δt), Xsolids(m-Δt)) con campos existentes en los esquemas diarios o mensuales de la planta. Esto permite adaptar el cálculo sin necesidad de modificar el código cuando se actualizan nombres o estructuras de los esquemas.
-- Para esta asignación, el Administrador puede trabajar por planta (por ejemplo PCS) y ver una lista de campos disponibles en los esquemas ya definidos en el sistema, para seleccionar cuáles alimentan cada variable de la fórmula.
-- Se preparó el sistema para manejar resultados en dos estados:
-  - “Draft”: resultados preliminares a partir de datos cargados/publicados durante el mes (sin esperar el cierre mensual).
-  - “Certificado”: resultados a partir de datos mensuales certificados y aprobados, usados como referencia oficial.
-- Se desarrolló un primer MVP para la Planta de Concentración de Sales (PCS) enfocado en la Fórmula 1 (Rendimiento de Producción Mensual %). En esta pantalla el Administrador:
-  - Selecciona el mes a evaluar.
-  - Asigna las variables requeridas por la fórmula a campos reales del sistema (por planta).
-  - Visualiza un resultado estimado (preview) para Draft y Certificado.
-  - Cuenta con un gráfico inicial para ver la tendencia mensual.
-- Se iniciaron pruebas funcionales (backend y frontend) para verificar el funcionamiento correcto de esta primera implementación (Fórmula 1), con el objetivo de usarla como ejemplo y referencia para el resto de fórmulas del documento.
-- Se sentaron bases para el “catálogo” de variables e indicadores, de modo que el sistema pueda ir incorporando progresivamente las demás fórmulas del documento (recuperación, energía, balances, pérdidas, etc.) manteniendo una lógica uniforme.
-- Se ajustó la gestión de dependencias para asegurar compatibilidad con carga y lectura de archivos Excel, ya que SICGAD trabaja con plantillas de carga y materialización de datos.
+2.2 Resultados de pruebas (estado actual)
 
-Este avance deja listo el camino para la siguiente etapa: alimentar la Fórmula 1 con datos reales (tanto diarios como mensuales certificados), ajustar el criterio de cálculo (por ejemplo sumas por día, selección de columnas correctas y desfase Δt) y extender el mismo mecanismo a las siguientes fórmulas de desempeño.
+- El flujo de produccion diaria y certificacion mensual se considera implementado y probado a nivel funcional.
+- Se confirmo que el sistema:
+  - Soporta multiples usuarios con roles distintos y alcances distintos.
+  - Permite registrar esquemas, cargar datos, validar, publicar y auditar acciones.
+  - Mantiene trazabilidad y control de estados para evitar modificaciones fuera de flujo.
 
-Lo que falta (siguientes pasos):
+2.3 Pendientes recomendados (para este alcance)
 
-- Ajustar y validar el criterio final de la Fórmula 1, definiendo claramente para cada variable si se alimentará desde sumas/agrupaciones diarias (avance del mes) o desde valores del mensual certificado (fuente oficial).
-- Completar la visualización de KPIs para que se vea claramente el indicador en estado Draft y el indicador en estado Certificado cuando ya exista el mensual aprobado (incluyendo comparación de ambos valores y su tendencia).
-- Asegurar que el indicador “Certificado” se actualice automáticamente cuando se publique o bloquee la certificación mensual, para que el resultado refleje siempre la versión oficial.
-- Mejorar la trazabilidad visible para el Administrador (mostrar claramente qué campos y qué agregaciones se usaron en cada cálculo, especialmente cuando el resultado certificado proviene del mensual aprobado).
+- Consolidar un set de escenarios de prueba documentados (casos base y casos borde) con evidencia (capturas/logs).
+- Preparar un entorno piloto con datos reales y monitoreo de incidencias, antes de despliegue productivo.
+- Documentacion de usuario por rol (cargador/validador/administrador) centrada en produccion y certificacion mensual.
+
+
+3) FLEXIBILIDAD DEL SISTEMA Y NUEVAS INCORPORACIONES EN PRUEBA (UPSTREAM RECURSOS EVAPORITICOS)
+
+3.1 Extensibilidad de esquemas (mas alla de produccion)
+
+- El sistema de esquemas es lo suficientemente flexible para incorporar otros tipos de datos ademas de produccion:
+  - Esquemas de inversiones (ejecucion financiera/fisica, curvas, reportes).
+  - Esquemas estaticos o de carga unica (por ejemplo proyecciones o valores iniciales).
+- Se realizaron pruebas de ingreso de esquemas no-productivos y funcionaron correctamente en cuanto a:
+  - Registro de esquema y columnas.
+  - Carga y control de estados.
+  - Revision/visualizacion segun permisos.
+
+3.2 Esquemas estaticos y control de cambios con justificacion (en pruebas)
+
+- Se incorporo el concepto de "carga unica" por esquema para proteger informacion estatica (ej. proyecciones o valores base).
+- La logica busca asegurar que cualquier modificacion posterior quede justificada y registrada en el sistema.
+- Este control se encuentra en proceso de pruebas y ajuste, especialmente para escenarios donde ya existian cargas previas.
+
+3.3 Registro y reporte de proyectos (inversiones) para upstream (en pruebas)
+
+- Se implemento un modulo de Proyectos para registrar proyectos y asociarlos a multiples plantas/unidades operativas.
+- Se implemento un sistema de configuracion de reportes por proyecto y una vista de reporte con:
+  - Datos de resumen del proyecto.
+  - Curva S programada y ejecutada.
+  - Filtros (gestion, fuente publicados/borradores y seleccion semanal cuando aplica).
+- Estas capacidades se estan probando actualmente para proyectos ejecutados en el upstream del sector de recursos evaporiticos (exploracion y explotacion).
+
+3.4 Estado actual
+
+- A la fecha continun las pruebas y ajustes de estas nuevas incorporaciones (inversiones/proyecciones/proyectos) para integrarlas de forma consistente al SICGAD, manteniendo:
+  - Seguridad por rol y alcance.
+  - Control de cambios con justificacion cuando corresponde.
+  - Trazabilidad y auditoria de acciones.

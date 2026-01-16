@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Eliminar reporte - SICGAD{% endblock %}
+{% block page_title %}Eliminar reporte{% endblock %}
+
+{% block content %}
+  <section class="max-w-lg bg-slate-950/60 border border-slate-800 rounded-xl p-5 text-xs">
+    <h2 class="text-sm font-semibold mb-3">Eliminar configuracion</h2>
+    <p class="text-slate-300 mb-4">
+      Estas seguro de eliminar el reporte <strong>{{ config.name }}</strong>
+      del proyecto <strong>{{ config.project.name }}</strong>?
+    </p>
+    <form method="post" class="flex items-center justify-between">
+      {% csrf_token %}
+      <a href="{% url 'projects:report_config_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+        ← Cancelar
+      </a>
+      <button
+        type="submit"
+        class="inline-flex items-center px-4 py-1.5 rounded-md bg-red-600 text-xs font-semibold hover:bg-red-500"
+      >
+        Eliminar
+      </button>
+    </form>
+  </section>
+{% endblock %}

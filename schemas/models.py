@@ -1,7 +1,10 @@
 from django.db import models
+from django.db.models import Q
+from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 
 from plants.models import Plant
+from projects.models import Project
 
 
 class DatasetType(models.Model):
@@ -33,6 +36,15 @@ class DatasetType(models.Model):
         Plant,
         on_delete=models.CASCADE,
         related_name="dataset_types",
+        null=True,
+        blank=True,
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="dataset_types",
+        null=True,
+        blank=True,
     )
     source_dataset = models.ForeignKey(
         "self",
@@ -59,7 +71,11 @@ class DatasetType(models.Model):
     )
     is_active = models.BooleanField(
         default=True,
-        help_text="Solo un esquema por familia (planta+nombre) deberia estar activo a la vez.",
+        help_text="Solo un esquema por familia (planta/proyecto + nombre) deberia estar activo a la vez.",
+    )
+    is_one_time = models.BooleanField(
+        default=False,
+        help_text="Si esta activo, este esquema solo puede cargarse una vez.",
     )
     status = models.CharField(
         max_length=20,
@@ -81,11 +97,34 @@ class DatasetType(models.Model):
     )
 
     class Meta:
-        ordering = ["plant__code", "name", "-version"]
-        unique_together = ("plant", "name", "version")
+        ordering = ["plant__code", "project__name", "name", "-version"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["plant", "name", "version"],
+                condition=Q(plant__isnull=False),
+                name="uniq_datasettype_plant_name_version",
+            ),
+            models.UniqueConstraint(
+                fields=["project", "name", "version"],
+                condition=Q(project__isnull=False),
+                name="uniq_datasettype_project_name_version",
+            ),
+        ]
 
     def __str__(self) -> str:
-        return f"{self.plant.code} - {self.name} v{self.version}"
+        if self.plant:
+            prefix = self.plant.code
+        elif self.project:
+            prefix = self.project.code or self.project.name
+        else:
+            prefix = "SIN-DESTINO"
+        return f"{prefix} - {self.name} v{self.version}"
+
+    def clean(self):
+        if bool(self.plant_id) == bool(self.project_id):
+            raise ValidationError(
+                "Debe seleccionar una planta o un proyecto (solo uno)."
+            )
 
     slug = models.SlugField(
         max_length=255,
@@ -95,8 +134,14 @@ class DatasetType(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        if not self.slug and self.plant_id and self.name and self.version:
-            base = f"{self.plant.code}-{self.name}-v{self.version}"
+        if not self.slug and self.name and self.version:
+            if self.plant_id:
+                base = f"{self.plant.code}-{self.name}-v{self.version}"
+            elif self.project_id:
+                project_code = self.project.code or self.project.name
+                base = f"{project_code}-{self.name}-v{self.version}"
+            else:
+                base = f"{self.name}-v{self.version}"
             self.slug = slugify(base)
         super().save(*args, **kwargs)
 

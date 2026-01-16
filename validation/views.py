@@ -277,46 +277,56 @@ def inbox(request):
     )
 
     daily_plants = [m.plant_id for m in daily_memberships if m.plant_id]
+    daily_projects = [m.project_id for m in daily_memberships if m.project_id]
     weekly_plants = [m.plant_id for m in weekly_memberships if m.plant_id]
+    weekly_projects = [m.project_id for m in weekly_memberships if m.project_id]
     projections_plants = [m.plant_id for m in projections_memberships if m.plant_id]
+    projections_projects = [m.project_id for m in projections_memberships if m.project_id]
     monthly_plants = [m.plant_id for m in monthly_memberships if m.plant_id]
+    monthly_projects = [m.project_id for m in monthly_memberships if m.project_id]
 
-    has_global_daily = any(m.plant_id is None for m in daily_memberships)
-    has_global_weekly = any(m.plant_id is None for m in weekly_memberships)
-    has_global_projections = any(m.plant_id is None for m in projections_memberships)
-    has_global_monthly = any(m.plant_id is None for m in monthly_memberships)
+    has_global_daily = any(m.plant_id is None and m.project_id is None for m in daily_memberships)
+    has_global_weekly = any(m.plant_id is None and m.project_id is None for m in weekly_memberships)
+    has_global_projections = any(
+        m.plant_id is None and m.project_id is None for m in projections_memberships
+    )
+    has_global_monthly = any(
+        m.plant_id is None and m.project_id is None for m in monthly_memberships
+    )
 
-    base_qs = DatasetInstance.objects.select_related("dataset_type", "plant").filter(
+    base_qs = DatasetInstance.objects.select_related("dataset_type", "plant", "project").filter(
         state__in=[DatasetInstance.STATE_SUBMITTED, DatasetInstance.STATE_VALIDATED_L1]
     )
 
-    daily_filter = Q(
-        dataset_type__validation_frequency=DatasetType.DAILY,
-        plant_id__in=daily_plants,
-    )
-    if has_global_daily:
-        daily_filter |= Q(dataset_type__validation_frequency=DatasetType.DAILY)
+    daily_filter = Q(dataset_type__validation_frequency=DatasetType.DAILY)
+    if not has_global_daily:
+        if daily_plants or daily_projects:
+            daily_filter &= Q(plant_id__in=daily_plants) | Q(project_id__in=daily_projects)
+        else:
+            daily_filter = Q(pk__in=[])
 
-    weekly_filter = Q(
-        dataset_type__validation_frequency=DatasetType.WEEKLY,
-        plant_id__in=weekly_plants,
-    )
-    if has_global_weekly:
-        weekly_filter |= Q(dataset_type__validation_frequency=DatasetType.WEEKLY)
+    weekly_filter = Q(dataset_type__validation_frequency=DatasetType.WEEKLY)
+    if not has_global_weekly:
+        if weekly_plants or weekly_projects:
+            weekly_filter &= Q(plant_id__in=weekly_plants) | Q(project_id__in=weekly_projects)
+        else:
+            weekly_filter = Q(pk__in=[])
 
-    projections_filter = Q(
-        dataset_type__validation_frequency=DatasetType.FLEXIBLE,
-        plant_id__in=projections_plants,
-    )
-    if has_global_projections:
-        projections_filter |= Q(dataset_type__validation_frequency=DatasetType.FLEXIBLE)
+    projections_filter = Q(dataset_type__validation_frequency=DatasetType.FLEXIBLE)
+    if not has_global_projections:
+        if projections_plants or projections_projects:
+            projections_filter &= Q(plant_id__in=projections_plants) | Q(
+                project_id__in=projections_projects
+            )
+        else:
+            projections_filter = Q(pk__in=[])
 
-    monthly_filter = Q(
-        dataset_type__validation_frequency=DatasetType.MONTHLY,
-        plant_id__in=monthly_plants,
-    )
-    if has_global_monthly:
-        monthly_filter |= Q(dataset_type__validation_frequency=DatasetType.MONTHLY)
+    monthly_filter = Q(dataset_type__validation_frequency=DatasetType.MONTHLY)
+    if not has_global_monthly:
+        if monthly_plants or monthly_projects:
+            monthly_filter &= Q(plant_id__in=monthly_plants) | Q(project_id__in=monthly_projects)
+        else:
+            monthly_filter = Q(pk__in=[])
 
     approval_subquery = ValidationAction.objects.filter(
         dataset_instance=OuterRef("pk"),
@@ -344,6 +354,7 @@ def inbox(request):
             "dataset_instance",
             "dataset_instance__dataset_type",
             "dataset_instance__plant",
+            "dataset_instance__project",
         )
         .filter(validator__user=user, validator__is_active=True)
         .order_by("-created_at")[:50]
@@ -444,10 +455,18 @@ def approve_historical_batch(request, batch_id: int):
         return redirect("validation:inbox")
 
     user = request.user
-    base_qs = Membership.objects.filter(user=user, role="VALIDATOR", is_active=True, can_validate_daily=True)
+    base_qs = Membership.objects.filter(
+        user=user,
+        role="VALIDATOR",
+        is_active=True,
+        can_validate_daily=True,
+    )
     membership = base_qs.filter(plant=batch.plant).order_by("validation_level").first()
     if not membership:
-        membership = base_qs.filter(plant__isnull=True).order_by("validation_level").first()
+        membership = base_qs.filter(
+            plant__isnull=True,
+            project__isnull=True,
+        ).order_by("validation_level").first()
     if not membership:
         messages.error(request, "No tiene permisos de validación diaria para este histórico.")
         return redirect("validation:inbox")
@@ -558,7 +577,7 @@ def admin_overview(request):
 @login_required
 def detail(request, pk):
     instance = get_object_or_404(
-        DatasetInstance.objects.select_related("dataset_type", "plant"),
+        DatasetInstance.objects.select_related("dataset_type", "plant", "project"),
         pk=pk,
     )
 
@@ -574,10 +593,18 @@ def detail(request, pk):
     else:
         base_qs = base_qs.filter(can_validate_monthly=True)
 
-    # Primero intentamos un membership especifico de planta; si no hay, usamos uno global
-    membership = base_qs.filter(plant=instance.plant).order_by("validation_level").first()
+    # Primero intentamos un membership especifico de planta/proyecto; si no hay, usamos uno global
+    if instance.plant_id:
+        membership = base_qs.filter(plant=instance.plant).order_by("validation_level").first()
+    elif instance.project_id:
+        membership = base_qs.filter(project=instance.project).order_by("validation_level").first()
+    else:
+        membership = None
     if not membership:
-        membership = base_qs.filter(plant__isnull=True).order_by("validation_level").first()
+        membership = base_qs.filter(
+            plant__isnull=True,
+            project__isnull=True,
+        ).order_by("validation_level").first()
 
     if not membership:
         messages.error(request, "No tiene permisos de validacion sobre este dataset.")

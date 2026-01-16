@@ -16,6 +16,8 @@ import csv
 import openpyxl
 
 from accounts.models import Membership
+from plants.models import Plant
+from projects.models import Project
 from schemas.models import DatasetType
 from schemas.services import previous_month_range
 from audit.utils import record_action
@@ -34,7 +36,216 @@ from .models import (
     DatasetChangeAttachment,
     HistoricalImportBatch,
 )
-from .utils import read_uploaded_file, parse_date_cell
+from .utils import (
+    _read_instance_file,
+    month_columns_for_dataset,
+    month_label,
+    month_number_from_label,
+    parse_date_cell,
+    read_uploaded_file,
+)
+
+
+def _has_one_time_instance(dataset: DatasetType | None) -> bool:
+    if not dataset or not dataset.is_one_time:
+        return False
+    qs = DatasetInstance.objects.filter(dataset_type=dataset)
+    if dataset.plant_id:
+        qs = qs.filter(plant_id=dataset.plant_id)
+    elif dataset.project_id:
+        qs = qs.filter(project_id=dataset.project_id)
+    return qs.exists()
+
+
+def _is_weekly_month_locked_dataset(dataset: DatasetType | None) -> bool:
+    if not dataset or dataset.validation_frequency != DatasetType.WEEKLY:
+        return False
+    if dataset.is_one_time:
+        return False
+    name = (dataset.name or "").lower()
+    slug = (dataset.slug or "").lower()
+    return "curva_s_ejecutado" in name or "curva_s_ejecutado" in slug or "curva-s-ejecutado" in slug
+
+
+def _normalize_month_value(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    text = text.replace(" ", "")
+    if "," in text and "." in text:
+        text = text.replace(",", "")
+    else:
+        text = text.replace(",", ".")
+    try:
+        return float(text)
+    except ValueError:
+        return text.lower()
+
+
+def _values_match(left, right) -> bool:
+    if left is None and right is None:
+        return True
+    if left is None or right is None:
+        return False
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return abs(left - right) < 1e-6
+    return str(left).strip().lower() == str(right).strip().lower()
+
+
+def _month_values_from_rows(header, rows, dataset_months: set[int]) -> dict[int, object]:
+    if not header:
+        return {}
+    header_months = []
+    for idx, name in enumerate(header):
+        month = month_number_from_label(name)
+        if month and month in dataset_months:
+            header_months.append((idx, month))
+
+    values: dict[int, object] = {}
+    for row in rows:
+        row_values = row.values if hasattr(row, "values") else row
+        for idx, month in header_months:
+            if idx >= len(row_values):
+                continue
+            parsed = _normalize_month_value(row_values[idx])
+            if parsed is None:
+                continue
+            values[month] = parsed
+    return values
+
+
+def _previous_month_values(dataset: DatasetType, period: date | None) -> dict[int, object]:
+    if not period:
+        return {}
+    qs = DatasetInstance.objects.filter(dataset_type=dataset, period__lt=period)
+    if dataset.plant_id:
+        qs = qs.filter(plant_id=dataset.plant_id)
+    elif dataset.project_id:
+        qs = qs.filter(project_id=dataset.project_id)
+    prev_instance = qs.order_by("-period", "-created_at").first()
+    if not prev_instance:
+        return {}
+
+    header, rows = _read_instance_file(prev_instance)
+    dataset_months = set(month_columns_for_dataset(dataset).values())
+    return _month_values_from_rows(header, rows, dataset_months)
+
+
+def _validate_weekly_month_rows(dataset: DatasetType, period: date | None, rows: list[dict]) -> str | None:
+    if not period or not _is_weekly_month_locked_dataset(dataset):
+        return None
+    month_columns = month_columns_for_dataset(dataset)
+    if not month_columns:
+        return None
+    allowed_month = period.month
+    dataset_months = set(month_columns.values())
+    previous_values = _previous_month_values(dataset, period)
+    current_values: dict[int, object] = {}
+    for row in rows:
+        for col_name, month in month_columns.items():
+            if col_name not in row:
+                continue
+            parsed = _normalize_month_value(row.get(col_name))
+            if parsed is None:
+                continue
+            current_values[month] = parsed
+
+    mismatched_months = []
+    for month in sorted(dataset_months):
+        if month == allowed_month:
+            continue
+        if not _values_match(previous_values.get(month), current_values.get(month)):
+            mismatched_months.append(month_label(month) or str(month))
+
+    if mismatched_months:
+        allowed_label = month_label(allowed_month) or str(allowed_month)
+        blocked_label = ", ".join(mismatched_months)
+        return (
+            f"Solo puedes actualizar el mes de {allowed_label}. "
+            f"No modifiques los meses: {blocked_label}."
+        )
+    return None
+
+
+def _validate_weekly_month_file(
+    dataset: DatasetType, period: date | None, uploaded_file
+) -> str | None:
+    if not period or not _is_weekly_month_locked_dataset(dataset):
+        return None
+    month_columns = month_columns_for_dataset(dataset)
+    if not month_columns:
+        return None
+
+    header, rows = read_uploaded_file(uploaded_file)
+    try:
+        uploaded_file.seek(0)
+    except Exception:
+        pass
+    if not header:
+        return "El archivo no tiene encabezado."
+
+    dataset_months = set(month_columns.values())
+    header_months = []
+    for idx, name in enumerate(header):
+        month = month_number_from_label(name)
+        if month and month in dataset_months:
+            header_months.append((idx, month, name))
+
+    allowed_month = period.month
+    if allowed_month not in dataset_months:
+        return None
+    if not any(month == allowed_month for _, month, _ in header_months):
+        allowed_label = month_label(allowed_month) or str(allowed_month)
+        return f"El archivo no incluye la columna del mes de {allowed_label}."
+
+    current_values = _month_values_from_rows(header, rows, dataset_months)
+    previous_values = _previous_month_values(dataset, period)
+
+    mismatched_months = []
+    for month in sorted(dataset_months):
+        if month == allowed_month:
+            continue
+        if not _values_match(previous_values.get(month), current_values.get(month)):
+            mismatched_months.append(month_label(month) or str(month))
+
+    if mismatched_months:
+        allowed_label = month_label(allowed_month) or str(allowed_month)
+        blocked_label = ", ".join(mismatched_months)
+        return (
+            f"Solo puedes actualizar el mes de {allowed_label}. "
+            f"No modifiques los meses: {blocked_label}."
+        )
+    return None
+
+
+def _apply_weekly_month_lock_to_formset(
+    row_formset,
+    dataset: DatasetType,
+    period: date | None,
+    previous_values: dict[int, object] | None = None,
+) -> bool:
+    if not row_formset or not period or not _is_weekly_month_locked_dataset(dataset):
+        return False
+    month_columns = month_columns_for_dataset(dataset)
+    if not month_columns:
+        return False
+    allowed_month = period.month
+    for form in row_formset:
+        for col_name, month in month_columns.items():
+            if month == allowed_month or col_name not in form.fields:
+                continue
+            field = form.fields[col_name]
+            if previous_values and month in previous_values:
+                form.initial[col_name] = previous_values[month]
+                field.initial = previous_values[month]
+            field.required = False
+            field.disabled = True
+            field.widget.attrs["disabled"] = True
+    return True
 
 
 def upload(request):
@@ -49,58 +260,103 @@ def upload(request):
         )
         return redirect(reverse("ingest:upload_history"))
 
-    loader_plant = None
+    loader_plants = None
+    loader_projects = None
     if user.is_authenticated:
-        loader_membership = (
+        loader_memberships = (
             Membership.objects.filter(user=user, role="LOADER", is_active=True)
-            .select_related("plant")
-            .first()
+            .select_related("plant", "project")
         )
-        if loader_membership and loader_membership.plant_id:
-            loader_plant = loader_membership.plant
+        has_global_loader = loader_memberships.filter(
+            plant__isnull=True, project__isnull=True
+        ).exists()
+        if not has_global_loader:
+            loader_plants = list(
+                loader_memberships.exclude(plant__isnull=True).values_list(
+                    "plant_id", flat=True
+                )
+            )
+            loader_projects = list(
+                loader_memberships.exclude(project__isnull=True).values_list(
+                    "project_id", flat=True
+                )
+            )
+
+    default_plant = Plant.objects.filter(id=loader_plants[0]).first() if loader_plants else None
 
     if request.method == "POST":
-        form = DatasetInstanceUploadForm(request.POST, request.FILES, loader_plant=loader_plant)
+        form = DatasetInstanceUploadForm(
+            request.POST,
+            request.FILES,
+            loader_plants=loader_plants,
+            loader_projects=loader_projects,
+        )
         if form.is_valid():
             instance: DatasetInstance = form.save(commit=False)
-
-            if request.user.is_authenticated:
-                membership = (
-                    Membership.objects.filter(user=request.user, plant=instance.plant, is_active=True)
-                    .order_by("role")
-                    .first()
+            upload_error = _validate_weekly_month_file(
+                instance.dataset_type,
+                instance.period,
+                form.cleaned_data.get("raw_file"),
+            )
+            if upload_error:
+                form.add_error("raw_file", upload_error)
+            elif _has_one_time_instance(instance.dataset_type):
+                messages.error(
+                    request,
+                    "Este esquema es de carga unica y ya tiene una carga registrada.",
                 )
+                return redirect(reverse("ingest:upload"))
             else:
-                membership = None
+                if request.user.is_authenticated:
+                    membership = (
+                        Membership.objects.filter(user=request.user, is_active=True)
+                        .filter(
+                            Q(plant=instance.plant)
+                            | Q(project=instance.project)
+                            | Q(plant__isnull=True, project__isnull=True)
+                        )
+                        .order_by("role")
+                        .first()
+                    )
+                else:
+                    membership = None
 
-            instance.created_by = membership
-            if membership and membership.role == "LOADER":
-                # Asegura consistencia: el dataset define la planta destino.
-                instance.plant = instance.dataset_type.plant
-            instance.state = DatasetInstance.STATE_DRAFT
-            instance.row_count = 0
-            instance.error_count = 0
-            instance.last_error_summary = ""
-            instance.save()
+                instance.created_by = membership
+                if membership and membership.role == "LOADER":
+                    # Asegura consistencia: el dataset define la planta/proyecto destino.
+                    instance.plant = instance.dataset_type.plant
+                    instance.project = instance.dataset_type.project
+                instance.state = DatasetInstance.STATE_DRAFT
+                instance.row_count = 0
+                instance.error_count = 0
+                instance.last_error_summary = ""
+                instance.save()
 
-            messages.success(
-                request,
-                "Archivo subido correctamente. Revisa tus cargas y envía el dataset a validación cuando corresponda.",
-            )
-            record_action(
-                "UPLOAD",
-                request=request,
-                module="Ingest",
-                object_repr=f"{instance.dataset_type.name} | {instance.period}",
-                details=f"Planta {instance.plant.code}",
-            )
-            return redirect(reverse("ingest:upload_history"))
+                messages.success(
+                    request,
+                    "Archivo subido correctamente. Revisa tus cargas y env?a el dataset a validaci?n cuando corresponda.",
+                )
+                record_action(
+                    "UPLOAD",
+                    request=request,
+                    module="Ingest",
+                    object_repr=f"{instance.dataset_type.name} | {instance.period}",
+                    details=(
+                        f"Planta {instance.plant.code}"
+                        if instance.plant
+                        else f"Proyecto {instance.project.name}"
+                    ),
+                )
+                return redirect(reverse("ingest:upload_history"))
     else:
-        form = DatasetInstanceUploadForm(loader_plant=loader_plant)
+        form = DatasetInstanceUploadForm(
+            loader_plants=loader_plants,
+            loader_projects=loader_projects,
+        )
 
     if request.user.is_authenticated:
         instances = (
-            DatasetInstance.objects.select_related("dataset_type", "plant")
+            DatasetInstance.objects.select_related("dataset_type", "plant", "project")
             .filter(created_by__user=request.user)
             .order_by("-created_at")[:10]
         )
@@ -152,8 +408,12 @@ def dataset_has_data(request):
             }
         )
 
-    dataset = DatasetType.objects.select_related("plant").filter(pk=dataset_type_id_int).first()
-    if not dataset or not dataset.plant_id:
+    dataset = (
+        DatasetType.objects.select_related("plant", "project")
+        .filter(pk=dataset_type_id_int)
+        .first()
+    )
+    if not dataset or (not dataset.plant_id and not dataset.project_id):
         return JsonResponse(
             {
                 "has_data": False,
@@ -175,8 +435,12 @@ def dataset_has_data(request):
 
     has_data = DatasetInstance.objects.filter(
         dataset_type_id=dataset_type_id_int,
-        plant_id=dataset.plant_id,
-    ).exists()
+    )
+    if dataset.plant_id:
+        has_data = has_data.filter(plant_id=dataset.plant_id)
+    else:
+        has_data = has_data.filter(project_id=dataset.project_id)
+    has_data = has_data.exists()
 
     return JsonResponse(
         {
@@ -202,18 +466,25 @@ def upload_historical(request):
     if not user.is_authenticated:
         return redirect("login")
 
-    loader_membership = (
+    loader_memberships = (
         Membership.objects.filter(user=user, role="LOADER", is_active=True)
         .select_related("plant")
-        .first()
     )
-    loader_plant = loader_membership.plant if loader_membership else None
+    has_global_loader = loader_memberships.filter(
+        plant__isnull=True, project__isnull=True
+    ).exists()
+    if has_global_loader:
+        loader_plants = list(Plant.objects.values_list("id", flat=True))
+    else:
+        loader_plants = list(
+            loader_memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
+        )
 
     if request.method == "POST":
         form = HistoricalDatasetUploadForm(
             request.POST,
             request.FILES,
-            loader_plant=loader_plant,
+            loader_plants=loader_plants,
         )
         if form.is_valid():
             dataset_type = form.cleaned_data["dataset_type"]
@@ -233,6 +504,7 @@ def upload_historical(request):
                     role="LOADER",
                     is_active=True,
                     plant__isnull=True,
+                    project__isnull=True,
                 ).first()
 
             batch = HistoricalImportBatch.objects.create(
@@ -394,14 +666,14 @@ def upload_historical(request):
                 batch.save(update_fields=["status", "error_summary", "finished_at"])
                 messages.error(request, f"Error al importar histórico: {exc}")
     else:
-        form = HistoricalDatasetUploadForm(loader_plant=loader_plant)
+        form = HistoricalDatasetUploadForm(loader_plants=loader_plants)
 
     return render(
         request,
         "ingest/upload_historical.html",
         {
             "form": form,
-            "loader_default_plant": loader_plant,
+            "loader_default_plant": default_plant,
         },
     )
 
@@ -421,12 +693,25 @@ def upload_manual(request):
     if not user.is_authenticated:
         return redirect("login")
 
-    loader_membership = (
+    loader_memberships = (
         Membership.objects.filter(user=user, role="LOADER", is_active=True)
-        .select_related("plant")
-        .first()
+        .select_related("plant", "project")
     )
-    loader_plant = loader_membership.plant if loader_membership else None
+    has_global_loader = loader_memberships.filter(
+        plant__isnull=True, project__isnull=True
+    ).exists()
+    if has_global_loader:
+        loader_plants = list(Plant.objects.values_list("id", flat=True))
+        loader_projects = list(Project.objects.values_list("id", flat=True))
+    else:
+        loader_plants = list(
+            loader_memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
+        )
+        loader_projects = list(
+            loader_memberships.exclude(project__isnull=True).values_list(
+                "project_id", flat=True
+            )
+        )
 
     dataset_initial = request.GET.get("dataset_type")
     rows_requested = request.GET.get("rows")
@@ -437,12 +722,15 @@ def upload_manual(request):
 
     dataset_form = ManualDatasetForm(
         request.POST or None,
-        loader_plant=loader_plant,
+        loader_plants=loader_plants,
+        loader_projects=loader_projects,
         initial={"dataset_type": dataset_initial} if dataset_initial else None,
     )
 
     selected_dataset = None
+    dataset_form_valid = False
     if dataset_form.is_bound and dataset_form.is_valid():
+        dataset_form_valid = True
         selected_dataset = dataset_form.cleaned_data["dataset_type"]
     elif dataset_initial and not dataset_form.is_bound:
         try:
@@ -479,7 +767,27 @@ def upload_manual(request):
         row_formset = None
         rows_count = rows_extra
 
-    if request.method == "POST" and dataset_form.is_valid() and row_formset is not None:
+    selected_period = None
+    if dataset_form_valid:
+        selected_period = dataset_form.cleaned_data.get("period")
+    else:
+        selected_period = parse_date_cell(dataset_form["period"].value())
+
+    month_lock_enabled = False
+    if selected_dataset:
+        month_lock_enabled = bool(
+            _is_weekly_month_locked_dataset(selected_dataset)
+            and month_columns_for_dataset(selected_dataset)
+        )
+    previous_values = {}
+    if month_lock_enabled and selected_dataset and selected_period:
+        previous_values = _previous_month_values(selected_dataset, selected_period)
+    if month_lock_enabled and row_formset is not None:
+        _apply_weekly_month_lock_to_formset(
+            row_formset, selected_dataset, selected_period, previous_values
+        )
+
+    if request.method == "POST" and dataset_form_valid and row_formset is not None:
         valid = row_formset.is_valid()
         rows_data = []
         if valid:
@@ -501,8 +809,32 @@ def upload_manual(request):
                 valid = False
 
         if valid:
+            if month_lock_enabled and previous_values:
+                month_columns = month_columns_for_dataset(
+                    dataset_form.cleaned_data["dataset_type"]
+                )
+                allowed_month = dataset_form.cleaned_data["period"].month
+                for row in rows_data:
+                    for col_name, month in month_columns.items():
+                        if month == allowed_month:
+                            continue
+                        if col_name not in row or row.get(col_name) in (None, ""):
+                            if month in previous_values:
+                                row[col_name] = previous_values[month]
+
+            month_error = _validate_weekly_month_rows(
+                dataset_form.cleaned_data["dataset_type"],
+                dataset_form.cleaned_data["period"],
+                rows_data,
+            )
+            if month_error:
+                row_formset._non_form_errors = row_formset.error_class([month_error])
+                valid = False
+
+        if valid:
             dataset_type = dataset_form.cleaned_data["dataset_type"]
             plant = dataset_form.cleaned_data["plant"]
+            project = dataset_form.cleaned_data["project"]
             period = dataset_form.cleaned_data["period"]
 
             buffer = StringIO()
@@ -526,6 +858,7 @@ def upload_manual(request):
             instance = DatasetInstance(
                 dataset_type=dataset_type,
                 plant=plant,
+                project=project,
                 period=period,
                 state=DatasetInstance.STATE_DRAFT,
                 row_count=len(rows_data),
@@ -534,7 +867,12 @@ def upload_manual(request):
             )
             if user.is_authenticated:
                 membership = (
-                    Membership.objects.filter(user=user, plant=plant, is_active=True)
+                    Membership.objects.filter(user=user, is_active=True)
+                    .filter(
+                        Q(plant=plant)
+                        | Q(project=project)
+                        | Q(plant__isnull=True, project__isnull=True)
+                    )
                     .order_by("role")
                     .first()
                 )
@@ -553,7 +891,11 @@ def upload_manual(request):
                 request=request,
                 module="Ingest",
                 object_repr=f"{instance.dataset_type.name} | {instance.period}",
-                details=f"Captura manual en planta {instance.plant.code}",
+                details=(
+                    f"Captura manual en planta {instance.plant.code}"
+                    if instance.plant
+                    else f"Captura manual en proyecto {instance.project.name}"
+                ),
             )
             return redirect(reverse("ingest:upload"))
 
@@ -571,6 +913,9 @@ def upload_manual(request):
     can_add_rows = rows_count < 20
     can_remove_rows = rows_count > 1
 
+    default_plant = Plant.objects.filter(id=loader_plants[0]).first() if loader_plants else None
+    default_project = Project.objects.filter(id=loader_projects[0]).first() if loader_projects else None
+
     return render(
         request,
         "ingest/manual_entry.html",
@@ -585,7 +930,9 @@ def upload_manual(request):
             "can_add_rows": can_add_rows,
             "can_remove_rows": can_remove_rows,
             "selected_dataset": selected_dataset,
-            "loader_default_plant": loader_plant,
+            "loader_default_plant": default_plant,
+            "loader_default_project": default_project,
+            "month_lock_enabled": month_lock_enabled,
         },
     )
 
@@ -609,7 +956,12 @@ def download_template(request):
     if not columns.exists():
         raise Http404("El esquema seleccionado no tiene columnas activas.")
 
-    base_name = f"plantilla_{ds.plant.code}_{ds.name}"
+    if ds.plant:
+        base_name = f"plantilla_{ds.plant.code}_{ds.name}"
+    elif ds.project:
+        base_name = f"plantilla_{ds.project.name}_{ds.name}"
+    else:
+        base_name = f"plantilla_{ds.name}"
     safe_name = f"{slugify(base_name) or 'plantilla'}.xlsx"
 
     wb = openpyxl.Workbook()
@@ -635,7 +987,9 @@ def download_template(request):
 
 def instance_detail(request, pk):
     instance = (
-        DatasetInstance.objects.select_related("dataset_type", "plant", "created_by__user")
+        DatasetInstance.objects.select_related(
+            "dataset_type", "plant", "project", "created_by__user"
+        )
         .filter(pk=pk)
         .first()
     )
@@ -660,7 +1014,11 @@ def instance_detail(request, pk):
             role="VALIDATOR",
             is_active=True,
         )
-        .filter(Q(plant=instance.plant) | Q(plant__isnull=True))
+        .filter(
+            Q(plant=instance.plant)
+            | Q(project=instance.project)
+            | Q(plant__isnull=True, project__isnull=True)
+        )
         .exists()
     )
 
@@ -668,7 +1026,10 @@ def instance_detail(request, pk):
         user=user,
         role="LOADER",
         is_active=True,
-        plant=instance.plant,
+    ).filter(
+        Q(plant=instance.plant)
+        | Q(project=instance.project)
+        | Q(plant__isnull=True, project__isnull=True)
     ).exists()
 
     if not (is_admin or is_creator or is_validator):
@@ -1026,7 +1387,9 @@ def _submit_instance_to_validation(instance: DatasetInstance, request) -> None:
 
 def certification_review(request, pk):
     instance = (
-        DatasetInstance.objects.select_related("dataset_type", "plant", "created_by__user")
+        DatasetInstance.objects.select_related(
+            "dataset_type", "plant", "project", "created_by__user"
+        )
         .filter(pk=pk)
         .first()
     )
@@ -1052,7 +1415,11 @@ def certification_review(request, pk):
             role="LOADER",
             is_active=True,
         )
-        .filter(Q(plant=instance.plant) | Q(plant__isnull=True))
+        .filter(
+            Q(plant=instance.plant)
+            | Q(project=instance.project)
+            | Q(plant__isnull=True, project__isnull=True)
+        )
         .first()
     )
 
@@ -1479,6 +1846,7 @@ def upload_history(request):
     loader_memberships = []
     has_global_loader = False
     loader_plants = []
+    loader_projects = []
 
     if request.user.is_authenticated:
         loader_memberships = list(
@@ -1486,12 +1854,17 @@ def upload_history(request):
                 user=request.user,
                 role="LOADER",
                 is_active=True,
-            ).select_related("plant")
+            ).select_related("plant", "project")
         )
-        has_global_loader = any(m.plant_id is None for m in loader_memberships)
+        has_global_loader = any(
+            m.plant_id is None and m.project_id is None for m in loader_memberships
+        )
         loader_plants = [m.plant_id for m in loader_memberships if m.plant_id]
+        loader_projects = [m.project_id for m in loader_memberships if m.project_id]
 
-        queryset = DatasetInstance.objects.select_related("dataset_type", "plant", "created_by__user")
+        queryset = DatasetInstance.objects.select_related(
+            "dataset_type", "plant", "project", "created_by__user"
+        )
 
         if request.user.is_superuser or Membership.objects.filter(
             user=request.user,
@@ -1620,7 +1993,9 @@ def submit_instance(request, pk):
         return redirect("ingest:upload_history")
 
     instance = (
-        DatasetInstance.objects.select_related("dataset_type", "plant", "created_by__user")
+        DatasetInstance.objects.select_related(
+            "dataset_type", "plant", "project", "created_by__user"
+        )
         .filter(pk=pk)
         .first()
     )
@@ -1640,7 +2015,11 @@ def submit_instance(request, pk):
             role="LOADER",
             is_active=True,
         )
-        .filter(Q(plant=instance.plant) | Q(plant__isnull=True))
+        .filter(
+            Q(plant=instance.plant)
+            | Q(project=instance.project)
+            | Q(plant__isnull=True, project__isnull=True)
+        )
         .exists()
     ):
         can_submit = True
@@ -1676,7 +2055,10 @@ def submit_historical_batch(request, batch_id: int):
 
     can_access_plant = Membership.objects.filter(
         user=user, role="LOADER", is_active=True
-    ).filter(Q(plant=batch.plant) | Q(plant__isnull=True)).exists()
+    ).filter(
+        Q(plant=batch.plant)
+        | Q(plant__isnull=True, project__isnull=True)
+    ).exists()
     if not can_access_plant:
         return redirect("ingest:upload_history")
 
@@ -1726,21 +2108,36 @@ def edit_instance(request, pk):
     if request.method == "POST":
         form = DatasetInstanceEditForm(request.POST, request.FILES, instance=instance)
         if form.is_valid():
-            instance = form.save(commit=False)
-            instance.row_count = 0
-            instance.error_count = 0
-            instance.last_error_summary = ""
-            instance.state = DatasetInstance.STATE_DRAFT
-            instance.save()
-            messages.success(request, "Dataset actualizado. Ahora puedes enviarlo a validación diaria.")
-            record_action(
-                "EDIT",
-                request=request,
-                module="Ingest",
-                object_repr=f"{instance.dataset_type.name} | {instance.period}",
-                details="Archivo corregido y reemplazado",
+            upload_error = _validate_weekly_month_file(
+                instance.dataset_type,
+                instance.period,
+                form.cleaned_data.get("raw_file"),
             )
-            return redirect("ingest:upload")
+            if upload_error:
+                form.add_error("raw_file", upload_error)
+            else:
+                instance = form.save(commit=False)
+                instance.row_count = 0
+                instance.error_count = 0
+                instance.last_error_summary = ""
+                instance.state = DatasetInstance.STATE_DRAFT
+                instance.save()
+                justification = (form.cleaned_data.get("justification") or "").strip()
+                details = "Archivo corregido y reemplazado"
+                if instance.dataset_type.is_one_time:
+                    details = f"Actualizacion de carga unica. Justificacion: {justification}"
+                messages.success(
+                    request,
+                    "Dataset actualizado. Ahora puedes enviarlo a validacion diaria.",
+                )
+                record_action(
+                    "EDIT",
+                    request=request,
+                    module="Ingest",
+                    object_repr=f"{instance.dataset_type.name} | {instance.period}",
+                    details=details,
+                )
+                return redirect("ingest:upload")
     else:
         form = DatasetInstanceEditForm(instance=instance)
 

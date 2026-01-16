@@ -26,7 +26,7 @@
     <table class="min-w-full text-xs">
       <thead class="bg-slate-950/80 text-slate-300">
         <tr>
-          <th class="px-3 py-2 text-left font-semibold">Planta</th>
+          <th class="px-3 py-2 text-left font-semibold">Planta / Proyecto</th>
           <th class="px-3 py-2 text-left font-semibold">Nombre</th>
           <th class="px-3 py-2 text-left font-semibold">Versión</th>
           <th class="px-3 py-2 text-left font-semibold">Frecuencia</th>
@@ -40,11 +40,24 @@
       <tbody>
         {% for ds in datasets %}
           <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-            <td class="px-3 py-2 align-top">{{ ds.plant.code }}</td>
+            <td class="px-3 py-2 align-top">
+              {% if ds.plant %}
+                {{ ds.plant.code }}
+              {% elif ds.project %}
+                {{ ds.project.name }}
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
             <td class="px-3 py-2 align-top">
               <a href="{% url 'schemas:schema_detail' ds.slug|default:ds.pk %}" class="text-emerald-400 hover:underline">
                 {{ ds.name }}
               </a>
+              {% if ds.is_one_time %}
+                <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
+                  Carga unica
+                </span>
+              {% endif %}
             </td>
             <td class="px-3 py-2 align-top">{{ ds.version }}</td>
             <td class="px-3 py-2 align-top">
@@ -114,6 +127,19 @@
                   </a>
                 {% endif %}
               {% endif %}
+              {% if can_edit_schemas and ds.status == 'DRAFT' and not ds.is_certification %}
+                <form
+                  method="post"
+                  action="{% url 'schemas:schema_delete' ds.slug|default:ds.pk %}"
+                  class="inline"
+                  onsubmit="return confirm('Eliminar esquema en borrador? Esta accion no se puede deshacer.');"
+                >
+                  {% csrf_token %}
+                  <button type="submit" class="text-xs text-red-300 hover:text-red-200">
+                    Eliminar
+                  </button>
+                </form>
+              {% endif %}
               {% if can_edit_schemas and ds.status == 'DRAFT' %}
                 <form method="post" action="{% url 'schemas:schema_submit' ds.slug|default:ds.pk %}" class="inline">
                   {% csrf_token %}
@@ -134,7 +160,7 @@
                   data-open-reject-modal
                   data-reject-url="{% url 'schemas:schema_reject' ds.slug|default:ds.pk %}"
                   data-dataset-name="{{ ds.name }}"
-                  data-dataset-plant="{{ ds.plant.code }}"
+                  data-dataset-plant="{% if ds.plant %}{{ ds.plant.code }}{% elif ds.project %}{{ ds.project.name }}{% else %}N/A{% endif %}"
                 >
                   Rechazar
                 </button>

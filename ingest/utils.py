@@ -19,6 +19,51 @@ class ParsedRow:
   values: List[str]
 
 
+MONTH_ALIASES = {
+    "ene": 1,
+    "enero": 1,
+    "feb": 2,
+    "febrero": 2,
+    "mar": 3,
+    "marzo": 3,
+    "abr": 4,
+    "abril": 4,
+    "may": 5,
+    "mayo": 5,
+    "jun": 6,
+    "junio": 6,
+    "jul": 7,
+    "julio": 7,
+    "ago": 8,
+    "agosto": 8,
+    "sep": 9,
+    "sept": 9,
+    "septiembre": 9,
+    "setiembre": 9,
+    "oct": 10,
+    "octubre": 10,
+    "nov": 11,
+    "noviembre": 11,
+    "dic": 12,
+    "diciembre": 12,
+}
+
+MONTH_NAMES = {
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril",
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre",
+}
+
+
 def read_uploaded_file(uploaded_file) -> Tuple[List[str], List[List[object]]]:
     """
     Lee un archivo subido (CSV/Excel) y devuelve encabezado y filas (valores crudos).
@@ -91,6 +136,35 @@ def parse_date_cell(value) -> date | None:
         return parsed
     except Exception:
         return None
+
+
+def month_number_from_label(label: str | None) -> int | None:
+    if not label:
+        return None
+    text = str(label).strip().lower()
+    if not text:
+        return None
+    if text in MONTH_ALIASES:
+        return MONTH_ALIASES[text]
+    key = text[:3]
+    return MONTH_ALIASES.get(key)
+
+
+def month_label(month: int | None) -> str:
+    if not month:
+        return ""
+    return MONTH_NAMES.get(month, "")
+
+
+def month_columns_for_dataset(dataset) -> dict[str, int]:
+    if not dataset:
+        return {}
+    month_columns: dict[str, int] = {}
+    for column in dataset.columns.filter(is_active=True):
+        month = month_number_from_label(column.name) or month_number_from_label(column.label)
+        if month:
+            month_columns[column.name] = month
+    return month_columns
 
 def _read_instance_file(instance: DatasetInstance) -> Tuple[List[str], List[ParsedRow]]:
     """

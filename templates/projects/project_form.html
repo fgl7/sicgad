@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}{% if project %}Editar proyecto{% else %}Nuevo proyecto{% endif %} - SICGAD{% endblock %}
+{% block page_title %}{% if project %}Editar proyecto{% else %}Nuevo proyecto{% endif %}{% endblock %}
+
+{% block content %}
+  <section class="max-w-2xl bg-slate-950/60 border border-slate-800 rounded-xl p-5 text-xs">
+    <h2 class="text-sm font-semibold mb-3">
+      {% if project %}Editar proyecto{% else %}Datos del proyecto{% endif %}
+    </h2>
+
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Nombre</label>
+          {{ form.name }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Codigo</label>
+          {{ form.code }}
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Ejecutor</label>
+          {{ form.executor }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Ubicacion</label>
+          {{ form.location }}
+        </div>
+      </div>
+
+      <div>
+        <label class="block mb-1 text-slate-300 text-[11px]">Descripcion</label>
+        {{ form.description }}
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Fecha inicio</label>
+          {{ form.start_date }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Fecha conclusion</label>
+          {{ form.end_date }}
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-3">
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Presupuesto (MMBs)</label>
+          {{ form.budget_mmbs }}
+        </div>
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Plantas relacionadas</label>
+          {{ form.plants }}
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 mt-1">
+        {{ form.is_active }}
+        <span class="text-slate-300 text-[11px]">Proyecto activo</span>
+      </div>
+
+      {% if form.change_justification %}
+        <div>
+          <label class="block mb-1 text-slate-300 text-[11px]">Justificacion del cambio</label>
+          {{ form.change_justification }}
+          {% if form.change_justification.errors %}
+            <p class="text-[11px] text-rose-300 mt-1">
+              {{ form.change_justification.errors|striptags }}
+            </p>
+          {% endif %}
+          <p class="text-[11px] text-slate-400 mt-1">
+            Requerido si modificas datos estaticos del proyecto.
+          </p>
+        </div>
+      {% endif %}
+
+      <div class="flex items-center justify-between pt-2">
+        <a href="{% url 'projects:project_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+          ← Volver al listado
+        </a>
+        <button
+          type="submit"
+          class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500"
+        >
+          Guardar
+        </button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

@@ -7,7 +7,15 @@
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4 text-xs">
     <h2 class="text-sm font-semibold">Datos de la carga</h2>
     <p class="text-slate-300">
-      <strong>Planta:</strong> {{ instance.plant.code }}<br />
+      <strong>Planta/Proyecto:</strong>
+      {% if instance.plant %}
+        {{ instance.plant.code }}
+      {% elif instance.project %}
+        {{ instance.project.name }}
+      {% else %}
+        -
+      {% endif %}
+      <br />
       <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
       <strong>Periodo:</strong> {{ instance.period }}<br />
       <strong>Estado actual:</strong> {{ instance.get_state_display }}
@@ -30,7 +38,22 @@
           </p>
         {% endif %}
         {{ form.raw_file }}
+        {% if form.raw_file.errors %}
+          <p class="text-[11px] text-red-400 mt-1">{{ form.raw_file.errors.0 }}</p>
+        {% endif %}
       </div>
+      {% if instance.dataset_type.is_one_time %}
+        <div>
+          <label class="block mb-1 text-slate-300">Justificacion del cambio</label>
+          {{ form.justification }}
+          {% if form.justification.errors %}
+            <p class="text-[11px] text-red-400 mt-1">{{ form.justification.errors.0 }}</p>
+          {% endif %}
+          <p class="text-[11px] text-slate-400 mt-1">
+            Requerido para actualizar esquemas de carga unica.
+          </p>
+        </div>
+      {% endif %}
       <div class="flex items-center justify-between">
         <a href="{% url 'ingest:upload' %}" class="text-xs text-slate-300 hover:text-emerald-400">
           ← Volver a carga de datos

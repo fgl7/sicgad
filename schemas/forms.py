@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import ColumnDef, DatasetType
+from projects.models import Project
 
 
 class DatasetTypeForm(forms.ModelForm):
@@ -8,25 +9,47 @@ class DatasetTypeForm(forms.ModelForm):
         self,
         *args,
         allowed_plants_qs=None,
+        allowed_projects_qs=None,
         allow_set_active: bool = True,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         if allowed_plants_qs is not None:
             self.fields["plant"].queryset = allowed_plants_qs
+        if allowed_projects_qs is not None:
+            self.fields["project"].queryset = allowed_projects_qs
         if not allow_set_active:
             self.fields["is_active"].disabled = True
 
     class Meta:
         model = DatasetType
-        fields = ["plant", "name", "version", "validation_frequency", "is_active"]
+        fields = [
+            "plant",
+            "project",
+            "name",
+            "version",
+            "validation_frequency",
+            "is_active",
+            "is_one_time",
+        ]
         widgets = {
             "name": forms.TextInput(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
             "version": forms.NumberInput(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
             "validation_frequency": forms.Select(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
             "plant": forms.Select(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
+            "project": forms.Select(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
             "is_active": forms.CheckboxInput(attrs={"class": "rounded border-slate-700"}),
+            "is_one_time": forms.CheckboxInput(attrs={"class": "rounded border-slate-700"}),
         }
+
+    def clean(self):
+        cleaned = super().clean()
+        plant = cleaned.get("plant")
+        project = cleaned.get("project")
+        if bool(plant) == bool(project):
+            self.add_error("plant", "Debe seleccionar una planta o un proyecto.")
+            self.add_error("project", "Debe seleccionar una planta o un proyecto.")
+        return cleaned
 
 
 class ColumnDefForm(forms.ModelForm):
@@ -87,6 +110,7 @@ class CertificationSchemaForm(forms.Form):
                 validation_frequency=DatasetType.DAILY,
                 is_active=True,
                 is_certification=False,
+                project__isnull=True,
             )
             .select_related("plant")
             .order_by("plant__code", "name", "-version")

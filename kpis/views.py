@@ -39,7 +39,7 @@ def home(request):
 
     # Últimas cargas de datos (independiente del estado)
     recent_instances = (
-        DatasetInstance.objects.select_related("dataset_type", "plant")
+        DatasetInstance.objects.select_related("dataset_type", "plant", "project")
         .order_by("-created_at")[:5]
     )
 
@@ -75,12 +75,12 @@ def charts(request):
     user = request.user
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
 
-    datasets = DatasetType.objects.select_related("plant")
+    datasets = DatasetType.objects.select_related("plant").filter(project__isnull=True)
 
     if not is_admin:
         memberships = Membership.objects.filter(user=user, is_active=True)
         plant_ids = list(memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True))
-        has_global = memberships.filter(plant__isnull=True).exists()
+        has_global = memberships.filter(plant__isnull=True, project__isnull=True).exists()
         if plant_ids and not has_global:
             datasets = datasets.filter(plant_id__in=plant_ids)
         elif not plant_ids and not has_global:
@@ -110,7 +110,7 @@ def dataset_data(request, dataset_id: int):
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
 
     dataset = get_object_or_404(
-        DatasetType.objects.select_related("plant"),
+        DatasetType.objects.select_related("plant").filter(project__isnull=True),
         pk=dataset_id,
     )
 
@@ -119,7 +119,7 @@ def dataset_data(request, dataset_id: int):
         plant_ids = list(
             memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
         )
-        has_global = memberships.filter(plant__isnull=True).exists()
+        has_global = memberships.filter(plant__isnull=True, project__isnull=True).exists()
         if not (has_global or (plant_ids and dataset.plant_id in plant_ids)):
             raise Http404
 

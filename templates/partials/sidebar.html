@@ -11,10 +11,12 @@
     {% url 'ingest:upload' as ingest_url %}
     {% url 'validation:inbox' as validation_url %}
     {% url 'plants:plant_list' as plants_url %}
+    {% url 'projects:project_list' as projects_url %}
     {% url 'accounts:admin_user_list' as users_url %}
     {% url 'accounts:institution_list' as institutions_url %}
     {% url 'audit:log_list' as audit_url %}
     {% url 'performance:pcs_formula_1' as performance_url %}
+    {% url 'projects:report_list' as projects_report_url %}
 
     <a href='{{ home_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == home_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
       <span>Inicio</span>
@@ -64,7 +66,7 @@
           <span class='ml-auto text-[10px] text-slate-500'>Panel</span>
         {% endif %}
         {% if is_validator and pending_certification_alerts %}
-          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='CertificaciÃ³n mensual pendiente'>
+          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='Certificación mensual pendiente'>
             C{{ pending_certification_alerts }}
           </span>
         {% endif %}
@@ -88,7 +90,7 @@
           </span>
         {% endif %}
         {% if loader_pending_certification_alerts %}
-          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='CertificaciÃ³n mensual pendiente'>
+          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='Certificación mensual pendiente'>
             C{{ loader_pending_certification_alerts }}
           </span>
         {% endif %}
@@ -98,6 +100,12 @@
     <a href='{% url "kpis_charts" %}' class='flex items-center gap-2 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800/60'>
       <span>KPIs / Graficos</span>
     </a>
+
+    {% if is_admin or is_loader or is_validator %}
+      <a href='{{ projects_report_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":10" == "/projects/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
+        <span>Reportes de proyectos</span>
+      </a>
+    {% endif %}
 
     {% if is_admin %}
       <a href='{{ performance_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":13" == "/performance/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
@@ -115,6 +123,9 @@
       </div>
       <a href='{{ plants_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":8" == "/plants/" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
         <span>Unidades operativas</span>
+      </a>
+      <a href='{{ projects_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == projects_url %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
+        <span>Proyectos</span>
       </a>
       <a href='{{ institutions_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":22" == "/accounts/institutions/" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
         <span>Instituciones</span>

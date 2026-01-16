@@ -72,7 +72,7 @@
           <thead class="bg-slate-950 text-slate-300">
             <tr>
               <th class="px-3 py-1 text-left font-semibold">Fecha</th>
-              <th class="px-3 py-1 text-left font-semibold">Planta</th>
+              <th class="px-3 py-1 text-left font-semibold">Planta / Proyecto</th>
               <th class="px-3 py-1 text-left font-semibold">Dataset</th>
               <th class="px-3 py-1 text-left font-semibold">Periodo</th>
               <th class="px-3 py-1 text-left font-semibold">Estado</th>
@@ -82,7 +82,15 @@
             {% for inst in recent_instances %}
               <tr class="border-t border-slate-800">
                 <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
-                <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.plant.code }}</td>
+                <td class="px-3 py-1 align-top whitespace-nowrap">
+                  {% if inst.plant %}
+                    {{ inst.plant.code }}
+                  {% elif inst.project %}
+                    {{ inst.project.code|default:inst.project.name }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
                 <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.dataset_type.name }}</td>
                 <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.period }}</td>
                 <td class="px-3 py-1 align-top whitespace-nowrap">{{ inst.get_state_display }}</td>

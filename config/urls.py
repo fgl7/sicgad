@@ -42,4 +42,5 @@ urlpatterns = [
     path("validate/", include("validation.urls")),
     path("audit/", include("audit.urls")),
     path("performance/", include("performance.urls")),
+    path("projects/", include("projects.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

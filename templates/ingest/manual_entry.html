@@ -13,9 +13,9 @@
         Completa los valores directamente en la tabla. Cada fila representa un registro del dataset diario seleccionado.
         Después podrás revisar el borrador desde el historial y enviarlo a validación.
       </p>
-      <form method="post" class="space-y-4">
+      <form method="post" class="space-y-4" data-month-lock="{{ month_lock_enabled|yesno:'true,false' }}">
         {% csrf_token %}
-        <div class="grid md:grid-cols-3 gap-3">
+        <div class="grid md:grid-cols-4 gap-3">
           <div>
             <label class="block font-semibold text-slate-200 mb-1">{{ dataset_form.dataset_type.label }}</label>
             {{ dataset_form.dataset_type }}
@@ -35,6 +35,20 @@
             {% endif %}
             {% if dataset_form.plant.errors %}
               <p class="text-red-400 mt-1">{{ dataset_form.plant.errors.0 }}</p>
+            {% endif %}
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-200 mb-1">{{ dataset_form.project.label }}</label>
+            {% if loader_default_project %}
+              <div class="text-slate-200 text-xs mb-1">
+                {{ loader_default_project.name }}
+              </div>
+              <input type="hidden" name="{{ dataset_form.project.name }}" value="{{ loader_default_project.id }}" />
+            {% else %}
+              {{ dataset_form.project }}
+            {% endif %}
+            {% if dataset_form.project.errors %}
+              <p class="text-red-400 mt-1">{{ dataset_form.project.errors.0 }}</p>
             {% endif %}
           </div>
           <div>
@@ -63,6 +77,11 @@
               {% endif %}
             </div>
           </div>
+          {% if month_lock_enabled %}
+            <p class="text-[11px] text-slate-400">
+              Solo se habilita el mes correspondiente al periodo seleccionado.
+            </p>
+          {% endif %}
           <div class="overflow-auto border border-slate-800 rounded-lg">
             <table class="min-w-full text-[11px]">
               <thead class="bg-slate-950 text-slate-300">
@@ -143,7 +162,14 @@
               {{ inst.dataset_type.name }} — {{ inst.period }}
             </div>
             <div class="text-slate-400 text-[11px]">
-              {{ inst.plant.code }} • {{ inst.get_state_display }}
+              {% if inst.plant %}
+                {{ inst.plant.code }}
+              {% elif inst.project %}
+                {{ inst.project.name }}
+              {% else %}
+                N/A
+              {% endif %}
+              • {{ inst.get_state_display }}
             </div>
           </div>
         {% empty %}

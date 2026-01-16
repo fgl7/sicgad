@@ -31,6 +31,17 @@
       </select>
     </div>
     <div>
+      <label class="block mb-1 text-slate-300">Proyecto</label>
+      <select name="project" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
+        <option value="">Todos</option>
+        {% for proj in projects %}
+          <option value="{{ proj.id }}" {% if filter_project == proj.id|stringformat:'s' %}selected{% endif %}>
+            {{ proj.code|default:proj.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
       <label class="block mb-1 text-slate-300">Institucion</label>
       <select name="institution" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
         <option value="">Todas</option>
@@ -59,7 +70,7 @@
           <th class="px-3 py-2 text-left font-semibold">Nombre</th>
           <th class="px-3 py-2 text-left font-semibold">Email</th>
           <th class="px-3 py-2 text-left font-semibold">Roles</th>
-          <th class="px-3 py-2 text-left font-semibold">Unidades</th>
+          <th class="px-3 py-2 text-left font-semibold">Planta / Proyecto</th>
           <th class="px-3 py-2 text-left font-semibold">Validacion</th>
           <th class="px-3 py-2 text-left font-semibold">Institucion</th>
           <th class="px-3 py-2 text-left font-semibold">Acciones</th>
@@ -87,6 +98,8 @@
                     <div>
                       {% if m.plant %}
                         {{ m.plant.code }}
+                      {% elif m.project %}
+                        {{ m.project.code|default:m.project.name }}
                       {% else %}
                         GLOBAL
                       {% endif %}
@@ -105,11 +118,19 @@
                       {% else %}
                         Nivel -
                       {% endif %}
-                      {% if m.can_validate_daily or m.can_validate_monthly %}
+                      {% if m.can_validate_daily or m.can_validate_weekly or m.can_validate_monthly or m.can_validate_projections %}
                         (
                         {% if m.can_validate_daily %}diario{% endif %}
-                        {% if m.can_validate_daily and m.can_validate_monthly %} / {% endif %}
+                        {% if m.can_validate_daily and m.can_validate_weekly %} / {% endif %}
+                        {% if m.can_validate_weekly %}semanal{% endif %}
+                        {% if m.can_validate_monthly %}
+                          {% if m.can_validate_daily or m.can_validate_weekly %} / {% endif %}
+                        {% endif %}
                         {% if m.can_validate_monthly %}mensual{% endif %}
+                        {% if m.can_validate_projections %}
+                          {% if m.can_validate_daily or m.can_validate_weekly or m.can_validate_monthly %} / {% endif %}
+                        {% endif %}
+                        {% if m.can_validate_projections %}proyecciones{% endif %}
                         )
                       {% endif %}
                     </div>

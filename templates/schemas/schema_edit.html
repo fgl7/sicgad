@@ -1,222 +1,183 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{% if dataset %}Editar esquema{% else %}Nuevo esquema{% endif %} - SICGAD{% endblock %}
-{% block page_title %}{% if dataset %}Editar esquema{% else %}Nuevo esquema{% endif %}{% endblock %}
+{% block title %}{% if dataset %}Editar Esquema{% else %}Nuevo Esquema{% endif %} - SICGAD{% endblock %}
 
 {% block extra_js %}
   <script src="{% static 'js/schema_edit.js' %}"></script>
 {% endblock %}
 
 {% block content %}
-  <form method="post" class="space-y-4">
-    {% csrf_token %}
-
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
-      <h2 class="text-sm font-semibold mb-1">Datos generales</h2>
-      <div class="grid md:grid-cols-2 gap-3 text-xs">
+<div class="max-w-6xl mx-auto space-y-8 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-          <label class="block mb-1 text-slate-300">Planta</label>
-          {% if is_admin %}
-            {{ form.plant }}
-          {% else %}
-            {% if dataset and dataset.plant %}
-              <div class="text-slate-200 text-xs">
-                {{ dataset.plant.code }} - {{ dataset.plant.name }}
-              </div>
-              <input type="hidden" name="{{ form.plant.name }}" value="{{ dataset.plant.id }}">
-            {% else %}
-              {{ form.plant }}
-            {% endif %}
-          {% endif %}
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">{% if dataset %}Configurar Arquitectura de Datos{% else %}Definir Nuevo Esquema{% endif %}</h2>
+            <p class="text-slate-500 text-sm">Establece la estructura técnica, validaciones y roles gráficos del dataset.</p>
         </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Proyecto</label>
-          {% if is_admin %}
-            {{ form.project }}
-          {% else %}
-            {% if dataset and dataset.project %}
-              <div class="text-slate-200 text-xs">
-                {{ dataset.project.name }}
-              </div>
-              <input type="hidden" name="{{ form.project.name }}" value="{{ dataset.project.id }}">
-            {% else %}
-              {{ form.project }}
-            {% endif %}
-          {% endif %}
-          <p class="text-[10px] text-slate-500 mt-1">Seleccione una planta o un proyecto.</p>
-        </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Nombre del dataset</label>
-          {{ form.name }}
-        </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Versión</label>
-          {{ form.version }}
-        </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Frecuencia de validación</label>
-          {{ form.validation_frequency }}
-        </div>
-        <div class="flex items-center gap-2 mt-2">
-          {{ form.is_active }}
-          <span class="text-slate-300">Esquema activo</span>
-        </div>
-        <div class="flex items-center gap-2 mt-2">
-          {{ form.is_one_time }}
-          <span class="text-slate-300">Carga unica (solo una vez)</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold">Columnas</h2>
-        <button
-          type="button"
-          id="add-column-btn"
-          class="inline-flex items-center gap-1 text-xs px-4 py-1.5 rounded-full bg-emerald-500 text-slate-950 font-semibold hover:bg-emerald-400 shadow-md shadow-emerald-900/50 ring-2 ring-emerald-300/60"
-        >
-          <span class="text-base leading-none">+</span>
-          <span>Añadir columna</span>
-        </button>
-      </div>
-
-      {{ formset.management_form }}
-      <input
-        type="hidden"
-        data-schema-columns-total-forms
-        id="id_{{ formset.prefix }}-TOTAL_FORMS"
-        name="{{ formset.management_form.TOTAL_FORMS.html_name }}"
-        value="{{ formset.management_form.TOTAL_FORMS.value }}"
-      />
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-[11px]">
-          <thead class="bg-slate-950/80 text-slate-300">
-            <tr>
-              <th class="px-2 py-1 text-left font-semibold">Nombre</th>
-              <th class="px-2 py-1 text-left font-semibold">Etiqueta</th>
-              <th class="px-2 py-1 text-left font-semibold">Tipo</th>
-              <th class="px-2 py-1 text-left font-semibold">Req.</th>
-              <th class="px-2 py-1 text-left font-semibold">Mín.</th>
-              <th class="px-2 py-1 text-left font-semibold">Máx.</th>
-              <th class="px-2 py-1 text-left font-semibold">Unidad</th>
-              <th class="px-2 py-1 text-left font-semibold">Rol gráfico</th>
-              <th class="px-2 py-1 text-left font-semibold">Agreg.</th>
-              <th class="px-2 py-1 text-left font-semibold">KPI</th>
-              <th class="px-2 py-1 text-left font-semibold">Orden</th>
-              <th class="px-2 py-1 text-left font-semibold">Activo</th>
-              <th class="px-2 py-1 text-left font-semibold">Eliminar</th>
-            </tr>
-          </thead>
-          <tbody id="columns-body">
-            {% for form in formset.forms %}
-              <tr class="border-t border-slate-800 align-top" data-column-row>
-                <td class="px-2 py-1">{{ form.name }}</td>
-                <td class="px-2 py-1">{{ form.label }}</td>
-                <td class="px-2 py-1">{{ form.data_type }}</td>
-                <td class="px-2 py-1 text-center">{{ form.required }}</td>
-                <td class="px-2 py-1">{{ form.min_value }}</td>
-                <td class="px-2 py-1">{{ form.max_value }}</td>
-                <td class="px-2 py-1">{{ form.unit }}</td>
-                <td class="px-2 py-1">{{ form.axis_role }}</td>
-                <td class="px-2 py-1">{{ form.default_agg }}</td>
-                <td class="px-2 py-1 text-center">{{ form.is_primary_kpi }}</td>
-                <td class="px-2 py-1">{{ form.display_order }}</td>
-                <td class="px-2 py-1 text-center">{{ form.is_active }}</td>
-                <td class="px-2 py-1 text-center">
-                  <button
-                    type="button"
-                    class="text-red-400 hover:text-red-300 text-[10px]"
-                    data-delete-row
-                  >
-                    Eliminar
-                  </button>
-                  <span class="hidden">
-                    {{ form.DELETE }}
-                  </span>
-                </td>
-                {% for hidden in form.hidden_fields %}
-                  {{ hidden }}
-                {% endfor %}
-              </tr>
-              {% if form.errors %}
-                <tr>
-                  <td colspan="13" class="px-2 pb-2 text-red-400">
-                    {{ form.errors }}
-                  </td>
-                </tr>
-              {% endif %}
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <template id="empty-column-row">
-        <tr class="border-t border-slate-800 align-top" data-column-row>
-          {% with form=formset.empty_form %}
-            <td class="px-2 py-1">{{ form.name }}</td>
-            <td class="px-2 py-1">{{ form.label }}</td>
-            <td class="px-2 py-1">{{ form.data_type }}</td>
-            <td class="px-2 py-1 text-center">{{ form.required }}</td>
-            <td class="px-2 py-1">{{ form.min_value }}</td>
-            <td class="px-2 py-1">{{ form.max_value }}</td>
-            <td class="px-2 py-1">{{ form.unit }}</td>
-            <td class="px-2 py-1">{{ form.axis_role }}</td>
-            <td class="px-2 py-1">{{ form.default_agg }}</td>
-            <td class="px-2 py-1 text-center">{{ form.is_primary_kpi }}</td>
-            <td class="px-2 py-1">{{ form.display_order }}</td>
-            <td class="px-2 py-1 text-center">{{ form.is_active }}</td>
-            <td class="px-2 py-1 text-center">
-              <button
-                type="button"
-                class="text-red-400 hover:text-red-300 text-[10px]"
-                data-delete-row
-              >
-                Eliminar
-              </button>
-              <span class="hidden">
-                {{ form.DELETE }}
-              </span>
-            </td>
-            {% for hidden in form.hidden_fields %}
-              {{ hidden }}
-            {% endfor %}
-          {% endwith %}
-        </tr>
-      </template>
-    </section>
-    
-    <div class="flex items-center justify-between">
-      <a href="{% url 'schemas:schema_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
-        ← ← Volver al listado
-      </a>
-      <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
-        Guardar esquema
-      </button>
+        <a href="{% url 'schemas:schema_list' %}" class="text-xs font-bold text-slate-400 hover:text-emerald-400 uppercase tracking-widest transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 0118 0z"></path></svg>
+            Volver al listado
+        </a>
     </div>
 
-    <section class="mt-6 bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-[11px] space-y-2">
-      <h3 class="text-sm font-semibold mb-1">¿Qué significa cada columna del esquema?</h3>
-      <p class="text-slate-300">
-        Esta tabla define la estructura de los datos que se van a cargar. Una buena definición aquí evita muchos errores
-        al momento de subir archivos.
-      </p>
-      <ul class="list-disc list-inside text-slate-300 space-y-1">
-        <li><strong>Nombre</strong>: identificador interno del campo (sin espacios). Es el nombre técnico y también el encabezado que se usará en las plantillas y archivos de carga/exportación.</li>
-        <li><strong>Etiqueta</strong>: descripción para otros usuarios; explica qué representa la columna y qué tipo de datos se espera.</li>
-        <li><strong>Tipo</strong>: tipo de dato esperado (entero, decimal, texto, fecha, sí/no, etc.).</li>
-        <li><strong>Req.</strong>: indica si el campo es obligatorio; si está marcado, no se aceptan filas vacías en esa columna.</li>
-        <li><strong>Mín. / Máx.</strong>: valores mínimo y máximo permitidos para datos numéricos (ayudan a detectar errores de dedo).</li>
-        <li><strong>Unidad</strong>: unidad de medida que se mostrará en pantallas y gráficos (por ejemplo TM/día, m³, %, kWh).</li>
-        <li><strong>Rol gráfico</strong>: cómo se usa el campo en los gráficos (eje X, eje Y, serie o filtro).</li>
-        <li><strong>Agreg.</strong>: forma en que se resume el campo al agrupar datos (suma, promedio, máximo, mínimo, etc.).</li>
-        <li><strong>KPI</strong>: marca este campo como indicador principal para que aparezca destacado en los tableros.</li>
-        <li><strong>Orden</strong>: posición en la que se mostrará la columna en tablas y formularios.</li>
-        <li><strong>Activo</strong>: indica si la columna sigue en uso. Se puede desactivar sin borrar el historial ya cargado.</li>
-        <li><strong>Eliminar</strong>: opción para quitar la columna de este esquema (no elimina los datos ya registrados en versiones anteriores).</li>
-      </ul>
-    </section>
+    <form method="post" class="space-y-8">
+        {% csrf_token %}
 
-  </form>
+        <!-- General Data Section -->
+        <section class="glass-card rounded-3xl p-8 space-y-8 border-white/5 bg-gradient-to-br from-emerald-500/5 to-transparent">
+            <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                Parámetros Globales
+            </h3>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Planta / Unidad</label>
+                    {% if is_admin %}{{ form.plant }}{% else %}
+                        {% if dataset and dataset.plant %}
+                            <div class="px-4 py-2 rounded-xl bg-slate-800/50 border border-white/5 text-slate-200 text-xs font-bold">{{ dataset.plant.name }}</div>
+                            <input type="hidden" name="{{ form.plant.name }}" value="{{ dataset.plant.id }}">
+                        {% else %}{{ form.plant }}{% endif %}
+                    {% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Proyecto Relacionado</label>
+                    {% if is_admin %}{{ form.project }}{% else %}
+                        {% if dataset and dataset.project %}
+                            <div class="px-4 py-2 rounded-xl bg-slate-800/50 border border-white/5 text-slate-200 text-xs font-bold">{{ dataset.project.name }}</div>
+                            <input type="hidden" name="{{ form.project.name }}" value="{{ dataset.project.id }}">
+                        {% else %}{{ form.project }}{% endif %}
+                    {% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre Técnico del Dataset</label>
+                    {{ form.name }}
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8 pt-4 border-t border-white/5">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Versión</label>
+                    {{ form.version }}
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Frecuencia Operativa</label>
+                    {{ form.validation_frequency }}
+                </div>
+                <div class="flex items-center gap-6 pt-6">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        {{ form.is_active }}
+                        <span class="text-[10px] font-bold text-slate-500 uppercase group-hover:text-slate-300 transition-colors">Esquema Activo</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        {{ form.is_one_time }}
+                        <span class="text-[10px] font-bold text-slate-500 uppercase group-hover:text-slate-300 transition-colors">Carga Única</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Columns Section -->
+        <section class="glass-card rounded-3xl overflow-hidden border-white/5">
+            <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+                <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                    Definición de Campos (Columnas)
+                </h3>
+                <button type="button" id="add-column-btn" class="btn-primary py-2 px-6 glow-emerald">
+                    + Añadir Columna
+                </button>
+            </div>
+
+            {{ formset.management_form }}
+            <input type="hidden" data-schema-columns-total-forms id="id_{{ formset.prefix }}-TOTAL_FORMS" name="{{ formset.management_form.TOTAL_FORMS.html_name }}" value="{{ formset.management_form.TOTAL_FORMS.value }}" />
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-white/[0.02] text-[9px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                            <th class="px-4 py-4">Nombre / Etiqueta</th>
+                            <th class="px-4 py-4">Tipo Dato</th>
+                            <th class="px-2 py-4 text-center">Req.</th>
+                            <th class="px-2 py-4 text-center">Mín/Máx</th>
+                            <th class="px-2 py-4 text-center">Unidad</th>
+                            <th class="px-2 py-4">Rol Gráfico</th>
+                            <th class="px-2 py-4 text-center">KPI</th>
+                            <th class="px-4 py-4 text-right">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="columns-body" class="text-[10px]">
+                        {% for form in formset.forms %}
+                        <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group align-top" data-column-row>
+                            <td class="px-4 py-4 space-y-2">
+                                {{ form.name }}
+                                {{ form.label }}
+                            </td>
+                            <td class="px-4 py-4">{{ form.data_type }}</td>
+                            <td class="px-2 py-4 text-center">{{ form.required }}</td>
+                            <td class="px-2 py-4 space-y-1">
+                                {{ form.min_value }}
+                                {{ form.max_value }}
+                            </td>
+                            <td class="px-2 py-4 text-center">{{ form.unit }}</td>
+                            <td class="px-2 py-4 space-y-2">
+                                {{ form.axis_role }}
+                                {{ form.default_agg }}
+                            </td>
+                            <td class="px-2 py-4 text-center">{{ form.is_primary_kpi }}</td>
+                            <td class="px-4 py-4 text-right">
+                                <button type="button" class="text-red-500 hover:text-red-400 font-bold uppercase tracking-widest text-[8px]" data-delete-row>ELIMINAR</button>
+                                <span class="hidden">{{ form.DELETE }}</span>
+                                {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <template id="empty-column-row">
+                <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors align-top" data-column-row>
+                    {% with form=formset.empty_form %}
+                    <td class="px-4 py-4 space-y-2">{{ form.name }}{{ form.label }}</td>
+                    <td class="px-4 py-4">{{ form.data_type }}</td>
+                    <td class="px-2 py-4 text-center">{{ form.required }}</td>
+                    <td class="px-2 py-4 space-y-1">{{ form.min_value }}{{ form.max_value }}</td>
+                    <td class="px-2 py-4 text-center">{{ form.unit }}</td>
+                    <td class="px-2 py-4 space-y-2">{{ form.axis_role }}{{ form.default_agg }}</td>
+                    <td class="px-2 py-4 text-center">{{ form.is_primary_kpi }}</td>
+                    <td class="px-4 py-4 text-right">
+                        <button type="button" class="text-red-500 hover:text-red-400 font-bold uppercase tracking-widest text-[8px]" data-delete-row>ELIMINAR</button>
+                        <span class="hidden">{{ form.DELETE }}</span>
+                        {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                    </td>
+                    {% endwith %}
+                </tr>
+            </template>
+        </section>
+        
+        <div class="flex items-center justify-between pt-4 pb-8">
+            <div class="flex items-center gap-4">
+                <button type="submit" class="btn-primary glow-emerald px-12 py-4">
+                    Confirmar Arquitectura de Datos
+                </button>
+            </div>
+        </div>
+
+        <!-- Educational Help Section -->
+        <section class="p-8 rounded-3xl bg-slate-900/50 border border-white/5 space-y-4">
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Guía de Configuración Técnica</h4>
+            <div class="grid md:grid-cols-2 gap-8 text-[11px] leading-relaxed text-slate-400">
+                <div class="space-y-3">
+                    <p><strong class="text-slate-300">Nombre Técnico:</strong> Es el encabezado que el sistema buscará en los archivos CSV/Excel. No debe contener espacios ni caracteres especiales.</p>
+                    <p><strong class="text-slate-300">Rol Gráfico:</strong> Define si el campo se usará como eje Y (valores), X (tiempos) o como filtro dinámico en los tableros.</p>
+                </div>
+                <div class="space-y-3">
+                    <p><strong class="text-slate-300">Agregación:</strong> Indica si al ver períodos largos el sistema debe sumar los valores, promediarlos o tomar el valor máximo.</p>
+                    <p><strong class="text-slate-300">KPI Principal:</strong> Al marcarlo, este dato aparecerá con prioridad en las tarjetas de resumen y alertas operativas.</p>
+                </div>
+            </div>
+        </section>
+    </form>
+</div>
 {% endblock %}

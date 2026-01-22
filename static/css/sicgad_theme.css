@@ -1,0 +1,208 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
+
+:root {
+    --dark-bg: #030712;
+    /* Slate 950 */
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    /* Slate 900 with transparency */
+    --accent-primary: #10b981;
+    /* Emerald 500 */
+    --accent-secondary: #0ea5e9;
+    /* Sky 500 */
+    --border-glass: rgba(255, 255, 255, 0.08);
+}
+
+.font-header {
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* Glassmorphism primitives */
+.glass-effect {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-glass);
+}
+
+.glass-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.2) 100%);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-glass);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Sidebar Specific */
+.sidebar-link {
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent-primary);
+    transform: scaleY(0);
+    transition: transform 0.2s ease;
+}
+
+.sidebar-link:hover::after,
+.sidebar-link.active::after {
+    transform: scaleY(1);
+}
+
+/* Vibrant Glows */
+.glow-emerald {
+    box-shadow: 0 0 15px -5px var(--accent-primary);
+}
+
+.glow-sky {
+    box-shadow: 0 0 15px -5px var(--accent-secondary);
+}
+
+/* HTMX Transitions */
+.htmx-swapping {
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+}
+
+.htmx-added {
+    opacity: 0;
+}
+
+.fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Forms & Inputs */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+    background: rgba(15, 23, 42, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 0.75rem;
+    color: #f8fafc !important;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem !important;
+    transition: all 0.2s ease !important;
+    width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none !important;
+    border-color: rgba(16, 185, 129, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1) !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+}
+
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 1rem;
+    width: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.25rem;
+    background: rgba(15, 23, 42, 0.5);
+    cursor: pointer;
+    vertical-align: middle;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid black;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--accent-primary);
+    color: #030712;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary:hover {
+    background: #34d399;
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+
+/* Generic Section styling */
+section,
+.card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-glass);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}

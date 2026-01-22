@@ -1,338 +1,136 @@
 {% extends "base.html" %}
 
-{% block title %}Historial de cargas - SICGAD{% endblock %}
-{% block page_title %}Historial de cargas{% endblock %}
+{% block title %}Historial de Cargas - SICGAD{% endblock %}
 
 {% block content %}
-  {% if historical_batches %}
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
-      <div class="flex items-center justify-between mb-3">
+<div class="space-y-8 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-          <h2 class="text-sm font-semibold text-slate-100">Históricos importados</h2>
-          <p class="text-[11px] text-slate-400">
-            Importaciones históricas divididas por día. Puedes enviar el histórico completo a validación en un solo paso.
-          </p>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Historial de Ingestas</h2>
+            <p class="text-slate-500 text-sm">Registro completo de archivos procesados, validaciones y cargas históricas.</p>
         </div>
-      </div>
-      <div class="bg-slate-950/70 border border-slate-800 rounded-lg overflow-hidden">
-        <table class="min-w-full text-[11px]">
-          <thead class="bg-slate-950 text-slate-300">
-            <tr>
-              <th class="px-3 py-2 text-left font-semibold">Creado</th>
-              <th class="px-3 py-2 text-left font-semibold">Planta</th>
-              <th class="px-3 py-2 text-left font-semibold">Dataset</th>
-              <th class="px-3 py-2 text-left font-semibold">Rango</th>
-              <th class="px-3 py-2 text-left font-semibold">Borrador</th>
-              <th class="px-3 py-2 text-left font-semibold">Enviados</th>
-              <th class="px-3 py-2 text-left font-semibold">Publicados</th>
-              <th class="px-3 py-2 text-left font-semibold">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in historical_batches %}
-              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-                <td class="px-3 py-2">{{ row.batch.created_at|date:"Y-m-d H:i" }}</td>
-                <td class="px-3 py-2">
-                  {% if row.batch.plant %}
-                    {{ row.batch.plant.code }}
-                  {% else %}
-                    &mdash;
-                  {% endif %}
-                </td>
-                <td class="px-3 py-2">
-                  {{ row.batch.dataset_type.name }}
-                  {% if row.batch.dataset_type.is_one_time %}
-                    <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
-                      Carga unica
-                    </span>
-                  {% endif %}
-                </td>
-                <td class="px-3 py-2">
-                  {% if row.period_start and row.period_end %}
-                    {{ row.period_start }} → {{ row.period_end }}
-                  {% else %}
-                    -
-                  {% endif %}
-                </td>
-                <td class="px-3 py-2">{{ row.draft_count }}</td>
-                <td class="px-3 py-2">{{ row.submitted_count }}</td>
-                <td class="px-3 py-2">{{ row.published_count }}</td>
-                <td class="px-3 py-2">
-                  {% if row.draft_count %}
-                    <form method="post" action="{% url 'ingest:submit_historical_batch' row.batch.id %}">
-                      {% csrf_token %}
-                      <button type="submit" class="px-3 py-1.5 rounded-md bg-amber-400 text-slate-900 text-[11px] font-semibold hover:bg-amber-300">
-                        Enviar histórico
-                      </button>
-                    </form>
-                  {% else %}
-                    <span class="text-slate-500">-</span>
-                  {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  {% endif %}
-
-  {% if loader_certifications_pending %}
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
-      <div class="flex items-center justify-between mb-2">
-        <div>
-          <h2 class="text-sm font-semibold text-amber-200">Alertas de certificacion mensual</h2>
-          <p class="text-[11px] text-slate-400">
-            El mes anterior ya finalizo y existen consolidaciones automaticas pendientes de revisar y enviar a validacion mensual.
-          </p>
-        </div>
-      </div>
-      <div class="space-y-3">
-        {% for inst in loader_certifications_pending %}
-          <div class="border border-slate-800 rounded-lg p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between bg-slate-950/70">
-            <div>
-              <div class="text-slate-100 font-semibold text-sm">
-                {{ inst.dataset_type.name }}
-                {% if inst.dataset_type.is_one_time %}
-                  <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
-                    Carga unica
-                  </span>
-                {% endif %}
-              </div>
-              <div class="text-[11px] text-slate-400">
-                {% if inst.plant %}
-                  Planta {{ inst.plant.code }}
-                {% elif inst.project %}
-                  Proyecto {{ inst.project.name }}
-                {% else %}
-                  Sin origen
-                {% endif %}
-                - periodo {{ inst.period }}
-              </div>
-              <div class="text-[11px] text-slate-500">
-                Estado actual: {{ inst.get_state_display }}
-              </div>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <a href="{% url 'ingest:certification_review' inst.pk %}?next={{ request.path|urlencode }}" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-100 text-[11px] hover:bg-slate-700">
-                Ver consolidacion
-              </a>
-              <form method="post" action="{% url 'ingest:submit_instance' inst.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="px-3 py-1.5 rounded-md bg-emerald-500 text-slate-900 text-[11px] font-semibold hover:bg-emerald-400">
-                  Enviar a validacion mensual
-                </button>
-              </form>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    </section>
-  {% endif %}
-
-  {% if loader_certifications_rejected %}
-    <section class="bg-red-950/40 border border-red-800 rounded-xl p-4 mb-6 text-xs">
-      <div class="flex items-center justify-between mb-2">
-        <div>
-          <h2 class="text-sm font-semibold text-red-200">Certificaciones rechazadas</h2>
-          <p class="text-[11px] text-red-200/80">
-            Un validador devolvio estas consolidaciones con observaciones. Revisa los comentarios y corrige antes de reenviar.
-          </p>
-        </div>
-      </div>
-      <div class="space-y-3">
-        {% for inst in loader_certifications_rejected %}
-          <div class="border border-red-800 rounded-lg p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between bg-red-900/30">
-            <div>
-              <div class="text-slate-100 font-semibold text-sm">
-                {{ inst.dataset_type.name }}
-                {% if inst.dataset_type.is_one_time %}
-                  <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
-                    Carga unica
-                  </span>
-                {% endif %}
-              </div>
-              <div class="text-[11px] text-slate-300">
-                {% if inst.plant %}
-                  Planta {{ inst.plant.code }}
-                {% elif inst.project %}
-                  Proyecto {{ inst.project.name }}
-                {% else %}
-                  Sin origen
-                {% endif %}
-                - periodo {{ inst.period }}
-              </div>
-              <div class="text-[11px] text-red-200">
-                Motivo del rechazo: {{ inst.last_error_summary|default:"Sin detalles" }}
-              </div>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <a href="{% url 'ingest:certification_review' inst.pk %}?next={{ request.path|urlencode }}" class="px-3 py-1.5 rounded-md bg-slate-800 text-slate-100 text-[11px] hover:bg-slate-700">
-                Revisar cambios
-              </a>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    </section>
-  {% endif %}
-
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
-    <div class="flex items-center justify-between mb-3">
-      <div>
-        <h2 class="text-sm font-semibold text-slate-100">Historial de certificaciones</h2>
-        <p class="text-[11px] text-slate-400">
-          Consulta los envíos automáticos de certificación mensual y su estado actual.
-        </p>
-      </div>
+        {% if not is_admin %}
+        <a href="{% url 'ingest:upload' %}" class="btn-primary glow-emerald">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            Nueva Carga de Datos
+        </a>
+        {% endif %}
     </div>
-    <div class="bg-slate-950/70 border border-slate-800 rounded-lg overflow-hidden">
-      <table class="min-w-full text-[11px]">
-        <thead class="bg-slate-950 text-slate-300">
-          <tr>
-            <th class="px-3 py-2 text-left font-semibold">Actualizado</th>
-            <th class="px-3 py-2 text-left font-semibold">Planta</th>
-            <th class="px-3 py-2 text-left font-semibold">Dataset</th>
-            <th class="px-3 py-2 text-left font-semibold">Periodo</th>
-            <th class="px-3 py-2 text-left font-semibold">Estado</th>
-            <th class="px-3 py-2 text-left font-semibold">Comentario</th>
-            <th class="px-3 py-2 text-left font-semibold">Accion</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inst in loader_certifications_history %}
-            <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-              <td class="px-3 py-2">{{ inst.updated_at|date:"Y-m-d H:i" }}</td>
-              <td class="px-3 py-2">
-                {% if inst.plant %}
-                  {{ inst.plant.code }}
-                {% elif inst.project %}
-                  {{ inst.project.name }}
-                {% else %}
-                  &mdash;
-                {% endif %}
-              </td>
-              <td class="px-3 py-2">
-                {{ inst.dataset_type.name }}
-                {% if inst.dataset_type.is_one_time %}
-                  <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
-                    Carga unica
-                  </span>
-                {% endif %}
-              </td>
-              <td class="px-3 py-2">{{ inst.period }}</td>
-              <td class="px-3 py-2">
-                {{ inst.get_state_display }}
-              </td>
-              <td class="px-3 py-2 text-[10px]">
-                {% if inst.last_error_summary %}
-                  <span class="text-red-300">{{ inst.last_error_summary|truncatechars:80 }}</span>
-                {% else %}
-                  <span class="text-slate-500">-</span>
-                {% endif %}
-              </td>
-              <td class="px-3 py-2">
-                <a href="{% url 'ingest:certification_review' inst.pk %}?next={{ request.path|urlencode }}" class="text-emerald-300 hover:text-emerald-200">
-                  Revisar
-                </a>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="7" class="px-3 py-4 text-center text-slate-400">
-                Todavía no hay certificaciones registradas para tus plantas.
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
 
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-sm font-semibold">Ultimas cargas de datos</h2>
-    {% if not is_admin %}
-      <a href="{% url 'ingest:upload' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
-        Nueva carga
-      </a>
+    {% if historical_batches %}
+    <!-- Historical Batches Section -->
+    <section class="space-y-4">
+        <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Inyecciones Históricas Masivas
+        </h3>
+        <div class="glass-card rounded-3xl overflow-hidden border-white/5 bg-indigo-500/5">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <th class="px-6 py-4">Fecha Importación</th>
+                        <th class="px-6 py-4">Origen / Dataset</th>
+                        <th class="px-6 py-4 text-center">Rango Temporal</th>
+                        <th class="px-6 py-4 text-center">Progreso (D/S/P)</th>
+                        <th class="px-6 py-4 text-right">Aciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for row in historical_batches %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors">
+                        <td class="px-6 py-4 font-mono text-[10px] text-slate-400">{{ row.batch.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-200">{{ row.batch.dataset_type.name }}</span>
+                                <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">PLA: {{ row.batch.plant.code|default:"PROY" }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">{{ row.period_start }} → {{ row.period_end }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex justify-center gap-2">
+                                <span class="text-[10px] font-bold text-slate-600 bg-black/30 px-2 py-0.5 rounded border border-white/5">{{ row.draft_count }}</span>
+                                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{{ row.submitted_count }}</span>
+                                <span class="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{{ row.published_count }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            {% if row.draft_count %}
+                            <form method="post" action="{% url 'ingest:submit_historical_batch' row.batch.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="text-[10px] font-black text-amber-500 hover:text-amber-400 uppercase tracking-widest transition-colors">Enviar Pack</button>
+                            </form>
+                            {% else %}
+                            <span class="text-slate-700 text-[10px] font-black uppercase">VINCULADO</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
     {% endif %}
-  </div>
 
-  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
-    <table class="min-w-full text-xs">
-      <thead class="bg-slate-950/80 text-slate-300">
-        <tr>
-          <th class="px-3 py-2 text-left font-semibold">Fecha</th>
-          <th class="px-3 py-2 text-left font-semibold">Planta / Proyecto</th>
-          <th class="px-3 py-2 text-left font-semibold">Dataset</th>
-          <th class="px-3 py-2 text-left font-semibold">Periodo</th>
-          <th class="px-3 py-2 text-left font-semibold">Cargado por</th>
-          <th class="px-3 py-2 text-left font-semibold">Estado</th>
-          <th class="px-3 py-2 text-left font-semibold">Comentario</th>
-          <th class="px-3 py-2 text-left font-semibold">Filas</th>
-          <th class="px-3 py-2 text-left font-semibold">Errores</th>
-          <th class="px-3 py-2 text-left font-semibold">Ver datos</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for inst in instances %}
-          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-            <td class="px-3 py-2 align-top">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
-            <td class="px-3 py-2 align-top">
-              {% if inst.plant %}
-                {{ inst.plant.code }}
-              {% elif inst.project %}
-                {{ inst.project.name }}
-              {% else %}
-                &mdash;
-              {% endif %}
-            </td>
-            <td class="px-3 py-2 align-top">
-              {{ inst.dataset_type.name }}
-              {% if inst.dataset_type.is_one_time %}
-                <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[10px]">
-                  Carga unica
-                </span>
-              {% endif %}
-            </td>
-            <td class="px-3 py-2 align-top">{{ inst.period }}</td>
-            <td class="px-3 py-2 align-top">
-              {% if inst.created_by and inst.created_by.user %}
-                {{ inst.created_by.user.get_full_name|default:inst.created_by.user.username }}
-              {% else %}
-                <span class="text-slate-500">Desconocido</span>
-              {% endif %}
-            </td>
-            <td class="px-3 py-2 align-top">{{ inst.get_state_display }}</td>
-            <td class="px-3 py-2 align-top text-[10px]">
-              {% if inst.last_error_summary %}
-                <span class="text-red-300">
-                  {{ inst.last_error_summary|truncatechars:80 }}
-                </span>
-              {% else %}
-                <span class="text-slate-500">-</span>
-              {% endif %}
-            </td>
-            <td class="px-3 py-2 align-top">{{ inst.row_count }}</td>
-            <td class="px-3 py-2 align-top">{{ inst.error_count }}</td>
-            <td class="px-3 py-2 align-top">
-              {% if is_validator or is_admin %}
-                <a href="{% url 'ingest:instance_detail' inst.pk %}?next={{ request.path|urlencode }}" class="text-emerald-300 hover:text-emerald-200 text-xs">
-                  Ver datos
-                </a>
-              {% else %}
-                <span class="text-slate-500 text-xs">-</span>
-              {% endif %}
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="8" class="px-3 py-4 text-center text-slate-400">
-              Aun no hay cargas registradas.
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <!-- Main History Table -->
+    <section class="space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m3.293-7.707a1 1 0 011.414 0L9 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"></path></svg>
+                Últimas Cargas Individuales
+            </h3>
+        </div>
+        <div class="glass-card rounded-3xl overflow-hidden border-white/5">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <th class="px-6 py-4">Fecha Carga</th>
+                        <th class="px-6 py-4">Dataset / Origen</th>
+                        <th class="px-6 py-4 text-center">Periodo</th>
+                        <th class="px-6 py-4 text-center">Volumen</th>
+                        <th class="px-6 py-4 text-center">Estado</th>
+                        <th class="px-6 py-4 text-right">Datos</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for inst in instances %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
+                        <td class="px-6 py-4 font-mono text-[10px] text-slate-500">{{ inst.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-200">{{ inst.dataset_type.name }}</span>
+                                <span class="text-[9px] font-black text-slate-600 uppercase tracking-tighter">PLA: {{ inst.plant.code|default:"PROY" }} · POR: {{ inst.created_by.user.username|default:"Sistema" }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="text-[10px] font-bold text-sky-400 uppercase">{{ inst.period }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="text-[10px] font-bold text-slate-300">{{ inst.row_count }} <span class="text-slate-600">filas</span></span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter
+                                {% if inst.state == 'PUBLISHED' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
+                                {% elif inst.state == 'DRAFT' %}bg-slate-800 text-slate-500
+                                {% else %}bg-amber-500/10 text-amber-500 border border-amber-500/20{% endif %}">
+                                {{ inst.get_state_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{% url 'ingest:instance_detail' inst.pk %}?next={{ request.path|urlencode }}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all inline-block">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center italic text-slate-600">No hay cargas registradas en el historial.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 {% endblock %}

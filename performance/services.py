@@ -34,12 +34,19 @@ def resolve_variable_value(variable: PerformanceVariable, window: MonthWindow) -
     Devuelve (valor, traza).
     """
 
-    mappings = list(variable.mappings.filter(is_active=True).select_related("dataset_type", "column"))
+    mappings = list(
+        variable.mappings.filter(is_active=True)
+        .select_related("dataset_type", "column")
+        .order_by("-updated_at")
+    )
     trace: dict = {"variable": variable.key, "mappings": [m.id for m in mappings]}
 
-    if len(mappings) != 1:
-        trace["error"] = "Se requiere exactamente 1 mapping activo para esta variable"
+    if not mappings:
+        trace["error"] = "Se requiere al menos 1 mapping activo para esta variable"
         return None, trace
+
+    if len(mappings) > 1:
+        trace["warning"] = "Se encontraron multiples mappings activos; se usa el mas reciente"
 
     mapping = mappings[0]
     shifted_start = shift_months(window.period_start, -mapping.offset_months)
@@ -140,23 +147,11 @@ def resolve_variable_value(variable: PerformanceVariable, window: MonthWindow) -
     return float(value), trace
 
 
-def compute_indicator(indicator: PerformanceIndicator, window: MonthWindow) -> tuple[float | None, str, dict]:
-    """
-    Devuelve (valor, status, trace).
-
-    Implementación inicial para 3 indicadores semilla; el resto queda NO_CALCULABLE.
-    """
-
-    variable_values: dict[str, float] = {}
-    variable_traces: dict[str, dict] = {}
-    for v in indicator.variables.filter(is_active=True):
-        val, tr = resolve_variable_value(v, window)
-        variable_traces[v.key] = tr
-        if val is None:
-            return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {"variables": variable_traces}
-        variable_values[v.key] = float(val)
-
-    key = indicator.key
+def _compute_indicator_value(
+    key: str,
+    variable_values: dict[str, float],
+    variable_traces: dict[str, dict],
+) -> tuple[float | None, str, dict]:
     try:
         if key == "pcs.formula1_yield_pct":
             msales = variable_values["pcs.f1.msales_tm"]
@@ -174,26 +169,60 @@ def compute_indicator(indicator: PerformanceIndicator, window: MonthWindow) -> t
             e = variable_values["pcs.energy_equivalent_boe"]
             prod = variable_values["pcs.salts_mass_tm"]
             if prod <= 0:
-                return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {"variables": variable_traces, "error": "denominator<=0"}
+                return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {
+                    "variables": variable_traces,
+                    "error": "denominator<=0",
+                }
             return e / prod, PerformanceIndicatorResult.STATUS_SUCCESS, {"variables": variable_traces}
 
         if key == "kcl.yield_pct":
             p = variable_values["kcl.product_mass_tm"]
             feed = variable_values["kcl.feed_mass_tm"]
             if feed <= 0:
-                return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {"variables": variable_traces, "error": "denominator<=0"}
+                return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {
+                    "variables": variable_traces,
+                    "error": "denominator<=0",
+                }
             return (p / feed) * 100.0, PerformanceIndicatorResult.STATUS_SUCCESS, {"variables": variable_traces}
 
         if key == "lic.yield_pct":
             p = variable_values["lic.product_mass_tm"]
             feed = variable_values["lic.feed_mass_tm"]
             if feed <= 0:
-                return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {"variables": variable_traces, "error": "denominator<=0"}
+                return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {
+                    "variables": variable_traces,
+                    "error": "denominator<=0",
+                }
             return (p / feed) * 100.0, PerformanceIndicatorResult.STATUS_SUCCESS, {"variables": variable_traces}
 
-        return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {"variables": variable_traces, "error": "indicador no implementado"}
+        return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {
+            "variables": variable_traces,
+            "error": "indicador no implementado",
+        }
     except Exception as exc:
-        return None, PerformanceIndicatorResult.STATUS_ERROR, {"variables": variable_traces, "exception": str(exc)}
+        return None, PerformanceIndicatorResult.STATUS_ERROR, {
+            "variables": variable_traces,
+            "exception": str(exc),
+        }
+
+
+def compute_indicator(indicator: PerformanceIndicator, window: MonthWindow) -> tuple[float | None, str, dict]:
+    """
+    Devuelve (valor, status, trace).
+
+    Implementacion inicial para 3 indicadores semilla; el resto queda NO_CALCULABLE.
+    """
+
+    variable_values: dict[str, float] = {}
+    variable_traces: dict[str, dict] = {}
+    for v in indicator.variables.filter(is_active=True):
+        val, tr = resolve_variable_value(v, window)
+        variable_traces[v.key] = tr
+        if val is None:
+            return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {"variables": variable_traces}
+        variable_values[v.key] = float(val)
+
+    return _compute_indicator_value(indicator.key, variable_values, variable_traces)
 
 
 def compute_indicator_for_stage(
@@ -203,34 +232,50 @@ def compute_indicator_for_stage(
     stage: str,
 ) -> tuple[float | None, str, dict]:
     """
-    Igual a compute_indicator, pero resolviendo variables con mapeos del stage dado.
+    Compatibilidad: usa los mapeos activos sin diferenciar stage.
     """
     variable_values: dict[str, float] = {}
     variable_traces: dict[str, dict] = {}
     for v in indicator.variables.filter(is_active=True):
-        val, tr = resolve_variable_value_for_stage(v, window, stage=stage)
+        val, tr = resolve_variable_value(v, window)
         variable_traces[v.key] = tr
         if val is None:
             return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {"variables": variable_traces}
         variable_values[v.key] = float(val)
 
-    key = indicator.key
-    try:
-        if key == "pcs.formula1_yield_pct":
-            msales = variable_values["pcs.f1.msales_tm"]
-            msalmuera = variable_values["pcs.f1.msalmuera_tm"]
-            xsolids = variable_values["pcs.f1.xsolids_frac"]
-            denom = msalmuera * xsolids
-            if denom <= 0:
-                return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {
-                    "variables": variable_traces,
-                    "error": "denominator<=0",
-                }
-            return (msales / denom) * 100.0, PerformanceIndicatorResult.STATUS_SUCCESS, {"variables": variable_traces}
+    return _compute_indicator_value(indicator.key, variable_values, variable_traces)
 
-        return compute_indicator(indicator, window)
-    except Exception as exc:
-        return None, PerformanceIndicatorResult.STATUS_ERROR, {"variables": variable_traces, "exception": str(exc)}
+
+def compute_and_store_indicators(
+    plant,
+    window: MonthWindow,
+    *,
+    frequency: str,
+) -> int:
+    indicators = list(
+        PerformanceIndicator.objects.filter(plant=plant, is_active=True)
+        .prefetch_related("variables")
+        .order_by("key")
+    )
+    updated = 0
+    for indicator in indicators:
+        value, status, trace = compute_indicator(indicator, window)
+        PerformanceIndicatorResult.objects.update_or_create(
+            indicator=indicator,
+            plant=plant,
+            period_end=window.period_end,
+            frequency=frequency,
+            defaults={
+                "period_start": window.period_start,
+                "stage": "DRAFT",
+                "status": status,
+                "numeric_value": value,
+                "text_value": "",
+                "trace": trace,
+            },
+        )
+        updated += 1
+    return updated
 
 
 def resolve_variable_value_for_stage(

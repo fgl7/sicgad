@@ -1,51 +1,64 @@
 {% extends "base.html" %}
 
 {% block title %}Instituciones - SICGAD{% endblock %}
-{% block page_title %}Administracion de instituciones{% endblock %}
 
 {% block content %}
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-sm font-semibold">Instituciones configuradas</h2>
-    <a href="{% url 'accounts:institution_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
-      Nueva institucion
-    </a>
-  </div>
+<div class="space-y-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Estructura Institucional</h2>
+            <p class="text-slate-500 text-sm">Organización jerárquica y entidades vinculadas al sistema.</p>
+        </div>
+        <a href="{% url 'accounts:institution_create' %}" class="btn-primary glow-emerald">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            Añadir Institución
+        </a>
+    </div>
 
-  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
-    <table class="min-w-full text-xs">
-      <thead class="bg-slate-950/80 text-slate-300">
-        <tr>
-          <th class="px-3 py-2 text-left font-semibold">Codigo</th>
-          <th class="px-3 py-2 text-left font-semibold">Nombre</th>
-          <th class="px-3 py-2 text-left font-semibold">Activa</th>
-          <th class="px-3 py-2 text-left font-semibold">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for institution in institutions %}
-          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-            <td class="px-3 py-2 align-top font-mono text-[11px]">{{ institution.code }}</td>
-            <td class="px-3 py-2 align-top">{{ institution.name }}</td>
-            <td class="px-3 py-2 align-top">
-              {% if institution.is_active %}Si{% else %}No{% endif %}
-            </td>
-            <td class="px-3 py-2 align-top text-right space-x-2">
-              <a href="{% url 'accounts:institution_edit' institution.pk %}" class="text-xs text-emerald-400 hover:underline">
-                Editar
-              </a>
-              <a href="{% url 'accounts:institution_delete' institution.pk %}" class="text-xs text-red-400 hover:underline">
-                Eliminar
-              </a>
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="4" class="px-3 py-4 text-center text-slate-400">
-              Aun no hay instituciones configuradas.
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <div class="glass-card rounded-3xl overflow-hidden border-white/5">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                        <th class="px-8 py-4">Identificador</th>
+                        <th class="px-8 py-4">Razón Social / Entidad</th>
+                        <th class="px-8 py-4">Estado Operativo</th>
+                        <th class="px-8 py-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for institution in institutions %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
+                        <td class="px-8 py-4 font-mono text-emerald-400 font-bold text-[11px] tracking-tight uppercase">{{ institution.code }}</td>
+                        <td class="px-8 py-4">
+                            <span class="text-slate-200 font-bold tracking-tight">{{ institution.name }}</span>
+                        </td>
+                        <td class="px-8 py-4">
+                            {% if institution.is_active %}
+                                <div class="flex items-center gap-2">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 glow-emerald"></div>
+                                    <span class="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest">Activa</span>
+                                </div>
+                            {% else %}
+                                <div class="flex items-center gap-2 opacity-50">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inactiva</span>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td class="px-8 py-4 text-right space-x-4">
+                            <a href="{% url 'accounts:institution_edit' institution.pk %}" class="text-[10px] font-black text-sky-400 hover:text-sky-300 uppercase tracking-widest transition-colors">Configurar</a>
+                            <a href="{% url 'accounts:institution_delete' institution.pk %}" class="text-[10px] font-black text-slate-600 hover:text-red-500 uppercase tracking-widest transition-colors">Eliminar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-8 py-16 text-center text-slate-600 italic">No se han registrado instituciones en la base de datos central.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -1,117 +1,110 @@
 {% extends "base.html" %}
 
 {% block title %}Auditoría - SICGAD{% endblock %}
-{% block page_title %}Auditoría{% endblock %}
 
 {% block content %}
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4">
-    <h2 class="text-sm font-semibold">Trazabilidad y logs</h2>
-    <p class="text-[11px] text-slate-400">
-      Aquí se registran las acciones relevantes del sistema (cargas, envíos, validaciones, cambios de esquemas y usuarios).
-    </p>
-
-    <form method="get" class="flex flex-wrap items-end gap-3 text-[11px] bg-slate-950/80 border border-slate-800 rounded-lg p-3">
-      <div>
-        <label class="block mb-1 text-slate-300">Usuario</label>
-        <input
-          type="text"
-          name="user"
-          value="{{ filter_user }}"
-          class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-          placeholder="Nombre de usuario"
-        />
-      </div>
-      <div>
-        <label class="block mb-1 text-slate-300">Acción</label>
-        <select
-          name="action"
-          class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs min-w-[140px]"
-        >
-          <option value="">Todas</option>
-          {% for code, label in actions %}
-            <option value="{{ code }}" {% if filter_action == code %}selected{% endif %}>
-              {{ label }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div>
-        <label class="block mb-1 text-slate-300">Desde</label>
-        <input
-          type="date"
-          name="from"
-          value="{{ filter_from }}"
-          class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-        />
-      </div>
-      <div>
-        <label class="block mb-1 text-slate-300">Hasta</label>
-        <input
-          type="date"
-          name="to"
-          value="{{ filter_to }}"
-          class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-        />
-      </div>
-      <div class="flex items-center gap-2 mt-4">
-        <input
-          type="checkbox"
-          id="only_mine"
-          name="only_mine"
-          value="1"
-          class="rounded border-slate-700"
-          {% if only_mine %}checked{% endif %}
-        />
-        <label for="only_mine" class="text-slate-300">Solo mis acciones</label>
-      </div>
-      <div class="ml-auto flex items-center gap-2 mt-4">
-        <button
-          type="submit"
-          class="px-3 py-1.5 rounded-md bg-emerald-600 text-[11px] font-semibold hover:bg-emerald-500"
-        >
-          Aplicar filtros
-        </button>
-        <a
-          href="{% url 'audit:log_list' %}"
-          class="px-3 py-1.5 rounded-md border border-slate-600 text-[11px] text-slate-200 hover:bg-slate-800/60"
-        >
-          Limpiar
-        </a>
-      </div>
-    </form>
-
-    <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
-      <table class="min-w-full text-xs">
-        <thead class="bg-slate-950 text-slate-300">
-          <tr>
-            <th class="px-3 py-2 text-left font-semibold">Fecha</th>
-            <th class="px-3 py-2 text-left font-semibold">Usuario</th>
-            <th class="px-3 py-2 text-left font-semibold">Acción</th>
-            <th class="px-3 py-2 text-left font-semibold">Módulo</th>
-            <th class="px-3 py-2 text-left font-semibold">Objeto</th>
-            <th class="px-3 py-2 text-left font-semibold">Detalles</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for log in logs %}
-            <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-              <td class="px-3 py-2 align-top">{{ log.created_at|date:"Y-m-d H:i" }}</td>
-              <td class="px-3 py-2 align-top">{{ log.username|default:"Sistema" }}</td>
-              <td class="px-3 py-2 align-top">{{ log.get_action_display }}</td>
-              <td class="px-3 py-2 align-top">{{ log.module|default:"General" }}</td>
-              <td class="px-3 py-2 align-top">{{ log.object_repr|default:"-" }}</td>
-              <td class="px-3 py-2 align-top">{{ log.details|truncatechars:80 }}</td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="6" class="px-3 py-4 text-center text-slate-400">
-                Del sistema aún no se han registrado acciones auditables.
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<div class="space-y-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Trazabilidad del Sistema</h2>
+            <p class="text-slate-500 text-sm">Registro inmutable de actividades operativas y cambios de configuración.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Monitoreo Realtime</span>
+        </div>
     </div>
-  </section>
-{% endblock %}
 
+    <!-- Filters Section -->
+    <div class="glass-card rounded-3xl p-6 border-white/5 bg-slate-900/20">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 items-end">
+            <div class="space-y-2 lg:col-span-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Usuario</label>
+                <input type="text" name="user" value="{{ filter_user }}" placeholder="Filtro de identidad..." />
+            </div>
+            
+            <div class="space-y-2 lg:col-span-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Acción Ejecutada</label>
+                <select name="action">
+                    <option value="">Todas las actividades</option>
+                    {% for code, label in actions %}
+                        <option value="{{ code }}" {% if filter_action == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Desde</label>
+                <input type="date" name="from" value="{{ filter_from }}" />
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hasta</label>
+                <input type="date" name="to" value="{{ filter_to }}" />
+            </div>
+
+            <div class="flex items-center gap-3 pt-6 lg:pt-0">
+                <label class="flex items-center gap-2 cursor-pointer group">
+                    {{ form.only_mine }}
+                    <input type="checkbox" id="only_mine" name="only_mine" value="1" {% if only_mine %}checked{% endif %} class="rounded bg-slate-800 border-white/10" />
+                    <span class="text-[10px] font-bold text-slate-500 uppercase group-hover:text-slate-300 transition-colors">Solo mías</span>
+                </label>
+            </div>
+
+            <div class="flex items-center gap-2 xl:justify-end">
+                <button type="submit" class="btn-primary py-2 px-6 glow-emerald">Filtrar</button>
+                <a href="{% url 'audit:log_list' %}" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Logs Table Card -->
+    <div class="glass-card rounded-3xl overflow-hidden border-white/5">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <th class="px-6 py-4">Timestamp</th>
+                        <th class="px-6 py-4">Actor</th>
+                        <th class="px-6 py-4">Acción / Módulo</th>
+                        <th class="px-6 py-4">Objeto</th>
+                        <th class="px-6 py-4">Detalle Técnico</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for log in logs %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
+                        <td class="px-6 py-4 font-mono text-[10px] text-slate-500">{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="w-6 h-6 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-[8px] font-black uppercase text-slate-400">
+                                    {{ log.username|default:"SYS"|slice:":2" }}
+                                </span>
+                                <span class="text-slate-300 font-bold text-xs">{{ log.username|default:"Sistema" }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{{ log.get_action_display }}</span>
+                                <span class="text-[9px] font-black text-slate-600 uppercase tracking-tighter">{{ log.module|default:"Core" }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="text-[10px] font-bold text-sky-500/80">{{ log.object_repr|default:"-"|truncatechars:30 }}</span>
+                        </td>
+                        <td class="px-6 py-4 max-w-xs">
+                            <p class="text-[10px] text-slate-500 leading-tight">{{ log.details|truncatechars:120 }}</p>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center italic text-slate-600">No se encontraron registros de auditoría.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

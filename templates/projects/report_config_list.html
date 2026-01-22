@@ -1,55 +1,83 @@
 {% extends "base.html" %}
 
-{% block title %}Configuracion de reportes - SICGAD{% endblock %}
-{% block page_title %}Configuracion de reportes{% endblock %}
+{% block title %}Configuración de Reportes - SICGAD{% endblock %}
 
 {% block content %}
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-sm font-semibold">Reportes configurados</h2>
-    <a href="{% url 'projects:report_config_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
-      Nuevo reporte
-    </a>
-  </div>
+<div class="space-y-6 fade-in">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Arquitectura de Reportabilidad</h2>
+            <p class="text-slate-500 text-sm">Víncula datasets operativos con visores analíticos de proyectos.</p>
+        </div>
+        <a href="{% url 'projects:report_config_create' %}" class="btn-primary glow-emerald">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            Nueva Configuración
+        </a>
+    </div>
 
-  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
-    <table class="min-w-full text-xs">
-      <thead class="bg-slate-950/80 text-slate-300">
-        <tr>
-          <th class="px-3 py-2 text-left font-semibold">Proyecto</th>
-          <th class="px-3 py-2 text-left font-semibold">Nombre</th>
-          <th class="px-3 py-2 text-left font-semibold">Curva ejecutada</th>
-          <th class="px-3 py-2 text-left font-semibold">Activo</th>
-          <th class="px-3 py-2 text-right font-semibold">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for config in configs %}
-          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-            <td class="px-3 py-2 align-top">{{ config.project.name }}</td>
-            <td class="px-3 py-2 align-top">{{ config.name }}</td>
-            <td class="px-3 py-2 align-top">
-              {{ config.curve_executed_dataset.get_validation_frequency_display }}
-            </td>
-            <td class="px-3 py-2 align-top">
-              {% if config.is_active %}Si{% else %}No{% endif %}
-            </td>
-            <td class="px-3 py-2 align-top text-right space-x-2">
-              <a href="{% url 'projects:report_config_edit' config.id %}" class="text-xs text-emerald-400 hover:underline">
-                Editar
-              </a>
-              <a href="{% url 'projects:report_config_delete' config.id %}" class="text-xs text-red-300 hover:underline">
-                Eliminar
-              </a>
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="5" class="px-3 py-4 text-center text-slate-400">
-              No hay reportes configurados.
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <!-- Inventory Table -->
+    <div class="glass-card rounded-[2rem] overflow-hidden border-white/5 bg-white/[0.01]">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-black/20 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                        <th class="px-8 py-5">Proyecto Asociado</th>
+                        <th class="px-8 py-5">Identificador Reporte</th>
+                        <th class="px-8 py-5">Frecuencia Curva-S</th>
+                        <th class="px-8 py-5 text-center">Estado</th>
+                        <th class="px-8 py-5 text-right">Control</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for config in configs %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
+                        <td class="px-8 py-5">
+                            <span class="text-white font-bold tracking-tight">{{ config.project.name }}</span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="text-slate-400 font-medium text-xs">{{ config.name }}</span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="px-3 py-1 rounded-lg bg-sky-500/10 text-sky-500 text-[10px] font-black uppercase border border-sky-500/20">
+                                {{ config.curve_executed_dataset.get_validation_frequency_display }}
+                            </span>
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            {% if config.is_active %}
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 glow-emerald"></div>
+                                    <span class="text-[9px] font-black uppercase">Vigente</span>
+                                </div>
+                            {% else %}
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 text-slate-500 border border-white/5">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                                    <span class="text-[9px] font-black uppercase">Inactivo</span>
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td class="px-8 py-5 text-right space-x-6">
+                            <a href="{% url 'projects:report_config_edit' config.id %}" class="text-[10px] font-black text-emerald-500 hover:text-white uppercase tracking-widest transition-colors">Configurar</a>
+                            <a href="{% url 'projects:report_config_delete' config.id %}" class="text-[10px] font-black text-slate-700 hover:text-red-500 uppercase tracking-widest transition-colors">Eliminar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-8 py-20 text-center text-slate-600 italic">No se han definido vinculaciones de reportes analíticos.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Helper Info -->
+    <div class="p-8 rounded-[2rem] bg-slate-900/50 border border-white/5 space-y-3">
+        <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Nota Técnica</h4>
+        <p class="text-xs text-slate-500 leading-relaxed font-medium">
+            La configuración de reportes permite desacoplar los registros técnicos cargados por las plantas del visor ejecutivo de proyectos. 
+            Defina aquí qué <span class="text-slate-300">Dataset Operativo</span> servirá como fuente para la Curva-S y qué información cualitativa se mostrará en los tableros.
+        </p>
+    </div>
+</div>
 {% endblock %}

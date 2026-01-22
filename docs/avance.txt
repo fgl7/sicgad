@@ -1,115 +1,261 @@
-AVANCE SICGAD (AL MOMENTO)
-Alcance de este documento: registro de esquemas de produccion (diario) y certificacion mensual.
+3.1 Sistemas concluidos y probados
+
+3.1.1 Autenticación y control de accesos (base del sistema)
+El sistema opera con inicio de sesión restringido; solo usuarios registrados por el administrador del sistema pueden acceder. Se actualizó la barra de navegación (sidebar) por rol para reducir errores operativos y evitar accesos a pantallas no relevantes o no autorizadas.
+
+Roles reconocidos actualmente:
+- ADMIN (rol del sistema): gestiona usuarios, esquemas, proyectos y configuraciones funcionales.
+- LOADER (cargador): crea esquemas (borradores), realiza cargas de datos (borradores) y envía a validación.
+- VALIDATOR (validador): revisa y decide (aprobar/rechazar) según reglas, niveles e institución.
+- VIEWER (visualizador): acceso a vistas permitidas (principalmente datos publicados).
+
+El alcance de permisos puede definirse como global o por planta/proyecto, según membresía (Membership).
+
+Ejemplo del orden lógico de creación, acceso y funcionalidades
+ADMIN -> crea usuarios operativos y define alcances
+- Es el "admin funcional": crea a los usuarios cargadores/validadores/visualizadores y les asigna membresías por planta, por proyecto o global.
+- Durante la creación de usuarios, el admin asigna una contraseña inicial para el primer acceso.
+- En su primer ingreso, el usuario debe actualizar su contraseña a una personal (cambio obligatorio). Este control evita que las credenciales iniciales permanezcan activas y reduce el riesgo de acceso indebido.
+- El admin gestiona: alta/baja de usuarios, actualización de membresías, definición de niveles de validación y configuración de permisos por periodicidad.
+
+Notas de seguridad adicionales:
+- Se registra auditoría de acciones críticas (cargas, ediciones, envíos a validación, aprobaciones/rechazos, creación de esquemas, etc.).
+- La integración de controles adicionales (2FA y rate limiting) está planificada como paso futuro, previo a un despliegue productivo.
 
 
-1) SISTEMAS CONCLUIDOS Y PROBADOS (PRODUCCION DIARIA Y CERTIFICACION MENSUAL)
+3.1.2 Gestión de esquemas (tablas flexibles), versionado y aprobación
+El sistema permite definir esquemas lógicos versionados, evitando la necesidad de crear/alterar tablas físicas para cada cambio. Un esquema define la estructura (columnas, tipos, obligatoriedad, unidades, etc.) y su periodicidad. Un esquema puede estar asociado a una planta o a un proyecto (no ambos).
 
-1.1 Autenticacion y control de accesos (base del sistema)
+Periodicidades soportadas en esquemas:
+- DIARIA (DAILY): captura operativa diaria.
+- SEMANAL (WEEKLY): captura operativa semanal.
+- MENSUAL (MONTHLY): captura mensual (y también certificación mensual cuando aplica).
+- FLEXIBLE (FLEXIBLE): periodicidad no definida, utilizada típicamente para proyecciones u otros esquemas estáticos.
 
-- El sistema opera con inicio de sesion restringido a usuarios registrados.
-- Se implemento una navegacion (sidebar) por rol para reducir errores operativos y evitar accesos a pantallas no relevantes.
-- Roles reconocidos actualmente:
-  - SUPERADMIN (tecnico, creado con createsuperuser): administracion del Django admin y configuracion tecnica.
-  - ADMIN (rol del sistema): gestiona usuarios, esquemas, proyectos y configuraciones funcionales.
-  - LOADER (cargador): realiza cargas de datos (borradores) y envio a validacion.
-  - VALIDATOR (validador): revisa y decide (aprobar/rechazar) segun reglas y niveles.
-  - VIEWER (visualizador): acceso a vistas permitidas (principalmente datos publicados).
-- El alcance de permisos puede definirse como global o por planta/proyecto, segun membership.
+Flujo de creación y aprobación de esquemas (probado)
+LOADER -> crea/edita esquema -> envía a aprobación -> ADMIN aprueba/rechaza
+- El LOADER crea/edita esquemas (no certificación) para las plantas/proyectos habilitados por el admin.
+- El esquema se mantiene en BORRADOR hasta que el LOADER lo envía a aprobación (PENDING).
+- El ADMIN revisa el esquema y decide:
+  - APROBAR: el esquema queda activo y disponible para carga.
+  - RECHAZAR: el esquema queda inactivo y se registra un comentario/observación.
+- Se soporta versionado: cuando se requiere un cambio estructural, se crea una nueva versión del esquema y se gestiona por el mismo flujo.
 
-1.2 Esquemas (tablas flexibles) para produccion y certificacion
-
-- Se consolidaron componentes para crear y administrar "esquemas" (DatasetType) con sus columnas (ColumnDef).
-- Los esquemas operan como tablas flexibles: el sistema valida estructura a partir del esquema, y materializa datos publicados en un modelo por celda (PublishedDataPoint) para consulta y auditoria.
-- Se soportan periodos por dataset y se establece periodicidad (diaria, semanal, mensual o flexible) como parte del esquema.
-- Se habilito un flujo de aprobacion de esquemas (borrador -> pendiente -> aprobado/rechazado) para asegurar que solo esquemas aprobados sean usados en carga.
-
-1.3 Flujo de carga de datos y estados (borrador -> validacion -> publicado)
-
-- Se concluyo el flujo base de carga de datos por archivo:
-  - Cargar archivo (CSV/Excel) con periodo y esquema aprobado.
-  - Crear instancia en estado borrador (DatasetInstance).
-  - Revisar y corregir (si esta en borrador).
-  - Enviar a validacion.
-- Se concluyo el soporte de captura manual para ciertos escenarios, generando tambien instancias en estado borrador.
-- Se habilito historial de cargas y detalle de instancia, para rastrear lo cargado, estado, errores y acciones.
-
-1.4 Certificacion mensual (produccion) y trazabilidad
-
-- Se concluyo el flujo de certificacion mensual de produccion, apoyado en:
-  - Reglas de periodicidad y periodos del mes.
-  - Revision y correccion con trazabilidad (cuando corresponde).
-  - Publicacion final segun reglas definidas de aprobacion.
-- Se reforzo la trazabilidad con registro de auditoria (AuditLog) y registro de decisiones/acciones de validacion.
-
-1.5 Controles de seguridad y calidad de datos (aplicados al flujo de produccion/certificacion)
-
-- Restriccion de acciones por estado: solo borradores pueden corregirse/eliminarse.
-- Separacion clara entre datos borrador y datos publicados:
-  - Los validadores y participantes del flujo pueden revisar borradores.
-  - Los datos oficiales se visualizan desde instancias publicadas/materializadas.
-- Auditoria de acciones: carga, correccion, envio a validacion, validacion, publicacion y eliminacion, con detalle del objeto afectado.
+Controles y seguridad en esquemas (probados):
+- El LOADER puede eliminar esquemas en BORRADOR siempre que no hayan sido enviados a aprobación y no existan instancias (cargas) asociadas.
+- El ADMIN puede marcar un esquema como "carga única" (carga estática) para proteger información base (por ejemplo, proyecciones o valores iniciales).
 
 
-2) PRUEBAS (PRODUCCION DIARIA Y CERTIFICACION MENSUAL)
+3.1.3 Carga de datos (archivo y captura manual) para diario, semanal, mensual y flexible
+Una vez que un esquema está aprobado, el LOADER puede cargar datos para ese esquema. Cada carga genera una instancia con estado controlado, habilitando trazabilidad y un flujo de validación consistente.
 
-2.1 Enfoque de pruebas
+Flujo base de carga (probado):
+- LOADER selecciona esquema aprobado + periodo (fecha) + planta/proyecto (según aplique) y carga archivo.
+- El sistema crea una instancia en estado BORRADOR (DRAFT).
+- El LOADER revisa y, si corresponde, corrige el archivo mientras esté en BORRADOR.
+- El LOADER envía la instancia a VALIDACIÓN (SUBMITTED) cuando está lista.
 
-- Se realizaron pruebas funcionales iterativas con datos reales y casos representativos:
-  - Carga por archivo y captura manual.
-  - Correcciones en borrador y re-envio a validacion.
-  - Aprobacion y rechazo por validadores.
-  - Publicacion y verificacion de lectura de datos publicados.
-  - Certificacion mensual y consistencia entre flujos.
-- Cada prueba fue acompanada de ajustes puntuales cuando se encontraron problemas de:
-  - Estructura del esquema (nombres de columnas, orden, tipos).
-  - Comportamiento del flujo (permisos por rol, alcance por planta/proyecto, estados).
-  - Visualizacion (lectura de datos publicados vs borradores).
+Soporte de formatos y plantillas:
+- Carga por archivo: CSV/Excel, usando como encabezados definidos en la creacion del esquema.
+- Captura manual: permite ingresar valores directamente desde la interfaz (útil para consolidaciones y ciertos esquemas).
+- Descarga de plantillas: el sistema genera plantillas para facilitar el llenado con la estructura del esquema.
 
-2.2 Resultados de pruebas (estado actual)
+Gating e importación histórica (DIARIO):
+- Para datasets diarios existe un flujo de importación histórica, que divide un archivo histórico (con múltiples fechas) en múltiples instancias diarias.
+- La carga diaria se bloquea hasta contar con histórico previo, para asegurar continuidad y habilitar validaciones masivas.
+- Para semanal/mensual/flexible no aplica el gating por histórico por el momento, aunque puede cambiar dependiendo de las solicitudes de los responsables de este tipo de información.
 
-- El flujo de produccion diaria y certificacion mensual se considera implementado y probado a nivel funcional.
-- Se confirmo que el sistema:
-  - Soporta multiples usuarios con roles distintos y alcances distintos.
-  - Permite registrar esquemas, cargar datos, validar, publicar y auditar acciones.
-  - Mantiene trazabilidad y control de estados para evitar modificaciones fuera de flujo.
+Controles de integridad y estados:
+- Una instancia solo puede editarse/eliminarse cuando está en BORRADOR.
+- Una instancia enviada o publicada no se edita directamente por el LOADER.
+- Al publicar, el sistema materializa los datos a una estructura de consulta (PublishedDataPoint), separando "borrador" de "oficial".
 
-2.3 Pendientes recomendados (para este alcance)
-
-- Consolidar un set de escenarios de prueba documentados (casos base y casos borde) con evidencia (capturas/logs).
-- Preparar un entorno piloto con datos reales y monitoreo de incidencias, antes de despliegue productivo.
-- Documentacion de usuario por rol (cargador/validador/administrador) centrada en produccion y certificacion mensual.
+Inmutabilidad y control de cambios (probado / en despliegue gradual):
+- La data publicada (oficial) no se modifica directamente desde el flujo del LOADER.
+- Las correcciones se realizan antes de publicar (en BORRADOR) o mediante mecanismos controlados que exigen justificación y vuelven a pasar por validación cuando corresponde (ver certificación mensual y carga única).
 
 
-3) FLEXIBILIDAD DEL SISTEMA Y NUEVAS INCORPORACIONES EN PRUEBA (UPSTREAM RECURSOS EVAPORITICOS)
+3.1.4 Validación por periodicidad (diaria, semanal, mensual y proyecciones) y publicación
+El sistema soporta validación por roles, niveles e institución, y culmina en publicación (PUBLISHED) cuando se cumplen los requisitos.
 
-3.1 Extensibilidad de esquemas (mas alla de produccion)
+Estados principales de una carga:
+- BORRADOR (DRAFT): creado por el LOADER, editable por el creador.
+- ENVIADO (SUBMITTED): listo para revisión de validadores.
+- VALIDADO (VALIDATED_L1/L2): etapas intermedias de validación cuando aplica multi-nivel.
+- PUBLICADO (PUBLISHED): dato oficial, materializado y disponible para visualización.
+- BLOQUEADO (LOCKED): estado reservado para escenarios controlados (p. ej. cierres o consolidaciones).
 
-- El sistema de esquemas es lo suficientemente flexible para incorporar otros tipos de datos ademas de produccion:
-  - Esquemas de inversiones (ejecucion financiera/fisica, curvas, reportes).
-  - Esquemas estaticos o de carga unica (por ejemplo proyecciones o valores iniciales).
-- Se realizaron pruebas de ingreso de esquemas no-productivos y funcionaron correctamente en cuanto a:
-  - Registro de esquema y columnas.
-  - Carga y control de estados.
-  - Revision/visualizacion segun permisos.
+Reglas generales (probadas):
+- DIARIA: aprobación directa a PUBLICADO (según configuración del flujo diario).
+- SEMANAL/MENSUAL/FLEXIBLE: validación multi-nivel/multi-institución cuando está configurada; se publica al completar requisitos.
 
-3.2 Esquemas estaticos y control de cambios con justificacion (en pruebas)
+Permisos de validación por periodicidad (probado):
+- La membresía del validador define si el usuario puede validar diarios, semanales, mensuales o proyecciones (flags por periodicidad).
+- La bandeja de validación muestra instancias pendientes y el sistema registra decisiones y comentarios.
 
-- Se incorporo el concepto de "carga unica" por esquema para proteger informacion estatica (ej. proyecciones o valores base).
-- La logica busca asegurar que cualquier modificacion posterior quede justificada y registrada en el sistema.
-- Este control se encuentra en proceso de pruebas y ajuste, especialmente para escenarios donde ya existian cargas previas.
+Detalle por periodicidad (probado):
+- Diario (DAILY):
+  - Se prioriza operación continua: carga frecuente, validación y publicación rápida.
+  - Está sujeto al gating por histórico (para habilitar carga diaria).
+- Semanal (WEEKLY):
+  - Permite cortes semanales con validación por los niveles definidos.
+  - Se usa para reportes y curvas con filtro por semana cuando aplica.
+- Mensual (MONTHLY):
+  - Permite cargas mensuales (no certificación) con validación multi-nivel según la organización.
+  - Incluye certificación mensual (caso especial derivado de diarios).
+- Flexible / Proyecciones (FLEXIBLE):
+  - Se usa para esquemas con periodicidad no definida (por ejemplo proyecciones).
+  - Usa permisos de validación específicos para proyecciones.
 
-3.3 Registro y reporte de proyectos (inversiones) para upstream (en pruebas)
 
-- Se implemento un modulo de Proyectos para registrar proyectos y asociarlos a multiples plantas/unidades operativas.
-- Se implemento un sistema de configuracion de reportes por proyecto y una vista de reporte con:
-  - Datos de resumen del proyecto.
-  - Curva S programada y ejecutada.
-  - Filtros (gestion, fuente publicados/borradores y seleccion semanal cuando aplica).
-- Estas capacidades se estan probando actualmente para proyectos ejecutados en el upstream del sector de recursos evaporiticos (exploracion y explotacion).
+3.1.5 Certificación mensual derivada (desde diarios) y correcciones justificadas
+Además de cargas mensuales "normales", el sistema implementa la certificación mensual derivada de diarios, con consolidación del mes anterior cuando existe cobertura diaria completa publicada.
 
-3.4 Estado actual
+Componentes y flujo (probado):
+- El ADMIN crea un esquema de certificación mensual derivado de un esquema diario (selecciona dataset base y columnas).
+- El sistema consolida automáticamente el último mes disponible (mes anterior) y genera/actualiza una instancia mensual.
+- El LOADER puede revisar la consolidación en borrador y, si se requiere ajustar valores consolidados, debe justificar los cambios.
+- Los cambios se registran como solicitudes de cambio con justificación y adjuntos de respaldo (cuando aplica).
+- La consolidación se envía a validación mensual y se publica al completar el flujo correspondiente.
 
-- A la fecha continun las pruebas y ajustes de estas nuevas incorporaciones (inversiones/proyecciones/proyectos) para integrarlas de forma consistente al SICGAD, manteniendo:
-  - Seguridad por rol y alcance.
-  - Control de cambios con justificacion cuando corresponde.
-  - Trazabilidad y auditoria de acciones.
+Control de cambios (probado en certificación mensual):
+- Los campos consolidados no pueden modificarse libremente: el sistema exige una justificación antes de habilitar la edición.
+- La justificación y evidencia quedan registradas y trazables (auditoría + adjuntos).
+
+
+3.1.6 Visualización y análisis de datos (KPIs, tablas, auditoría)
+La información publicada se puede visualizar en tableros y reportes, manteniendo separación entre borradores y datos oficiales.
+
+KPIs y dashboards (probado):
+- Visualización basada en datos publicados (y, según permisos, borradores).
+- Gráficas (ECharts) y tablas para análisis operativo.
+- Selección dinámica de datasets/columnas/series y filtros por fecha/periodo.
+
+Auditoría y trazabilidad (probado):
+- Registro de acciones críticas con usuario, módulo, objeto y detalles.
+- Permite rastrear el origen de datos (quién creó, quién corrigió, quién aprobó/rechazó y cuándo se publicó).
+
+
+3.1.7 Extensibilidad de esquemas: inversiones, proyecciones (carga estática) y proyectos (nuevo)
+A partir de la base de esquemas versionados + flujo de carga/validación/publicación, el sistema demostró flexibilidad para incorporar dominios adicionales (además de producción).
+
+3.1.7.1 Esquemas de proyecciones y datos estáticos (FLEXIBLE / carga única)
+- Se habilitó el concepto de "carga única" por esquema para proyecciones o valores iniciales que se cargan una sola vez.
+- Cuando un esquema se marca como carga única, el sistema evita recargas y exige controles de cambio (justificación) en escenarios de corrección.
+- Este mecanismo se encuentra en pruebas y ajuste para consolidar el flujo completo de correcciones una vez que la información ya fue validada/publicada (manteniendo la regla: todo cambio debe quedar justificado y pasar por el flujo de validación).
+
+3.1.7.2 Proyectos y reportes de proyectos (inversiones) para upstream de recursos evaporíticos
+Se implementó un módulo de proyectos para registrar y reportar información de inversiones/proyectos ejecutados en upstream (exploración y explotación), integrando la lógica de esquemas y cargas.
+
+Funcionalidades implementadas y probadas:
+- Registro de proyectos por el ADMIN del sistema (crear/editar/eliminar), similar a la gestión de plantas.
+- Asociación de un proyecto a múltiples plantas/unidades operativas (selección múltiple).
+- Esquemas por proyecto: el LOADER crea esquemas vinculados al proyecto (resumen y curvas), los envía a aprobación y el ADMIN los aprueba.
+- Configuración de reportes por proyecto: el ADMIN define qué esquemas alimentan el reporte:
+  - esquema principal (resumen),
+  - curva S programada,
+  - curva S ejecutada.
+- Visualización del reporte con filtros:
+  - gestión (año),
+  - fuente (publicados/borradores según permisos),
+  - selección semanal cuando la curva ejecutada es semanal (alineando la información al corte).
+
+Control especial para curva_s_ejecutado (acumulado semanal por mes) (probado):
+- Para esquemas tipo curva_s_ejecutado_* (semanales y con columnas por mes), al cargar una semana:
+  - solo se permite actualizar el mes del periodo seleccionado,
+  - los meses anteriores quedan bloqueados y el sistema valida que no se alteren,
+  - aplica en carga por archivo, corrección de archivo y captura manual (campos deshabilitados/precargados).
+
+
+3.2 Pruebas realizadas y ajustes durante pruebas
+Las pruebas se realizaron de manera iterativa y guiadas por casos reales, detectando y corrigiendo problemas a medida que se avanzaba.
+
+3.2.1 Pruebas funcionales (registro diario, semanal, mensual y flexible)
+- Creación y aprobación de esquemas por el flujo LOADER -> ADMIN.
+- Carga de datos por archivo y captura manual (borrador, corrección, envío).
+- Validación por periodicidad (diaria, semanal, mensual y flexible), incluyendo publicación y verificación de datos oficiales.
+- Verificación de la materialización de datos publicados y consumo en vistas/KPIs.
+
+3.2.2 Certificación mensual (derivada de diarios)
+- Creación de esquemas de certificación mensual por el ADMIN y consolidación automática del mes anterior.
+- Revisión de consolidaciones en borrador y registro de correcciones justificadas con respaldo.
+- Envío a validación mensual y publicación.
+
+3.2.3 Pruebas de extensibilidad (inversiones/proyecciones/proyectos)
+- Registro de esquemas no productivos (inversiones y proyecciones) y verificación del flujo completo de carga/validación/publicación.
+- Pruebas del módulo de proyectos, configuración de reportes y visualización de reportes con filtros (incluyendo filtro semanal).
+- Se aplicaron correcciones técnicas a medida que se detectaron inconsistencias (por ejemplo, alineación de datos en reportes por semana, render de gráficos y controles de seguridad de carga estática).
+
+
+3.3 Estado actual y siguientes pasos
+El sistema ya demuestra capacidad de cargado, gestión, validación y visualización de datos para producción (diario/semanal/mensual) y certificación mensual. Además, el avance reciente confirma que el SICGAD dejó de enfocarse únicamente en datos de producción y ahora soporta otros dominios de información del sector de recursos evaporíticos, tales como inversiones y seguimiento a la ejecución de proyectos en el upstream en el sector.
+
+Esta flexibilización lograda (esquemas versionados + flujo de aprobación de esquemas + flujo de carga/validación/publicación + trazabilidad) establece una base para ampliar el SICGAD hacia más áreas del sector, por ejemplo:
+- Comercialización (cantidades/volúmenes vendidos, precios de referencia, contratos, cronogramas de despacho, conciliaciones, etc.).
+- Control de regalías e impuestos (cálculo, conciliación y trazabilidad de variables de liquidación).
+- Seguimiento regulatorio/ambiental y control de cumplimiento (indicadores, reportes periódicos, evidencia y auditoría).
+- Gestión de inventarios, balances de materia, calidad y laboratorios (si se define el alcance institucional).
+Esta ampliacion seguiria una implementacion escalonada de aprobrase en un futuro cercano.
+
+Lógica institucional (propuesta operativa, sujeta a validación con YLB)
+En la práctica, el sistema se diseñó para operar con roles institucionales diferenciados, donde la gobernanza del flujo depende del tipo de información:
+- ADMIN (MHE/VMEERE): rol rector del sistema (gobernanza), define usuarios/roles, aprueba esquemas y administra configuraciones funcionales y de seguridad.
+- LOADER (YLB): rol operativo responsable de crear esquemas (borrador), cargar datos y enviar a validación.
+- VALIDATOR (YLB y/o MHE): rol de control que valida según periodicidad, nivel e institución. En particular:
+  - Reportes diarios: en un escenario típico, la validación podría ser interna (solo YLB) para asegurar continuidad operativa y publicación rápida.
+  - Certificación mensual: puede requerir validación conjunta (YLB + MHE) por niveles, dada su naturaleza oficial y certificable.
+  - Proyecciones y esquemas estáticos: el sistema exige una justificación y validación formal, por tratarse de datos base que impactan los reportes asociados.
+
+Esta lógica institucional se terminará de afinar y formalizar cuando el sistema sea presentado a YLB y se acuerde el flujo definitivo de: carga, validación, certificación, visualización, roles por institución, niveles y periodicidades.
+
+Respaldo normativo (línea de trabajo recomendada)
+Para que la implementación sea sostenible y obligatoria, el VMEERE debería acompañar el despliegue del SICGAD con una normativa que establezca:
+- Obligatoriedad de uso del sistema para los flujos definidos (producción, certificación, reportes, etc.).
+- Roles institucionales, responsabilidades, plazos y niveles de validación.
+- Reglas de trazabilidad y control de cambios (por ejemplo: datos publicados no se modifican sin justificación, registro de evidencia y revalidación).
+- Criterios de seguridad (acceso, contraseñas, auditoría, resguardo de archivos y evidencia).
+
+Dado que actualmente no existe una ley específica de recursos evaporíticos en Bolivia, se plantea como alternativa inicial una Resolución Administrativa u otra normativa aplicable emitida por el VMEERE, que otorgue respaldo legal y obligue a YLB a implementar el sistema. Esta acción sería coherente con el objetivo de automatización institucional promovido por la presidencia del Estado.
+
+
+Conclusiones
+- El SICGAD se encuentra con un avance suficiente (funcional y probado) para ser presentado a la máxima autoridad del VMEERE (Viceministro de Exploración y Explotación de Recursos Energéticos).
+- Esta presentación permitirá obtener retroalimentación institucional de alto nivel respecto al alcance, prioridades y gobernanza del sistema, así como validar la pertinencia de los módulos actuales (producción, validación/certificación, proyecciones y proyectos) y la posible incorporación de módulos adicionales o ajuste/eliminación de componentes.
+- El sistema ya demuestra capacidad para soportar procesos críticos: creación/aprobación de esquemas, carga de datos diaria/semanal/mensual, validación por niveles e institución, certificación mensual y visualización/auditoría, manteniendo trazabilidad y control de cambios.
+
+Recomendaciones
+- Programar una presentación formal al Viceministro de Exploración y Explotación de Recursos Energéticos para exponer el SICGAD, sus módulos, flujos, alcance institucional propuesto y próximos pasos.
+- Preparar un guion de demostración con casos reales (producción diaria, certificación mensual, proyecciones/carga única y reporte de proyectos) y un resumen de decisiones pendientes (roles por institución, niveles, normativa, periodos por periodicidad).
+- Definir un plan de implementación por fases, sujeto a la retroalimentación del Viceministro y a la coordinación con YLB, priorizando los módulos con mayor impacto operativo y regulatorio.
+
+
+
+
+3.4 Indicadores de desempeno (formulas, logica y visualizacion)
+Se incorporo el calculo de indicadores de desempeno productivo, tomando como base la Formula 9 de rendimiento de produccion de KCL (R_kcl(m) = Q_kcl(m) / Q_mp(m) * 100), con un flujo completo desde configuracion de variables hasta visualizacion.
+La logica y la estructura del sistema quedaron implementadas para registrar nuevas formulas de indicadores de desempeno productivo.
+
+Componentes implementados:
+- Catalogo de indicadores: soporte para definir indicadores por planta, con clave, etiqueta, unidad y formula asociada.
+- Asignacion de variables (admin): mapeo de variables requeridas (ej. Q_kcl y Q_mp) a columnas de esquemas existentes, con agregacion y offset de meses. La asignacion se realiza una sola vez y queda bloqueada para evitar reconfiguraciones innecesarias.
+- Calculo y almacenamiento: resultados guardados en la base de datos con frecuencia DAILY (diaria) y MONTHLY (mensual), llave unica por indicador, planta, periodo y frecuencia.
+- Recalculo automatico: al publicar datos diarios, el sistema recalcula indicadores (diario y mensual) para asegurar consistencia cuando hay correcciones.
+- UI de formulas: vista unificada con formula + asignacion de variables, filtro estandar por rango de fechas y resolucion (diario/mensual), grafico basado en resultados guardados.
+
+Visualizacion y graficos (KPIs):
+- Se agrego seccion de desempeno en KPIs con seleccion multiple de indicadores.
+- Tipos de grafico: linea, barras y barras apiladas.
+- Rango por defecto: diario = ultimos 30 dias, mensual = ultimos 12 meses.
+- Se incluyo dataZoom para navegar series largas.
+- Tablas dedicadas para desempeno diario y mensual, con exportacion CSV/Excel y valores numericos a 2 decimales.
+- Disposicion en 3 columnas: datos tabulares + desempeno diario + desempeno mensual.
+
+
+3.2.4 Pruebas de indicadores de desempeno
+- Asignacion de variables por admin y persistencia de configuracion.
+- Calculo y guardado de resultados diarios y mensuales desde datos publicados.
+- Verificacion de recalculo automatico al publicar nuevos datos o correcciones.
+- Validacion de graficos en vistas de formulas y KPIs (linea, barras, apiladas).
+- Verificacion de filtros por rango de fechas y resolucion.
+- Exportacion de tablas de desempeno diario y mensual (CSV/Excel).
+- Prueba pendiente: incluir mas formulas de desempeno para validar el sistema con al menos 10 formulas.

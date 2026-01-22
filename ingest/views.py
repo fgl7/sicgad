@@ -363,7 +363,45 @@ def upload(request):
     else:
         instances = DatasetInstance.objects.none()
 
-    return render(request, "ingest/upload.html", {"form": form, "instances": instances})
+    first_historical_batch = None
+    if request.user.is_authenticated:
+        batch_qs = HistoricalImportBatch.objects.select_related("dataset_type", "plant").order_by(
+            "created_at"
+        )
+        if loader_plants is not None and not has_global_loader:
+            if loader_plants:
+                batch_qs = batch_qs.filter(plant_id__in=loader_plants)
+            else:
+                batch_qs = batch_qs.none()
+
+        first_batch = batch_qs.first()
+        if first_batch:
+            inst_qs = DatasetInstance.objects.filter(historical_batch=first_batch)
+            counts = inst_qs.aggregate(
+                draft=Count("id", filter=Q(state=DatasetInstance.STATE_DRAFT)),
+                submitted=Count("id", filter=Q(state=DatasetInstance.STATE_SUBMITTED)),
+                published=Count("id", filter=Q(state=DatasetInstance.STATE_PUBLISHED)),
+                start=Min("period"),
+                end=Max("period"),
+            )
+            first_historical_batch = {
+                "batch": first_batch,
+                "draft_count": counts["draft"] or 0,
+                "submitted_count": counts["submitted"] or 0,
+                "published_count": counts["published"] or 0,
+                "period_start": first_batch.period_start or counts["start"],
+                "period_end": first_batch.period_end or counts["end"],
+            }
+
+    return render(
+        request,
+        "ingest/upload.html",
+        {
+            "form": form,
+            "instances": instances,
+            "first_historical_batch": first_historical_batch,
+        },
+    )
 
 
 def dataset_has_data(request):
@@ -479,6 +517,7 @@ def upload_historical(request):
         loader_plants = list(
             loader_memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
         )
+    default_plant = Plant.objects.filter(id=loader_plants[0]).first() if loader_plants else None
 
     if request.method == "POST":
         form = HistoricalDatasetUploadForm(

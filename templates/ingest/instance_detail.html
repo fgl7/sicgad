@@ -1,67 +1,83 @@
 {% extends "base.html" %}
 
-{% block title %}Carga de datos - Detalle{% endblock %}
-{% block page_title %}Detalle de carga de datos{% endblock %}
+{% block title %}Carga de Datos - Detalle - SICGAD{% endblock %}
 
 {% block content %}
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
-    <h2 class="text-sm font-semibold mb-1">Información básica</h2>
-    <p class="text-slate-300">
-      <strong>Planta:</strong> {{ instance.plant.code }}<br />
-      <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
-      <strong>Periodo:</strong> {{ instance.period }}<br />
-      <strong>Estado:</strong> {{ instance.get_state_display }}<br />
-      <strong>Archivo fuente:</strong>
-      {% if instance.raw_file %}
-        {{ instance.raw_file.name }}
-      {% else %}
-        <span class="text-slate-500">No registrado</span>
-      {% endif %}
-    </p>
-  </section>
+<div class="space-y-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Detalle de Ingesta</h2>
+            <p class="text-slate-500 text-sm">Exploración de datos RAW procesados para el período configurado.</p>
+        </div>
+        <a href="{{ back_url }}" class="text-xs font-bold text-slate-400 hover:text-emerald-400 uppercase tracking-widest transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 0118 0z"></path></svg>
+            Volver
+        </a>
+    </div>
 
-  <section class="mt-4 bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
-    <h2 class="text-sm font-semibold mb-2">Vista rápida de datos</h2>
-    {% if header %}
-      <p class="text-[11px] text-slate-400 mb-2">
-        Se muestran las últimas 100 filas del archivo cargado (ordenadas desde el dato más reciente).
-      </p>
-      <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-auto max-h-[480px]">
-        <table class="min-w-full text-[11px]">
-          <thead class="bg-slate-950 text-slate-300">
-            <tr>
-              {% for col in header %}
-                <th class="px-2 py-1 text-left font-semibold whitespace-nowrap">{{ col }}</th>
-              {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in rows %}
-              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-                {% for value in row %}
-                  <td class="px-2 py-1 align-top whitespace-nowrap">{{ value }}</td>
-                {% endfor %}
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="{{ header|length }}" class="px-3 py-4 text-center text-slate-400">
-                  No se encontraron filas en el archivo.
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <p class="text-slate-400">
-        No se pudo leer el contenido del archivo o el archivo está vacío.
-      </p>
-    {% endif %}
-  </section>
+    <!-- Info Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Unidad Operativa</p>
+            <p class="text-sm font-bold text-white">{{ instance.plant.code|default:instance.project.code }}</p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Dataset</p>
+            <p class="text-sm font-bold text-white">{{ instance.dataset_type.name }}</p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Periodo Operativo</p>
+            <p class="text-sm font-bold text-sky-400">{{ instance.period }}</p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado Validación</p>
+            <p class="text-sm font-bold text-emerald-400">{{ instance.get_state_display }}</p>
+        </div>
+    </div>
 
-  <div class="mt-4">
-    <a href="{{ back_url }}" class="text-xs text-slate-300 hover:text-emerald-400">
-      ← Volver
-    </a>
-  </div>
+    <!-- Data Table Section -->
+    <section class="space-y-4">
+        <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Previsualización de Datos (Top 100)</h3>
+            <span class="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic">Archivo: {{ instance.raw_file.name|default:"Memoria RAM" }}</span>
+        </div>
+        
+        <div class="glass-card rounded-3xl overflow-hidden border-white/5">
+            {% if header %}
+            <div class="overflow-auto max-h-[600px] custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 z-10">
+                        <tr class="bg-slate-900/90 backdrop-blur-md text-[10px] font-black text-slate-400 uppercase tracking-widest shadow-lg">
+                            {% for col in header %}
+                                <th class="px-4 py-4 whitespace-nowrap border-b border-white/10">{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="text-[11px]">
+                        {% for row in rows %}
+                        <tr class="border-t border-white/5 hover:bg-white/[0.02] transition-colors text-slate-300 group">
+                            {% for value in row %}
+                                <td class="px-4 py-3 whitespace-nowrap font-mono group-hover:text-emerald-400 transition-colors">{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{{ header|length }}" class="px-6 py-12 text-center text-slate-600 italic">No se encontraron filas de datos en esta ingesta.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="py-20 text-center space-y-4">
+                <div class="text-slate-700">
+                    <svg class="w-12 h-12 mx-auto mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.876c.54 0 .899-.596.63-1.026L13.03 4.062a1.012 1.012 0 00-1.817 0l-7.73 13.912c-.269.43-.269.946.063 1.026z"></path></svg>
+                    <p class="text-sm font-bold uppercase tracking-widest">No se pudo materializar la vista previa</p>
+                    <p class="text-xs text-slate-600">El archivo fuente podría estar vacío o en un formato no binario compatible.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
 {% endblock %}

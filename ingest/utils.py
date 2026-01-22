@@ -10,7 +10,7 @@ import csv
 import openpyxl
 
 from .models import DatasetInstance, PublishedDataPoint
-from schemas.models import ColumnDef
+from schemas.models import ColumnDef, DatasetType
 
 
 @dataclass
@@ -308,4 +308,41 @@ def materialize_instance(instance: DatasetInstance) -> int:
     if points:
         PublishedDataPoint.objects.bulk_create(points, batch_size=1000)
 
+    _auto_compute_performance(instance)
+
     return len(points)
+
+
+def _auto_compute_performance(instance: DatasetInstance) -> None:
+    if not instance.plant_id:
+        return
+    dataset = instance.dataset_type
+    if not dataset:
+        return
+
+    try:
+        from performance.models import PerformanceIndicatorResult
+        from performance.services import MonthWindow, compute_and_store_indicators, month_window
+    except Exception:
+        return
+
+    if dataset.validation_frequency == DatasetType.DAILY:
+        target_day = instance.period
+        compute_and_store_indicators(
+            instance.plant,
+            MonthWindow(target_day, target_day),
+            frequency=PerformanceIndicatorResult.FREQ_DAILY,
+        )
+        monthly_window = month_window(target_day.year, target_day.month)
+        compute_and_store_indicators(
+            instance.plant,
+            monthly_window,
+            frequency=PerformanceIndicatorResult.FREQ_MONTHLY,
+        )
+    elif dataset.validation_frequency == DatasetType.MONTHLY:
+        monthly_window = month_window(instance.period.year, instance.period.month)
+        compute_and_store_indicators(
+            instance.plant,
+            monthly_window,
+            frequency=PerformanceIndicatorResult.FREQ_MONTHLY,
+        )

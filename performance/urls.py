@@ -5,6 +5,5 @@ from . import views
 app_name = "performance"
 
 urlpatterns = [
-    path("pcs/formula-1/", views.pcs_formula_1, name="pcs_formula_1"),
+    path("kcl/formula-9/", views.kcl_formula_9, name="kcl_formula_9"),
 ]
-

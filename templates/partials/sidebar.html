@@ -1,11 +1,15 @@
-<aside class='w-56 bg-slate-950/80 border-r border-slate-800 hidden md:flex flex-col'>
-  <div class='p-4 border-b border-slate-800'>
+<aside class='w-64 glass-effect border-r border-white/5 hidden lg:flex flex-col h-screen sticky top-0 z-50'>
+  <div class='p-6 flex items-center gap-3'>
+    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+        <span class="text-emerald-400 font-bold text-lg">S</span>
+    </div>
     {% url 'landing' as landing_url %}
-    <a href='{{ landing_url }}' class='inline-block text-lg font-semibold tracking-wide text-slate-100 hover:text-emerald-400'>
+    <a href='{{ landing_url }}' class='text-xl font-header tracking-tighter text-white hover:text-emerald-400 transition-colors'>
       SICGAD
     </a>
   </div>
-  <nav class='flex-1 p-3 space-y-1 text-sm'>
+
+  <nav class='flex-1 px-4 py-2 space-y-1.5 overflow-y-auto custom-scrollbar'>
     {% url 'home' as home_url %}
     {% url 'schemas:schema_list' as schemas_url %}
     {% url 'ingest:upload' as ingest_url %}
@@ -13,126 +17,99 @@
     {% url 'plants:plant_list' as plants_url %}
     {% url 'projects:project_list' as projects_url %}
     {% url 'accounts:admin_user_list' as users_url %}
-    {% url 'accounts:institution_list' as institutions_url %}
     {% url 'audit:log_list' as audit_url %}
-    {% url 'performance:pcs_formula_1' as performance_url %}
+    {% url 'performance:kcl_formula_9' as performance_url %}
     {% url 'projects:report_list' as projects_report_url %}
 
-    <a href='{{ home_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == home_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-      <span>Inicio</span>
+    <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-3 mt-4 mb-2">General</div>
+
+    <a href='{{ home_url }}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path == home_url %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+      <span class="font-medium">Inicio</span>
     </a>
 
-    <a href='{{ schemas_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":9" == "/schemas/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-      <span>Esquemas</span>
+    <a href='{{ schemas_url }}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path|slice:":9" == "/schemas/" %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+      <span class="font-medium">Esquemas</span>
       {% if is_admin and pending_schema_requests %}
-        <span class='ml-auto inline-flex items-center justify-center px-2 py-0 rounded-full bg-amber-500 text-slate-900 text-[10px] font-semibold'>
-          {{ pending_schema_requests }}
-        </span>
-      {% elif is_loader %}
-        {% if loader_schema_approved %}
-          <span class='ml-auto inline-flex items-center justify-center px-2 py-0 rounded-full bg-emerald-500 text-slate-900 text-[10px] font-semibold'>
-            {{ loader_schema_approved }}
-          </span>
-        {% endif %}
-        {% if loader_schema_rejected %}
-          <span class='inline-flex items-center justify-center px-2 py-0 rounded-full bg-red-500 text-slate-900 text-[10px] font-semibold ml-1'>
-            {{ loader_schema_rejected }}
-          </span>
-        {% endif %}
+        <span class='ml-auto px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold'>{{ pending_schema_requests }}</span>
       {% endif %}
     </a>
+
+    <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-3 mt-6 mb-2">Operaciones</div>
 
     {% url 'ingest:upload_history' as ingest_history_url %}
     {% if is_admin or is_loader %}
-      {% if is_admin %}
-        <a href='{{ ingest_history_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":8" == "/ingest/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-          <span>Carga de datos</span>
-        </a>
-      {% else %}
-        <a href='{{ ingest_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == ingest_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-          <span>Carga de datos</span>
-        </a>
-      {% endif %}
+      <a href='{% if is_admin %}{{ ingest_history_url }}{% else %}{{ ingest_url }}{% endif %}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path|slice:":8" == "/ingest/" %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+        <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+        <span class="font-medium">Carga de datos</span>
+      </a>
     {% endif %}
 
-    {% if is_validator or is_admin %}
-      <a href='{{ validation_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":10" == "/validate/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-        <span>Validacion</span>
+    {% if is_validator or is_admin or is_loader %}
+      <a href='{% if is_validator or is_admin %}{{ validation_url }}{% else %}{{ ingest_history_url }}{% endif %}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path|slice:":10" == "/validate/" or request.path == ingest_history_url and is_loader %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+        <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span class="font-medium">Validación</span>
         {% if is_validator and pending_validation_items %}
-          <span class='ml-auto inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-500 text-slate-900 text-[10px] font-semibold'>
-            {{ pending_validation_items }}
-          </span>
-        {% elif is_admin %}
-          <span class='ml-auto text-[10px] text-slate-500'>Panel</span>
-        {% endif %}
-        {% if is_validator and pending_certification_alerts %}
-          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='Certificación mensual pendiente'>
-            C{{ pending_certification_alerts }}
-          </span>
-        {% endif %}
-      </a>
-    {% elif is_loader %}
-      <a href='{{ ingest_history_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == ingest_history_url %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-        <span>Validacion</span>
-        {% if loader_validation_approved %}
-          <span class='ml-auto inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-emerald-500 text-slate-900 text-[10px] font-semibold'>
-            {{ loader_validation_approved }}
-          </span>
-        {% endif %}
-        {% if loader_validation_rejected %}
-          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-red-500 text-slate-900 text-[10px] font-semibold ml-1'>
-            {{ loader_validation_rejected }}
-          </span>
-        {% endif %}
-        {% if loader_certification_rejected %}
-          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-red-400 text-slate-900 text-[10px] font-semibold ml-1' title='Certificacion mensual rechazada'>
-            CR{{ loader_certification_rejected }}
-          </span>
-        {% endif %}
-        {% if loader_pending_certification_alerts %}
-          <span class='inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-amber-300 text-slate-900 text-[10px] font-semibold ml-1' title='Certificación mensual pendiente'>
-            C{{ loader_pending_certification_alerts }}
-          </span>
+          <span class='ml-auto px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold'>{{ pending_validation_items }}</span>
         {% endif %}
       </a>
     {% endif %}
 
-    <a href='{% url "kpis_charts" %}' class='flex items-center gap-2 px-3 py-2 rounded-md text-slate-300 hover:bg-slate-800/60'>
-      <span>KPIs / Graficos</span>
+    <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-3 mt-6 mb-2">Análisis</div>
+
+    <a href='{% url "kpis_charts" %}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'>
+      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      <span class="font-medium">KPIs / Gráficos</span>
     </a>
 
     {% if is_admin or is_loader or is_validator %}
-      <a href='{{ projects_report_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":10" == "/projects/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-        <span>Reportes de proyectos</span>
+      <a href='{{ projects_report_url }}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path|slice:":10" == "/projects/" %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+        <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+        <span class="font-medium">Proyectos</span>
       </a>
     {% endif %}
 
     {% if is_admin %}
-      <a href='{{ performance_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":13" == "/performance/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-        <span>Desempeño</span>
+      <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 px-3 mt-6 mb-2">Administración</div>
+      
+      <a href='{{ plants_url }}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path|slice:":8" == "/plants/" %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+        <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+        <span class="font-medium">Plantas</span>
       </a>
-    {% endif %}
 
-    <a href='{{ audit_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":7" == "/audit/" %}bg-slate-800 text-slate-100{% else %}text-slate-300 hover:bg-slate-800/60{% endif %}'>
-      <span>Auditoria</span>
-    </a>
+      <a href='{{ projects_url }}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path == projects_url %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+        <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+        <span class="font-medium">Gestión Proyectos</span>
+      </a>
 
-    {% if is_admin %}
-      <div class='mt-3 pt-3 border-t border-slate-800 text-[11px] uppercase tracking-wide text-slate-500'>
-        Administracion
-      </div>
-      <a href='{{ plants_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":8" == "/plants/" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
-        <span>Unidades operativas</span>
+      <a href='{{ users_url }}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path|slice:":15" == "/accounts/users" %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+        <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        <span class="font-medium">Usuarios y Roles</span>
       </a>
-      <a href='{{ projects_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path == projects_url %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
-        <span>Proyectos</span>
-      </a>
-      <a href='{{ institutions_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":22" == "/accounts/institutions/" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
-        <span>Instituciones</span>
-      </a>
-      <a href='{{ users_url }}' class='flex items-center gap-2 px-3 py-2 rounded-md {% if request.path|slice:":15" == "/accounts/users" %}bg-slate-800 text-slate-100{% else %}text-slate-200 hover:bg-slate-800/60{% endif %}'>
-        <span>Usuarios y roles</span>
+
+      <a href='{{ audit_url }}' class='sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group {% if request.path|slice:":7" == "/audit/" %}active bg-emerald-500/10 text-emerald-100{% else %}text-slate-400 hover:bg-slate-800/40 hover:text-slate-200{% endif %}'>
+        <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+        <span class="font-medium">Auditoría</span>
       </a>
     {% endif %}
   </nav>
+
+  <div class="p-4 border-t border-white/5 bg-slate-950/40">
+      <div class="flex items-center gap-3 mb-2">
+          <div class="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold uppercase">
+              {{ request.user.username|slice:":2" }}
+          </div>
+          <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-white truncate">{{ request.user.username }}</p>
+              <p class="text-[10px] text-slate-500 truncate">Sesión Activa</p>
+          </div>
+      </div>
+      <form method='post' action='{% url "logout" %}'>
+          {% csrf_token %}
+          <button type='submit' class='w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition-colors'>
+            Cerrar Sesión
+          </button>
+      </form>
+  </div>
 </aside>

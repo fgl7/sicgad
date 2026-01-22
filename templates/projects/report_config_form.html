@@ -1,69 +1,96 @@
 {% extends "base.html" %}
 
-{% block title %}{% if config %}Editar reporte{% else %}Nuevo reporte{% endif %} - SICGAD{% endblock %}
-{% block page_title %}{% if config %}Editar reporte{% else %}Nuevo reporte{% endif %}{% endblock %}
+{% block title %}{% if config %}Editar Reporte{% else %}Nuevo Reporte{% endif %} - SICGAD{% endblock %}
 
 {% block content %}
-  <section class="max-w-2xl bg-slate-950/60 border border-slate-800 rounded-xl p-5 text-xs">
-    <h2 class="text-sm font-semibold mb-3">
-      {% if config %}Editar configuracion{% else %}Configurar reporte{% endif %}
-    </h2>
-
-    <form method="post" class="space-y-3">
-      {% csrf_token %}
-
-      <div>
-        <label class="block mb-1 text-slate-300 text-[11px]">Proyecto</label>
-        {{ form.project }}
-        {{ form.project.errors }}
-      </div>
-
-      <div>
-        <label class="block mb-1 text-slate-300 text-[11px]">Nombre</label>
-        {{ form.name }}
-        {{ form.name.errors }}
-      </div>
-
-      <div>
-        <label class="block mb-1 text-slate-300 text-[11px]">Dataset de resumen</label>
-        {{ form.report_dataset }}
-        {{ form.report_dataset.errors }}
-      </div>
-
-      <div>
-        <label class="block mb-1 text-slate-300 text-[11px]">Dataset curva programada</label>
-        {{ form.curve_program_dataset }}
-        {{ form.curve_program_dataset.errors }}
-      </div>
-
-      <div>
-        <label class="block mb-1 text-slate-300 text-[11px]">Dataset curva ejecutada (semanal o mensual)</label>
-        {{ form.curve_executed_dataset }}
-        {{ form.curve_executed_dataset.errors }}
-      </div>
-
-      <div>
-        <label class="block mb-1 text-slate-300 text-[11px]">Notas</label>
-        {{ form.notes }}
-        {{ form.notes.errors }}
-      </div>
-
-      <div class="flex items-center gap-2 mt-1">
-        {{ form.is_active }}
-        <span class="text-slate-300 text-[11px]">Reporte activo</span>
-      </div>
-
-      <div class="flex items-center justify-between pt-2">
-        <a href="{% url 'projects:report_config_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
-          ← Volver al listado
+<div class="max-w-4xl mx-auto space-y-6 fade-in">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">{% if config %}Sincronización de Reporte{% else %}Arquitectura Analítica{% endif %}</h2>
+            <p class="text-slate-500 text-sm">Víncula el núcleo de datos con la visualización ejecutiva.</p>
+        </div>
+        <a href="{% url 'projects:report_config_list' %}" class="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-colors flex items-center gap-2">
+             ← Volver a listado
         </a>
-        <button
-          type="submit"
-          class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500"
-        >
-          Guardar
-        </button>
-      </div>
+    </div>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <section class="glass-card rounded-[2.5rem] p-10 border-white/5 space-y-8 bg-gradient-to-br from-indigo-500/5 to-transparent">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest">General & Origen</h3>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Proyecto Objetivo</label>
+                    {{ form.project }}
+                    {% if form.project.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.project.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Alias del Reporte (Visor)</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.name.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Dataset de Resumen Ejecutivo</label>
+                {{ form.report_dataset }}
+                <p class="text-[9px] text-slate-600 font-bold uppercase tracking-tighter">Define los metadatos globales (Ubicación, Ejecutor, Etapa).</p>
+                {% if form.report_dataset.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.report_dataset.errors.0 }}</p>{% endif %}
+            </div>
+        </section>
+
+        <section class="glass-card rounded-[2.5rem] p-10 border-white/5 space-y-8 bg-gradient-to-br from-emerald-500/5 to-transparent">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                </div>
+                <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Fuentes Curva S (Ejecución vs Programación)</h3>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Dataset Curva Programada</label>
+                    {{ form.curve_program_dataset }}
+                    {% if form.curve_program_dataset.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.curve_program_dataset.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Dataset Curva Ejecutada</label>
+                    {{ form.curve_executed_dataset }}
+                    {% if form.curve_executed_dataset.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.curve_executed_dataset.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Notas Internas & Auditoría</label>
+                {{ form.notes }}
+            </div>
+
+            <div class="pt-4 border-t border-white/5">
+                <label class="flex items-center gap-3 cursor-pointer group w-fit">
+                    <div class="relative items-center flex">
+                        {{ form.is_active }}
+                    </div>
+                    <div>
+                        <span class="block text-xs font-bold text-slate-300 group-hover:text-white transition-colors">Estado Activo</span>
+                        <span class="block text-[9px] text-slate-600 font-bold uppercase tracking-widest">El reporte será visible en el menú ejecutivo.</span>
+                    </div>
+                </label>
+            </div>
+        </section>
+
+        <div class="flex justify-end pt-4 pb-8">
+            <button type="submit" class="btn-primary glow-emerald px-12 py-4 text-xs font-black uppercase tracking-widest">
+                {% if config %}Confirmar Cambios Operativos{% else %}Finalizar Configuración de Reporte{% endif %}
+            </button>
+        </div>
     </form>
-  </section>
+</div>
 {% endblock %}

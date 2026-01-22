@@ -1,174 +1,148 @@
 {% extends "base.html" %}
 
 {% block title %}Usuarios - SICGAD{% endblock %}
-{% block page_title %}Administracion de usuarios{% endblock %}
 
 {% block content %}
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-sm font-semibold">Usuarios del sistema</h2>
-    <a href="{% url 'accounts:admin_user_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
-      Nuevo usuario
-    </a>
-  </div>
+<div class="space-y-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Gestión de Usuarios</h2>
+            <p class="text-slate-500 text-sm">Administra los accesos y roles institucionales del sistema.</p>
+        </div>
+        <a href="{% url 'accounts:admin_user_create' %}" class="btn-primary glow-emerald">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            Nuevo Usuario
+        </a>
+    </div>
 
-  <form method="get" class="mb-4 flex flex-wrap items-end gap-3 text-xs">
-    <div>
-      <label class="block mb-1 text-slate-300">Rol</label>
-      <select name="role" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
-        <option value="">Todos</option>
-        {% for value,label in roles %}
-          <option value="{{ value }}" {% if filter_role == value %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
+    <!-- Filters Section -->
+    <div class="glass-card rounded-2xl p-6 border-white/5">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rol</label>
+                <select name="role">
+                    <option value="">Todos los Roles</option>
+                    {% for value,label in roles %}
+                    <option value="{{ value }}" {% if filter_role == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Planta</label>
+                <select name="plant">
+                    <option value="">Todas las Plantas</option>
+                    {% for p in plants %}
+                    <option value="{{ p.id }}" {% if filter_plant == p.id|stringformat:'s' %}selected{% endif %}>{{ p.code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Proyecto</label>
+                <select name="project">
+                    <option value="">Todos los Proyectos</option>
+                    {% for proj in projects %}
+                    <option value="{{ proj.id }}" {% if filter_project == proj.id|stringformat:'s' %}selected{% endif %}>{{ proj.code|default:proj.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Institución</label>
+                <select name="institution">
+                    <option value="">Todas las Instituciones</option>
+                    {% for inst in institutions %}
+                    <option value="{{ inst.id }}" {% if filter_institution == inst.id|stringformat:'s' %}selected{% endif %}>{{ inst.code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="submit" class="flex-1 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-700 transition-colors border border-white/5">
+                    Filtrar
+                </button>
+                <a href="{% url 'accounts:admin_user_list' %}" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors border border-white/5" title="Limpiar Filtros">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </a>
+            </div>
+        </form>
     </div>
-    <div>
-      <label class="block mb-1 text-slate-300">Planta</label>
-      <select name="plant" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
-        <option value="">Todas</option>
-        {% for p in plants %}
-          <option value="{{ p.id }}" {% if filter_plant == p.id|stringformat:'s' %}selected{% endif %}>{{ p.code }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="block mb-1 text-slate-300">Proyecto</label>
-      <select name="project" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
-        <option value="">Todos</option>
-        {% for proj in projects %}
-          <option value="{{ proj.id }}" {% if filter_project == proj.id|stringformat:'s' %}selected{% endif %}>
-            {{ proj.code|default:proj.name }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="block mb-1 text-slate-300">Institucion</label>
-      <select name="institution" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs">
-        <option value="">Todas</option>
-        {% for institution in institutions %}
-          <option value="{{ institution.id }}" {% if filter_institution == institution.id|stringformat:'s' %}selected{% endif %}>
-            {{ institution.code }} - {{ institution.name }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="flex items-center gap-2">
-      <button type="submit" class="px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
-        Filtrar
-      </button>
-      <a href="{% url 'accounts:admin_user_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
-        Limpiar
-      </a>
-    </div>
-  </form>
 
-  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
-    <table class="min-w-full text-xs">
-      <thead class="bg-slate-950/80 text-slate-300">
-        <tr>
-          <th class="px-3 py-2 text-left font-semibold">Usuario</th>
-          <th class="px-3 py-2 text-left font-semibold">Nombre</th>
-          <th class="px-3 py-2 text-left font-semibold">Email</th>
-          <th class="px-3 py-2 text-left font-semibold">Roles</th>
-          <th class="px-3 py-2 text-left font-semibold">Planta / Proyecto</th>
-          <th class="px-3 py-2 text-left font-semibold">Validacion</th>
-          <th class="px-3 py-2 text-left font-semibold">Institucion</th>
-          <th class="px-3 py-2 text-left font-semibold">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
-          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-            <td class="px-3 py-2 align-top font-mono text-[11px]">{{ u.username }}</td>
-            <td class="px-3 py-2 align-top">{{ u.get_full_name|default:"(sin nombre)" }}</td>
-            <td class="px-3 py-2 align-top">{{ u.email }}</td>
-            {% with u.memberships.all as mems %}
-              <td class="px-3 py-2 align-top">
-                {% if mems %}
-                  {% for m in mems %}
-                    <div>{{ m.get_role_display }}</div>
-                  {% endfor %}
-                {% else %}
-                  <span class="text-slate-400">(sin roles)</span>
-                {% endif %}
-              </td>
-              <td class="px-3 py-2 align-top">
-                {% if mems %}
-                  {% for m in mems %}
-                    <div>
-                      {% if m.plant %}
-                        {{ m.plant.code }}
-                      {% elif m.project %}
-                        {{ m.project.code|default:m.project.name }}
-                      {% else %}
-                        GLOBAL
-                      {% endif %}
-                    </div>
-                  {% endfor %}
-                {% else %}
-                  <span class="text-slate-400">(sin plantas)</span>
-                {% endif %}
-              </td>
-              <td class="px-3 py-2 align-top">
-                {% if mems %}
-                  {% for m in mems %}
-                    <div>
-                      {% if m.validation_level %}
-                        Nivel {{ m.validation_level }}
-                      {% else %}
-                        Nivel -
-                      {% endif %}
-                      {% if m.can_validate_daily or m.can_validate_weekly or m.can_validate_monthly or m.can_validate_projections %}
-                        (
-                        {% if m.can_validate_daily %}diario{% endif %}
-                        {% if m.can_validate_daily and m.can_validate_weekly %} / {% endif %}
-                        {% if m.can_validate_weekly %}semanal{% endif %}
-                        {% if m.can_validate_monthly %}
-                          {% if m.can_validate_daily or m.can_validate_weekly %} / {% endif %}
-                        {% endif %}
-                        {% if m.can_validate_monthly %}mensual{% endif %}
-                        {% if m.can_validate_projections %}
-                          {% if m.can_validate_daily or m.can_validate_weekly or m.can_validate_monthly %} / {% endif %}
-                        {% endif %}
-                        {% if m.can_validate_projections %}proyecciones{% endif %}
-                        )
-                      {% endif %}
-                    </div>
-                  {% endfor %}
-                {% else %}
-                  <span class="text-slate-400">(sin validacion)</span>
-                {% endif %}
-              </td>
-              <td class="px-3 py-2 align-top">
-                {% if mems %}
-                  {% for m in mems %}
-                    <div>
-                      {% if m.institution %}
-                        {{ m.institution.code }}
-                      {% else %}
-                        <span class="text-slate-400">(sin institucion)</span>
-                      {% endif %}
-                    </div>
-                  {% endfor %}
-                {% else %}
-                  <span class="text-slate-400">(sin institucion)</span>
-                {% endif %}
-              </td>
-            {% endwith %}
-            <td class="px-3 py-2 align-top">
-              <a href="{% url 'accounts:admin_user_edit' u.id %}" class="text-xs text-emerald-400 hover:underline">Editar</a>
-              |
-              <a href="{% url 'accounts:admin_user_delete' u.id %}" class="text-xs text-red-400 hover:underline">Eliminar</a>
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="8" class="px-3 py-4 text-center text-slate-400">
-              Aun no hay usuarios registrados.
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <!-- Users Table Card -->
+    <div class="glass-card rounded-3xl overflow-hidden border-white/5">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <th class="px-6 py-4">Usuario / Identidad</th>
+                        <th class="px-6 py-4">Alcance / Institución</th>
+                        <th class="px-6 py-4">Configuración de Rol</th>
+                        <th class="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for u in users %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-xs font-bold text-emerald-400 group-hover:border-emerald-500/30 transition-colors">
+                                    {{ u.username|slice:":2"|upper }}
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="font-bold text-slate-200">{{ u.username }}</span>
+                                    <span class="text-[10px] text-slate-500">{{ u.get_full_name|default:u.email }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% with u.memberships.all as mems %}
+                                {% for m in mems %}
+                                <div class="flex flex-col mb-2 last:mb-0">
+                                    <span class="text-slate-300 font-medium text-xs">
+                                        {% if m.plant %}{{ m.plant.name }}{% elif m.project %}{{ m.project.code }}{% else %}Alcance Global{% endif %}
+                                    </span>
+                                    <span class="text-[10px] text-slate-500 uppercase font-bold">{{ m.institution.code|default:"Sin Institución" }}</span>
+                                </div>
+                                {% empty %}
+                                <span class="text-slate-600 italic text-xs">Sin membresías</span>
+                                {% endfor %}
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% for m in u.memberships.all %}
+                            <div class="flex items-center gap-2 mb-2 last:mb-0">
+                                <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                                    {{ m.get_role_display }}
+                                </span>
+                                {% if m.validation_level %}
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">L{{ m.validation_level }}</span>
+                                {% endif %}
+                                <div class="flex items-center gap-1">
+                                    {% if m.can_validate_daily %}<div class="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Diario"></div>{% endif %}
+                                    {% if m.can_validate_weekly %}<div class="w-1.5 h-1.5 rounded-full bg-sky-500" title="Semanal"></div>{% endif %}
+                                    {% if m.can_validate_monthly %}<div class="w-1.5 h-1.5 rounded-full bg-amber-500" title="Mensual"></div>{% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex justify-end gap-2">
+                                <a href="{% url 'accounts:admin_user_edit' u.id %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </a>
+                                <a href="{% url 'accounts:admin_user_delete' u.id %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center">
+                            <p class="text-slate-500 font-medium">No se encontraron usuarios con los criterios de búsqueda.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}

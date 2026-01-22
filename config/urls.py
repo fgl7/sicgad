@@ -21,7 +21,7 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 
-from kpis.views import home, landing, charts, dataset_data
+from kpis.views import home, landing, charts, dataset_data, performance_data
 
 urlpatterns = [
     path("", landing, name="landing"),
@@ -29,6 +29,7 @@ urlpatterns = [
     path("home/", home, name="home"),
     path("kpis/", charts, name="kpis_charts"),
     path("kpis/data/<int:dataset_id>/", dataset_data, name="kpis_dataset_data"),
+    path("kpis/performance-data/<int:indicator_id>/", performance_data, name="kpis_performance_data"),
     path(
         "login/",
         auth_views.LoginView.as_view(template_name="registration/login.html"),

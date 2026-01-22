@@ -1,65 +1,78 @@
 {% extends "base.html" %}
 
 {% block title %}Proyectos - SICGAD{% endblock %}
-{% block page_title %}Administracion de proyectos{% endblock %}
 
 {% block content %}
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-sm font-semibold">Proyectos configurados</h2>
-    <a href="{% url 'projects:project_create' %}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-medium hover:bg-emerald-500">
-      Nuevo proyecto
-    </a>
-  </div>
+<div class="space-y-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Gestión de Proyectos</h2>
+            <p class="text-slate-500 text-sm">Administración de proyectos de inversión y seguimiento operativo.</p>
+        </div>
+        <a href="{% url 'projects:project_create' %}" class="btn-primary glow-emerald">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+            Nuevo Proyecto
+        </a>
+    </div>
 
-  <div class="bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden">
-    <table class="min-w-full text-xs">
-      <thead class="bg-slate-950/80 text-slate-300">
-        <tr>
-          <th class="px-3 py-2 text-left font-semibold">Codigo</th>
-          <th class="px-3 py-2 text-left font-semibold">Nombre</th>
-          <th class="px-3 py-2 text-left font-semibold">Plantas</th>
-          <th class="px-3 py-2 text-left font-semibold">Activo</th>
-          <th class="px-3 py-2 text-left font-semibold">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for project in projects %}
-          <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-            <td class="px-3 py-2 align-top font-mono text-[11px]">
-              {{ project.code|default:"-" }}
-            </td>
-            <td class="px-3 py-2 align-top">{{ project.name }}</td>
-            <td class="px-3 py-2 align-top">
-              {% with project.plants.all as plant_list %}
-                {% if plant_list %}
-                  {% for plant in plant_list %}
-                    {{ plant.code }}{% if not forloop.last %}, {% endif %}
-                  {% endfor %}
-                {% else %}
-                  -
-                {% endif %}
-              {% endwith %}
-            </td>
-            <td class="px-3 py-2 align-top">
-              {% if project.is_active %}Si{% else %}No{% endif %}
-            </td>
-            <td class="px-3 py-2 align-top text-right space-x-2">
-              <a href="{% url 'projects:project_edit' project.pk %}" class="text-xs text-emerald-400 hover:underline">
-                Editar
-              </a>
-              <a href="{% url 'projects:project_delete' project.pk %}" class="text-xs text-red-400 hover:underline">
-                Eliminar
-              </a>
-            </td>
-          </tr>
-        {% empty %}
-          <tr>
-            <td colspan="5" class="px-3 py-4 text-center text-slate-400">
-              Aun no hay proyectos configurados.
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <!-- Projects Table Card -->
+    <div class="glass-card rounded-3xl overflow-hidden border-white/5">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <th class="px-6 py-4">Código / Proyecto</th>
+                        <th class="px-6 py-4">Unidades Vinculadas</th>
+                        <th class="px-6 py-4 text-center">Estado</th>
+                        <th class="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for project in projects %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="font-mono text-[10px] text-sky-400 font-bold uppercase">{{ project.code|default:"SIN-COD" }}</span>
+                                <span class="text-slate-200 font-bold">{{ project.name }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% with project.plants.all as plant_list %}
+                                <div class="flex flex-wrap gap-1">
+                                    {% for plant in plant_list %}
+                                        <span class="px-2 py-0.5 rounded bg-slate-800 text-[9px] font-black text-slate-400 border border-white/5">{{ plant.code }}</span>
+                                    {% empty %}
+                                        <span class="text-slate-600 italic text-[10px]">Sin vinculación</span>
+                                    {% endfor %}
+                                </div>
+                            {% endwith %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if project.is_active %}
+                                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Operativo</span>
+                            {% else %}
+                                <span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-widest border border-white/5">Pausado</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex justify-end gap-2">
+                                <a href="{% url 'projects:project_edit' project.pk %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </a>
+                                <a href="{% url 'projects:project_delete' project.pk %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center text-slate-600 italic">No se encontraron proyectos configurados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}

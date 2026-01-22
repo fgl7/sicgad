@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib import messages
 from django.db import transaction
@@ -13,7 +13,7 @@ import json
 from accounts.decorators import admin_required
 from performance.forms import ColumnOption, VariableMappingForm
 from performance.models import PerformanceIndicator, PerformanceIndicatorResult, PerformanceVariable, PerformanceVariableMapping
-from performance.services import compute_indicator_for_stage, month_window, shift_months
+from performance.services import MonthWindow, compute_indicator, month_window, shift_months
 from plants.models import Plant
 from schemas.models import ColumnDef, DatasetType
 
@@ -35,33 +35,108 @@ def _parse_month(raw: str | None) -> tuple[int, int] | None:
         return None
 
 
-@admin_required
-def pcs_formula_1(request: HttpRequest) -> HttpResponse:
-    """
-    MVP UI: Formula 1 (PCS) - Rendimiento de Producción Mensual (%)
+def _parse_day(raw: str | None) -> date | None:
+    if not raw:
+        return None
+    raw = raw.strip()
+    if not raw:
+        return None
+    try:
+        y_s, m_s, d_s = raw.split("-", 2)
+        y = int(y_s)
+        m = int(m_s)
+        d = int(d_s)
+        return date(y, m, d)
+    except Exception:
+        return None
 
-    Permite al Admin asignar variables Msales(m), Msalmuera(m-delta_t), Xsolids(m-delta_t)
-    a columnas de esquemas (por planta) y ver resultado Draft/Certificado.
-    """
 
-    plant = Plant.objects.filter(code="PCS").first()
-    if not plant:
-        messages.error(request, "No existe la planta PCS en el sistema.")
-        return redirect("home")
+def _parse_frequency(raw: str | None) -> str:
+    if not raw:
+        return PerformanceIndicatorResult.FREQ_MONTHLY
+    raw = raw.strip().upper()
+    if raw in {PerformanceIndicatorResult.FREQ_DAILY, PerformanceIndicatorResult.FREQ_MONTHLY}:
+        return raw
+    return PerformanceIndicatorResult.FREQ_MONTHLY
 
-    indicator = PerformanceIndicator.objects.filter(key="pcs.formula1_yield_pct", plant=plant).first()
-    if not indicator:
-        messages.error(request, "No existe el indicador pcs.formula1_yield_pct. Ejecute seed_performance_catalog.")
-        return redirect("home")
 
-    # Mes seleccionado
-    month_param = request.GET.get("month") if request.method == "GET" else request.POST.get("month")
-    parsed = _parse_month(month_param)
+def _get_date_range(frequency: str, start_raw: str | None, end_raw: str | None) -> tuple[date, date]:
     today = timezone.now().date()
-    year, month = parsed if parsed else (today.year, today.month)
-    window = month_window(year, month)
+    end_date = _parse_day(end_raw) or today
+    start_date = _parse_day(start_raw)
+    if start_date is None:
+        base_month = date(end_date.year, end_date.month, 1)
+        if frequency == PerformanceIndicatorResult.FREQ_DAILY:
+            start_date = shift_months(base_month, -5)
+        else:
+            start_date = shift_months(base_month, -11)
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+    return start_date, end_date
 
-    # Column options por planta: solo esquemas aprobados y activos
+
+
+def _daily_history_days(base_day: date, months: int = 6) -> list[date]:
+    start_month = shift_months(date(base_day.year, base_day.month, 1), -(months - 1))
+    day = start_month
+    days: list[date] = []
+    while day <= base_day:
+        days.append(day)
+        day += timedelta(days=1)
+    return days
+
+
+def _upsert_indicator_result(
+    *,
+    indicator: PerformanceIndicator,
+    plant: Plant,
+    window,
+    stage: str,
+    frequency: str,
+    value: float | None,
+    status: str,
+    trace: dict,
+) -> PerformanceIndicatorResult:
+    result, _ = PerformanceIndicatorResult.objects.update_or_create(
+        indicator=indicator,
+        plant=plant,
+        period_end=window.period_end,
+        frequency=frequency,
+        defaults={
+            "period_start": window.period_start,
+            "stage": stage,
+            "status": status,
+            "numeric_value": value,
+            "text_value": "",
+            "trace": trace,
+        },
+    )
+    return result
+
+
+@admin_required
+def kcl_formula_9(request: HttpRequest) -> HttpResponse:
+    """
+    UI: Formula 9 (KCL) - Rendimiento de Produccion de KCL (%).
+
+    Permite al Admin asignar variables y ver resultados.
+    """
+
+    plant = Plant.objects.filter(code="PIKCL").first()
+    if not plant:
+        messages.error(request, "No existe la planta PIKCL en el sistema.")
+        return redirect("home")
+
+    indicator = PerformanceIndicator.objects.filter(key="kcl.yield_pct", plant=plant).first()
+    if not indicator:
+        messages.error(request, "No existe el indicador kcl.yield_pct. Ejecute seed_performance_catalog.")
+        return redirect("home")
+
+    frequency = _parse_frequency(request.GET.get("frequency") if request.method == "GET" else request.POST.get("frequency"))
+    start_raw = request.GET.get("date_start") if request.method == "GET" else request.POST.get("date_start")
+    end_raw = request.GET.get("date_end") if request.method == "GET" else request.POST.get("date_end")
+    start_date, end_date = _get_date_range(frequency, start_raw, end_raw)
+
     columns_qs = (
         ColumnDef.objects.filter(
             dataset_type__plant=plant,
@@ -80,136 +155,194 @@ def pcs_formula_1(request: HttpRequest) -> HttpResponse:
         for c in columns_qs
     ]
 
-    # Variables de la fórmula 1
     variables = list(
         PerformanceVariable.objects.filter(
             plant=plant,
-            key__in=["pcs.f1.msales_tm", "pcs.f1.msalmuera_tm", "pcs.f1.xsolids_frac"],
+            key__in=["kcl.product_mass_tm", "kcl.feed_mass_tm"],
             is_active=True,
         ).order_by("key")
     )
-    variables_by_key = {v.key: v for v in variables}
+    if not variables:
+        messages.error(request, "No existen variables KCL para la formula 9. Ejecute seed_performance_catalog.")
+        return redirect("home")
 
-    # Preload mappings
     mappings = list(
         PerformanceVariableMapping.objects.filter(variable__in=variables, is_active=True)
         .select_related("dataset_type", "column")
-        .order_by("variable__key", "stage", "-updated_at")
+        .order_by("variable__key", "-updated_at")
     )
-    mapping_by_var_stage: dict[tuple[str, str], PerformanceVariableMapping] = {}
-    for m in mappings:
-        k = (m.variable.key, m.stage)
-        if k not in mapping_by_var_stage:
-            mapping_by_var_stage[k] = m
+    mapping_by_var: dict[int, PerformanceVariableMapping] = {}
+    for mapping in mappings:
+        if mapping.variable_id not in mapping_by_var:
+            mapping_by_var[mapping.variable_id] = mapping
 
-    # Forms per variable-stage
-    forms: dict[tuple[str, str], VariableMappingForm] = {}
-    stages = ["DRAFT", "CERTIFIED"]
+    can_save_mappings = not PerformanceVariableMapping.objects.filter(
+        variable__in=variables,
+        is_active=True,
+    ).exists()
+
+    forms: dict[str, VariableMappingForm] = {}
     for v in variables:
-        for stage in stages:
-            existing = mapping_by_var_stage.get((v.key, stage))
-            initial = {
-                "column_id": str(existing.column_id) if existing else "",
-                "aggregation": existing.aggregation if existing else "SUM",
-                "offset_months": existing.offset_months if existing else 0,
-            }
-            safe_prefix = v.key.replace(".", "_").replace("-", "_")
-            prefix = f"{safe_prefix}__{stage}"
-            if request.method == "POST":
-                forms[(v.key, stage)] = VariableMappingForm(
-                    request.POST,
-                    prefix=prefix,
-                    column_options=column_options,
-                )
-            else:
-                forms[(v.key, stage)] = VariableMappingForm(
-                    initial=initial,
-                    prefix=prefix,
-                    column_options=column_options,
-                )
+        existing = mapping_by_var.get(v.id)
+        initial = {
+            "column_id": str(existing.column_id) if existing else "",
+            "aggregation": existing.aggregation if existing else "SUM",
+            "offset_months": existing.offset_months if existing else 0,
+        }
+        safe_prefix = v.key.replace(".", "_").replace("-", "_")
+        prefix = f"{safe_prefix}"
+        if request.method == "POST":
+            form = VariableMappingForm(
+                request.POST,
+                prefix=prefix,
+                column_options=column_options,
+            )
+        else:
+            form = VariableMappingForm(
+                initial=initial,
+                prefix=prefix,
+                column_options=column_options,
+            )
+        if not can_save_mappings:
+            for field in form.fields.values():
+                field.disabled = True
+                field.widget.attrs["disabled"] = True
+        forms[v.key] = form
 
     if request.method == "POST":
-        all_valid = all(f.is_valid() for f in forms.values())
-        if not all_valid:
-            messages.error(request, "Hay errores en el formulario. Revise las asignaciones.")
+        if not can_save_mappings:
+            messages.info(request, "Las asignaciones ya fueron configuradas.")
         else:
-            with transaction.atomic():
-                for (var_key, stage), form in forms.items():
-                    variable = variables_by_key[var_key]
-                    column = form.resolve_column()
-                    aggregation = form.cleaned_data["aggregation"]
-                    offset_months = form.cleaned_data["offset_months"]
+            all_valid = all(f.is_valid() for f in forms.values())
+            if not all_valid:
+                messages.error(request, "Hay errores en el formulario. Revise las asignaciones.")
+            else:
+                with transaction.atomic():
+                    for v in variables:
+                        form = forms[v.key]
+                        column = form.resolve_column()
+                        aggregation = form.cleaned_data["aggregation"]
+                        offset_months = form.cleaned_data["offset_months"]
 
-                    # Si no selecciona columna, desactiva mappings existentes para ese var+stage.
-                    if column is None:
                         PerformanceVariableMapping.objects.filter(
-                            variable=variable,
-                            stage=stage,
+                            variable=v,
                             is_active=True,
                         ).update(is_active=False)
-                        continue
 
-                    dataset = column.dataset_type
-                    if dataset.plant_id != plant.id:
-                        raise ValueError("Asignación inválida: la columna no pertenece a la planta PCS.")
+                        if column is None:
+                            continue
 
-                    # Mantener un solo mapping activo por var+stage (MVP)
-                    PerformanceVariableMapping.objects.filter(
-                        variable=variable,
-                        stage=stage,
-                        is_active=True,
-                    ).update(is_active=False)
+                        dataset = column.dataset_type
+                        if dataset.plant_id != plant.id:
+                            raise ValueError("Asignacion invalida: la columna no pertenece a la planta PIKCL.")
 
-                    PerformanceVariableMapping.objects.create(
-                        variable=variable,
-                        dataset_type=dataset,
-                        column=column,
-                        aggregation=aggregation,
-                        transform="NONE",
-                        transform_value=None,
-                        offset_months=offset_months,
-                        stage=stage,
-                        notes="Asignado desde UI (Fórmula 1 PCS)",
-                        is_active=True,
-                    )
+                        PerformanceVariableMapping.objects.update_or_create(
+                            variable=v,
+                            dataset_type=dataset,
+                            column=column,
+                            offset_months=offset_months,
+                            stage="DRAFT",
+                            defaults={
+                                "aggregation": aggregation,
+                                "transform": "NONE",
+                                "transform_value": None,
+                                "notes": "Asignado desde UI (Formula 9 KCL)",
+                                "is_active": True,
+                            },
+                        )
 
-            messages.success(request, "Asignaciones guardadas.")
-            return redirect(f"/performance/pcs/formula-1/?month={year:04d}-{month:02d}")
+                messages.success(request, "Asignaciones guardadas.")
 
-    # Cálculo/preview (no persiste, solo muestra)
-    preview: dict[str, dict] = {}
-    for stage in stages:
-        value, status, trace = compute_indicator_for_stage(indicator, window, stage=stage)
-        preview[stage] = {"value": value, "status": status, "trace": trace}
+        redirect_url = f"/performance/kcl/formula-9/?frequency={frequency}"
+        redirect_url += f"&date_start={start_date:%Y-%m-%d}&date_end={end_date:%Y-%m-%d}"
+        return redirect(redirect_url)
 
-    # Serie histórica (últimos 12 meses) calculada al vuelo
-    base_month = date(year, month, 1)
-    month_starts = [shift_months(base_month, -i) for i in range(11, -1, -1)]
-    chart_labels = [m.strftime("%Y-%m") for m in month_starts]
-    chart_draft: list[float | None] = []
-    chart_cert: list[float | None] = []
-    for m in month_starts:
-        w = month_window(m.year, m.month)
-        v_d, s_d, _ = compute_indicator_for_stage(indicator, w, stage="DRAFT")
-        v_c, s_c, _ = compute_indicator_for_stage(indicator, w, stage="CERTIFIED")
-        chart_draft.append(v_d if s_d == PerformanceIndicatorResult.STATUS_SUCCESS else None)
-        chart_cert.append(v_c if s_c == PerformanceIndicatorResult.STATUS_SUCCESS else None)
+    if frequency == PerformanceIndicatorResult.FREQ_DAILY:
+        days = []
+        day = start_date
+        while day <= end_date:
+            days.append(day)
+            day += timedelta(days=1)
+        period_ends = days
+        chart_labels = [d.strftime("%Y-%m-%d") for d in days]
+        chart_title = f"Historico ({start_date:%Y-%m-%d} a {end_date:%Y-%m-%d})"
+    else:
+        month_starts = []
+        current = date(start_date.year, start_date.month, 1)
+        end_month = date(end_date.year, end_date.month, 1)
+        while current <= end_month:
+            month_starts.append(current)
+            current = shift_months(current, 1)
+        period_ends = [month_window(m.year, m.month).period_end for m in month_starts]
+        chart_labels = [m.strftime("%Y-%m") for m in month_starts]
+        chart_title = f"Historico ({month_starts[0]:%Y-%m} a {end_month:%Y-%m})"
+
+    results = PerformanceIndicatorResult.objects.filter(
+        indicator=indicator,
+        plant=plant,
+        frequency=frequency,
+        period_end__gte=period_ends[0],
+        period_end__lte=period_ends[-1],
+    )
+    if not results.exists():
+        with transaction.atomic():
+            for period_end in period_ends:
+                if frequency == PerformanceIndicatorResult.FREQ_DAILY:
+                    w = MonthWindow(period_end, period_end)
+                else:
+                    w = month_window(period_end.year, period_end.month)
+                value, status, trace = compute_indicator(indicator, w)
+                _upsert_indicator_result(
+                    indicator=indicator,
+                    plant=plant,
+                    window=w,
+                    stage="DRAFT",
+                    frequency=frequency,
+                    value=value,
+                    status=status,
+                    trace=trace,
+                )
+        results = PerformanceIndicatorResult.objects.filter(
+            indicator=indicator,
+            plant=plant,
+            frequency=frequency,
+            period_end__gte=period_ends[0],
+            period_end__lte=period_ends[-1],
+        )
+    result_map = {r.period_end: r for r in results}
+
+    chart_values: list[float | None] = []
+    for period_end in period_ends:
+        res = result_map.get(period_end)
+        if res and res.status == PerformanceIndicatorResult.STATUS_SUCCESS:
+            chart_values.append(res.numeric_value)
+        else:
+            chart_values.append(None)
 
     context = {
         "plant": plant,
-        "month": f"{year:04d}-{month:02d}",
+        "date_start": start_date.strftime("%Y-%m-%d"),
+        "date_end": end_date.strftime("%Y-%m-%d"),
+        "frequency": frequency,
         "indicator": indicator,
+        "page_title": "Desempeno - KCL",
+        "page_subtitle": "Formula 9: Rendimiento de Produccion de KCL (%)",
+        "formula_equation": "R_kcl(m) = (Q_kcl(m) / Q_mp(m)) * 100",
+        "formula_notes": [
+            "R_kcl(m): rendimiento mensual (%) de produccion de KCL.",
+            "Q_kcl(m): cantidad total de KCL producida en el mes m (TM).",
+            "Q_mp(m): materia prima alimentada en el mes m (TM, base seca).",
+        ],
         "variable_blocks": [
             {
                 "variable": v,
-                "draft_form": forms[(v.key, "DRAFT")],
-                "cert_form": forms[(v.key, "CERTIFIED")],
+                "form": forms[v.key],
             }
             for v in variables
         ],
-        "preview": preview,
+        "can_save_mappings": can_save_mappings,
+        "chart_title": chart_title,
         "chart_labels_json": json.dumps(chart_labels),
-        "chart_draft_json": json.dumps(chart_draft),
-        "chart_cert_json": json.dumps(chart_cert),
+        "chart_values_json": json.dumps(chart_values),
     }
-    return render(request, "performance/pcs_formula_1.html", context)
+    return render(request, "performance/formulas.html", context)

@@ -163,6 +163,9 @@ class PerformanceIndicator(models.Model):
 
 
 class PerformanceIndicatorResult(models.Model):
+    FREQ_DAILY = "DAILY"
+    FREQ_MONTHLY = "MONTHLY"
+
     STATUS_SUCCESS = "SUCCESS"
     STATUS_NOT_CALCULABLE = "NOT_CALCULABLE"
     STATUS_ERROR = "ERROR"
@@ -171,6 +174,11 @@ class PerformanceIndicatorResult(models.Model):
         (STATUS_SUCCESS, "Calculado"),
         (STATUS_NOT_CALCULABLE, "No calculable"),
         (STATUS_ERROR, "Error"),
+    ]
+
+    FREQ_CHOICES = [
+        (FREQ_DAILY, "Diario"),
+        (FREQ_MONTHLY, "Mensual"),
     ]
 
     indicator = models.ForeignKey(
@@ -185,6 +193,12 @@ class PerformanceIndicatorResult(models.Model):
     )
     period_start = models.DateField()
     period_end = models.DateField()
+    frequency = models.CharField(
+        max_length=20,
+        choices=FREQ_CHOICES,
+        default=FREQ_MONTHLY,
+        help_text="Frecuencia del resultado calculado.",
+    )
     stage = models.CharField(
         max_length=20,
         choices=PerformanceVariableMapping.STAGE_CHOICES,
@@ -201,9 +215,9 @@ class PerformanceIndicatorResult(models.Model):
 
     class Meta:
         ordering = ["-period_end", "plant__code", "indicator__key"]
-        unique_together = ("indicator", "plant", "period_end", "stage")
+        unique_together = ("indicator", "plant", "period_end", "frequency")
 
     def __str__(self) -> str:
-        return f"{self.plant.code} {self.indicator.key} {self.period_end} ({self.status})"
+        return f"{self.plant.code} {self.indicator.key} {self.period_end} {self.frequency} ({self.status})"
 
 # Create your models here.

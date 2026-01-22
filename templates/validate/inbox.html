@@ -1,178 +1,186 @@
 {% extends "base.html" %}
 
 {% block title %}Bandeja de validación - SICGAD{% endblock %}
-{% block page_title %}Bandeja de validación diaria/mensual{% endblock %}
 
 {% block content %}
-  {% if pending_historical_batches %}
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-6 text-xs">
-      <h2 class="text-sm font-semibold mb-2 text-slate-100">Históricos pendientes (validación masiva)</h2>
-      <p class="text-[11px] text-slate-400 mb-3">
-        Estos históricos fueron enviados en conjunto. Puedes aprobarlos de una sola vez.
-      </p>
-      <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
-        <table class="min-w-full text-[11px]">
-          <thead class="bg-slate-950 text-slate-300">
-            <tr>
-              <th class="px-3 py-2 text-left font-semibold">Creado</th>
-              <th class="px-3 py-2 text-left font-semibold">Planta</th>
-              <th class="px-3 py-2 text-left font-semibold">Dataset</th>
-              <th class="px-3 py-2 text-left font-semibold">Rango</th>
-              <th class="px-3 py-2 text-left font-semibold">Pendientes</th>
-              <th class="px-3 py-2 text-left font-semibold">Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for batch in pending_historical_batches %}
-              <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-                <td class="px-3 py-2">{{ batch.created_at|date:"Y-m-d H:i" }}</td>
-                <td class="px-3 py-2">{{ batch.plant.code }}</td>
-                <td class="px-3 py-2">{{ batch.dataset_type.name }}</td>
-                <td class="px-3 py-2">
-                  {% if batch.period_start and batch.period_end %}
-                    {{ batch.period_start }} → {{ batch.period_end }}
-                  {% elif batch.inst_period_start and batch.inst_period_end %}
-                    {{ batch.inst_period_start }} → {{ batch.inst_period_end }}
-                  {% else %}
-                    -
-                  {% endif %}
-                </td>
-                <td class="px-3 py-2">{{ batch.pending_count }}</td>
-                <td class="px-3 py-2">
-                  <form method="post" action="{% url 'validation:approve_historical_batch' batch.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="px-3 py-1.5 rounded-md bg-emerald-500 text-slate-900 text-[11px] font-semibold hover:bg-emerald-400">
-                      Aprobar histórico
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+<div class="space-y-8 fade-in">
+    <div class="mb-2">
+        <h2 class="text-2xl font-header font-bold text-white tracking-tight">Centro de Validación</h2>
+        <p class="text-slate-500 text-sm">Gestiona la oficialización de datos operativos y certificaciones mensuales.</p>
+    </div>
+
+    {% if pending_historical_batches %}
+    <!-- Históricos Section -->
+    <section class="space-y-4">
+        <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Validación de Datos Históricos
+        </h3>
+        <div class="glass-card rounded-3xl overflow-hidden border-white/5 bg-sky-500/5">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <th class="px-6 py-4">Creado</th>
+                        <th class="px-6 py-4 text-center">Unidad</th>
+                        <th class="px-6 py-4">Dataset / Rango</th>
+                        <th class="px-6 py-4 text-center">Cargas</th>
+                        <th class="px-6 py-4 text-right">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for batch in pending_historical_batches %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors">
+                        <td class="px-6 py-4 font-mono text-[10px] text-slate-400">{{ batch.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400">{{ batch.plant.code }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-200">{{ batch.dataset_type.name }}</span>
+                                <span class="text-[10px] text-slate-500 uppercase">
+                                    {% if batch.period_start and batch.period_end %}
+                                        {{ batch.period_start }} — {{ batch.period_end }}
+                                    {% else %}-{% endif %}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="text-xs font-bold text-sky-400">{{ batch.pending_count }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <form method="post" action="{% url 'validation:approve_historical_batch' batch.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-primary py-1 px-4 glow-emerald">
+                                    Aprobar Pack
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </section>
-  {% endif %}
+    {% endif %}
 
-  {% if certification_alerts %}
-    <section class="bg-amber-950/40 border border-amber-800 rounded-xl p-4 mb-6 text-xs">
-      <h2 class="text-sm font-semibold mb-2 text-amber-200">Alertas de certificación mensual</h2>
-      <p class="text-[11px] text-amber-100/80 mb-3">
-        El mes anterior ya finalizó y existen consolidaciones automáticas pendientes de validar.
-      </p>
-      <ul class="space-y-2">
-        {% for alert in certification_alerts %}
-          <li class="flex items-center justify-between bg-slate-950/40 border border-amber-800/50 rounded-lg px-3 py-2">
-            <div>
-              <div class="font-semibold text-slate-100">{{ alert.dataset_type.name }}</div>
-              <div class="text-[11px] text-slate-300">
-                Planta {{ alert.plant.code }} — periodo {{ alert.period }}
-              </div>
-            </div>
-            <a href="{% url 'validation:detail' alert.pk %}" class="text-xs text-amber-200 hover:underline">
-              Revisar ahora
-            </a>
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
-
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
-    <h2 class="text-sm font-semibold mb-3">Datasets pendientes de validación</h2>
-    <p class="text-[11px] text-slate-400 mb-3">
-      Esta bandeja muestra datasets diarios y mensuales que requieren tu aprobación según tus permisos de validador.
-    </p>
-
-    <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
-      <table class="min-w-full text-xs">
-        <thead class="bg-slate-950 text-slate-300">
-          <tr>
-            <th class="px-3 py-2 text-left font-semibold">Creado</th>
-            <th class="px-3 py-2 text-left font-semibold">Planta</th>
-            <th class="px-3 py-2 text-left font-semibold">Dataset</th>
-            <th class="px-3 py-2 text-left font-semibold">Periodo</th>
-            <th class="px-3 py-2 text-left font-semibold">Frecuencia</th>
-            <th class="px-3 py-2 text-left font-semibold">Estado</th>
-            <th class="px-3 py-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inst in items %}
-            <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-              <td class="px-3 py-2 align-top">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
-              <td class="px-3 py-2 align-top">{{ inst.plant.code }}</td>
-              <td class="px-3 py-2 align-top">{{ inst.dataset_type.name }}</td>
-              <td class="px-3 py-2 align-top">{{ inst.period }}</td>
-              <td class="px-3 py-2 align-top">
-                {{ inst.dataset_type.get_validation_frequency_display }}
-              </td>
-              <td class="px-3 py-2 align-top">{{ inst.get_state_display }}</td>
-              <td class="px-3 py-2 align-top text-right">
-                <a href="{% url 'validation:detail' inst.pk %}" class="text-xs text-emerald-400 hover:underline">
-                  Ver y decidir
+    {% if certification_alerts %}
+    <!-- Certification Alerts -->
+    <section class="space-y-4">
+        <h3 class="text-xs font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.876c.54 0 .899-.596.63-1.026L13.03 4.062a1.012 1.012 0 00-1.817 0l-7.73 13.912c-.269.43-.269.946.063 1.026z"></path></svg>
+            Alertas de Certificación Mensual
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for alert in certification_alerts %}
+            <div class="glass-card rounded-2xl p-4 border-amber-500/20 bg-amber-500/5 group hover:border-amber-500/40 transition-all">
+                <div class="flex justify-between items-start mb-3">
+                    <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-widest">{{ alert.plant.code }}</span>
+                    <span class="text-[10px] font-bold text-slate-500">{{ alert.period }}</span>
+                </div>
+                <h4 class="font-bold text-slate-200 mb-4 group-hover:text-amber-400 transition-colors">{{ alert.dataset_type.name }}</h4>
+                <a href="{% url 'validation:detail' alert.pk %}" class="flex items-center justify-center w-full py-2 rounded-xl bg-amber-500/10 text-amber-500 text-xs font-bold hover:bg-amber-500 hover:text-white transition-all">
+                    Analizar Certificación
                 </a>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="7" class="px-3 py-4 text-center text-slate-400">
-                No hay datasets pendientes de validación para tus plantas.
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
 
-  <section class="mt-6 bg-slate-950/60 border border-slate-800 rounded-xl p-4">
-    <h2 class="text-sm font-semibold mb-3">Historial de mis validaciones</h2>
-    <p class="text-[11px] text-slate-400 mb-3">
-      Listado de datasets sobre los que has tomado decisiones de aprobación o rechazo.
-    </p>
+    <!-- Main Inbox Section -->
+    <section class="space-y-4">
+        <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+            Bandeja de Pendientes
+        </h3>
+        <div class="glass-card rounded-3xl overflow-hidden border-white/5">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        <th class="px-6 py-4">Fecha Carga</th>
+                        <th class="px-6 py-4 text-center">Unidad</th>
+                        <th class="px-6 py-4">Dataset / Periodo</th>
+                        <th class="px-6 py-4">Frecuencia</th>
+                        <th class="px-6 py-4 text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for inst in items %}
+                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
+                        <td class="px-6 py-4 font-mono text-[10px] text-slate-400">{{ inst.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400 group-hover:text-emerald-400 transition-colors">{{ inst.plant.code }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-200">{{ inst.dataset_type.name }}</span>
+                                <span class="text-[10px] font-bold text-emerald-500/80 uppercase tracking-tighter">{{ inst.period }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">{{ inst.dataset_type.get_validation_frequency_display }}</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="{% url 'validation:detail' inst.pk %}" class="btn-primary py-1 px-4 text-[10px] group-hover:scale-105 transition-transform">
+                                Revisar
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-12 text-center">
+                            <p class="text-slate-600 font-medium">Bandeja de entrada vacía.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 
-    <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
-      <table class="min-w-full text-xs">
-        <thead class="bg-slate-950 text-slate-300">
-          <tr>
-            <th class="px-3 py-2 text-left font-semibold">Fecha</th>
-            <th class="px-3 py-2 text-left font-semibold">Planta</th>
-            <th class="px-3 py-2 text-left font-semibold">Dataset</th>
-            <th class="px-3 py-2 text-left font-semibold">Periodo</th>
-            <th class="px-3 py-2 text-left font-semibold">Decisión</th>
-            <th class="px-3 py-2 text-left font-semibold">Comentario</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for act in history_actions %}
-            <tr class="border-t border-slate-800 hover:bg-slate-900/60">
-              <td class="px-3 py-2 align-top">{{ act.created_at|date:"Y-m-d H:i" }}</td>
-              <td class="px-3 py-2 align-top">{{ act.dataset_instance.plant.code }}</td>
-              <td class="px-3 py-2 align-top">{{ act.dataset_instance.dataset_type.name }}</td>
-              <td class="px-3 py-2 align-top">{{ act.dataset_instance.period }}</td>
-              <td class="px-3 py-2 align-top">
-                {{ act.get_decision_display }} (L{{ act.level }})
-              </td>
-              <td class="px-3 py-2 align-top text-[11px]">
-                {% if act.comment %}
-                  <span class="text-slate-300">
-                    {{ act.comment|truncatechars:80 }}
-                  </span>
-                {% else %}
-                  <span class="text-slate-500">—</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="6" class="px-3 py-4 text-center text-slate-400">
-                Aún no has registrado validaciones.
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
+    <!-- History Section -->
+    <section class="space-y-4">
+        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+            Mis Decisiones Recientes
+        </h3>
+        <div class="glass-card rounded-3xl overflow-hidden border-white/5 opacity-80">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-white/[0.01] text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                        <th class="px-6 py-3">Fecha</th>
+                        <th class="px-6 py-3">Dataset</th>
+                        <th class="px-6 py-3 text-center">Decisión</th>
+                        <th class="px-6 py-3">Comentario</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    {% for act in history_actions|slice:":10" %}
+                    <tr class="border-t border-white/5 text-slate-400">
+                        <td class="px-6 py-3 text-[10px]">{{ act.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-6 py-3">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-400 text-xs">{{ act.dataset_instance.dataset_type.name }}</span>
+                                <span class="text-[9px] uppercase">{{ act.dataset_instance.plant.code }} · {{ act.dataset_instance.period }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-3 text-center">
+                            <span class="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tight {% if act.decision == 'APPROVE' %}text-emerald-500{% else %}text-red-400{% endif %}">
+                                {{ act.get_decision_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-[10px] italic">
+                            {{ act.comment|default:"—"|truncatechars:100 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-8 text-center italic text-slate-600">No hay acciones registradas.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 {% endblock %}

@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, render
 from accounts.models import Membership
 from audit.models import AuditLog
 from ingest.models import DatasetInstance, PublishedDataPoint
+from performance.models import PerformanceIndicator, PerformanceIndicatorResult
 from ingest.utils import _read_instance_file
 from schemas.models import DatasetType, ColumnDef
 
@@ -94,12 +95,29 @@ def charts(request):
 
     can_see_drafts = is_admin or is_loader or is_validator
 
+    performance_indicators = (
+        PerformanceIndicator.objects.select_related("plant")
+        .filter(is_active=True, results__isnull=False)
+        .distinct()
+    )
+    if not is_admin:
+        memberships = Membership.objects.filter(user=user, is_active=True)
+        plant_ids = list(memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True))
+        has_global = memberships.filter(plant__isnull=True, project__isnull=True).exists()
+        if plant_ids and not has_global:
+            performance_indicators = performance_indicators.filter(plant_id__in=plant_ids)
+        elif not plant_ids and not has_global:
+            performance_indicators = performance_indicators.none()
+
+    performance_indicators = performance_indicators.order_by("plant__code", "label", "key")
+
     return render(
         request,
         "kpis/charts.html",
         {
             "datasets": datasets,
             "can_see_drafts": can_see_drafts,
+            "performance_indicators": performance_indicators,
         },
     )
 
@@ -290,6 +308,87 @@ def dataset_data(request, dataset_id: int):
             "is_certification": dataset.is_certification,
         },
         "columns": columns,
+        "rows": rows,
+    }
+
+    return JsonResponse(data)
+
+
+@login_required
+def performance_data(request, indicator_id: int):
+    user = request.user
+    is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
+
+    indicator = get_object_or_404(
+        PerformanceIndicator.objects.select_related("plant"),
+        pk=indicator_id,
+    )
+
+    if not is_admin:
+        memberships = Membership.objects.filter(user=user, is_active=True)
+        plant_ids = list(
+            memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
+        )
+        has_global = memberships.filter(plant__isnull=True, project__isnull=True).exists()
+        if not (has_global or (plant_ids and indicator.plant_id in plant_ids)):
+            raise Http404
+
+    if not (is_admin or is_loader or is_validator or is_viewer):
+        raise Http404
+
+    frequency = (request.GET.get("frequency") or PerformanceIndicatorResult.FREQ_MONTHLY).upper()
+    if frequency not in (
+        PerformanceIndicatorResult.FREQ_DAILY,
+        PerformanceIndicatorResult.FREQ_MONTHLY,
+    ):
+        frequency = PerformanceIndicatorResult.FREQ_MONTHLY
+
+    def _parse_date(raw):
+        if not raw:
+            return None
+        try:
+            return date.fromisoformat(raw)
+        except ValueError:
+            return None
+
+    start_date = _parse_date(request.GET.get("date_start"))
+    end_date = _parse_date(request.GET.get("date_end"))
+    if start_date and end_date and start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    qs = (
+        PerformanceIndicatorResult.objects.filter(
+            indicator=indicator,
+            plant=indicator.plant,
+            frequency=frequency,
+        )
+        .order_by("period_end")
+    )
+    if start_date:
+        qs = qs.filter(period_end__gte=start_date)
+    if end_date:
+        qs = qs.filter(period_end__lte=end_date)
+
+    rows = []
+    for res in qs:
+        rows.append(
+            {
+                "period_end": res.period_end.isoformat(),
+                "value": res.numeric_value if res.status == PerformanceIndicatorResult.STATUS_SUCCESS else None,
+                "status": res.status,
+            }
+        )
+
+    data = {
+        "indicator": {
+            "id": indicator.id,
+            "key": indicator.key,
+            "label": indicator.label,
+            "unit": indicator.unit,
+            "plant_code": indicator.plant.code,
+            "plant_name": indicator.plant.name,
+        },
+        "frequency": frequency,
         "rows": rows,
     }
 

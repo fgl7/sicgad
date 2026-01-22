@@ -261,16 +261,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const minStr = formatInputDate(minDate);
     const maxStr = formatInputDate(maxDate);
+    const defaultEnd = new Date(maxDate.getTime());
+    const defaultStart = new Date(maxDate.getTime());
+    defaultStart.setDate(defaultStart.getDate() - 29);
+    if (defaultStart < minDate) {
+      defaultStart.setTime(minDate.getTime());
+    }
 
     dateStartInput.min = minStr;
     dateStartInput.max = maxStr;
     dateEndInput.min = minStr;
     dateEndInput.max = maxStr;
 
-    dateStartInput.value = minStr;
-    dateEndInput.value = maxStr;
+    dateStartInput.value = formatInputDate(defaultStart);
+    dateEndInput.value = formatInputDate(defaultEnd);
 
-    setFilterBounds(minStr, maxStr);
+    setFilterBounds(dateStartInput.value, dateEndInput.value);
   }
 
   function getFilteredRows(rows) {
@@ -377,7 +383,7 @@ document.addEventListener("DOMContentLoaded", function () {
       stack = "total";
     }
 
-    const seriesColors = ["#38bdf8", "#fbbf24", "#34d399", "#a855f7", "#f97316", "#60a5fa"];
+    const seriesColors = ["#10b981", "#0ea5e9", "#f59e0b", "#ec4899", "#8b5cf6", "#f97316"];
     const series = yCols.map(function (yCol, idx) {
       const values = rows.map(function (row) {
         const raw = (row.values || {})[yCol.name];
@@ -400,12 +406,13 @@ document.addEventListener("DOMContentLoaded", function () {
     return {
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(15, 23, 42, 0.95)",
-        borderColor: "#1f2937",
-        textStyle: { color: "#e2e8f0", fontSize: 11 },
+        backgroundColor: "rgba(3, 7, 18, 0.9)",
+        borderColor: "rgba(255, 255, 255, 0.1)",
+        borderWidth: 1,
+        textStyle: { color: "#f8fafc", fontSize: 12, fontFamily: 'Inter' },
         axisPointer: {
           type: "line",
-          lineStyle: { color: "#38bdf8", width: 1 },
+          lineStyle: { color: "rgba(16, 185, 129, 0.5)", width: 2 },
         },
       },
       legend: {
@@ -436,8 +443,8 @@ document.addEventListener("DOMContentLoaded", function () {
           textStyle: {
             color: "#94a3b8",
           },
-          fillerColor: "rgba(16, 185, 129, 0.2)",
-          borderColor: "#1f2937",
+          fillerColor: "rgba(16, 185, 129, 0.1)",
+          borderColor: "rgba(255, 255, 255, 0.05)",
         },
       ],
       grid: {
@@ -466,7 +473,7 @@ document.addEventListener("DOMContentLoaded", function () {
         name:
           yCols.length === 1
             ? (yCols[0].label || yCols[0].name) +
-              (yCols[0].unit ? ` (${yCols[0].unit})` : "")
+            (yCols[0].unit ? ` (${yCols[0].unit})` : "")
             : "Valores",
         axisLine: { show: false },
         axisTick: { show: false },
@@ -519,29 +526,50 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    function formatCellValue(value) {
+      if (value == null || value === "") {
+        return "-";
+      }
+      if (typeof value === "number" && Number.isFinite(value)) {
+        return value.toFixed(2);
+      }
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) {
+          return "-";
+        }
+        if (/^-?\\d+(\\.\\d+)?$/.test(trimmed)) {
+          const numeric = Number(trimmed);
+          return Number.isFinite(numeric) ? numeric.toFixed(2) : trimmed;
+        }
+      }
+      return value;
+    }
+
     const table = document.createElement("table");
-    table.className = "min-w-full text-[11px]";
+    table.className = "w-full text-left border-collapse";
 
     const thead = document.createElement("thead");
-    thead.className = "bg-slate-950 text-slate-300";
+    thead.className = "bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest";
     const headRow = document.createElement("tr");
     data.columns.forEach(function (col) {
       const th = document.createElement("th");
-      th.className = "px-3 py-1 text-left font-semibold";
+      th.className = "px-6 py-4";
       th.textContent = col.name;
       headRow.appendChild(th);
     });
     thead.appendChild(headRow);
 
     const tbody = document.createElement("tbody");
+    tbody.className = "text-sm";
     rows.forEach(function (row) {
       const tr = document.createElement("tr");
-      tr.className = "border-t border-slate-800";
+      tr.className = "border-t border-white/5 hover:bg-white/[0.02] transition-colors";
       data.columns.forEach(function (col) {
         const td = document.createElement("td");
-        td.className = "px-3 py-1 align-top whitespace-nowrap";
+        td.className = "px-6 py-4 text-slate-300 whitespace-nowrap";
         const v = (row.values || {})[col.name];
-        td.textContent = v != null && v !== "" ? v : "-";
+        td.textContent = formatCellValue(v);
         tr.appendChild(td);
       });
       tbody.appendChild(tr);

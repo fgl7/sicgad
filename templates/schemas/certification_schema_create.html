@@ -1,105 +1,95 @@
 {% extends "base.html" %}
 
-{% block title %}Esquema de certificación - SICGAD{% endblock %}
-{% block page_title %}Nuevo esquema de certificación mensual{% endblock %}
+{% block title %}Certificación Mensual - SICGAD{% endblock %}
 
 {% block content %}
-  <div class="max-w-3xl space-y-4">
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-      <h2 class="text-sm font-semibold mb-2">Crear esquema de certificación</h2>
-      <p class="text-slate-300 mb-2">
-        Como Administrador puedes definir un esquema de datos <strong>mensuales</strong> para certificación,
-        a partir de un dataset diario existente configurado por los Cargadores.
-      </p>
-      <p class="text-slate-400">
-        Selecciona primero el dataset base (diario) y luego marca los campos que quieres incluir en la
-        certificación (por ejemplo: fecha, producto, producción). El esquema resultante se validará en los
-        flujos habituales de validación hasta declararse producción certificada.
-      </p>
-    </section>
-
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4">
-      <form method="post" class="space-y-4 text-xs">
-        {% csrf_token %}
-
-        <div class="space-y-1">
-          <label for="{{ form.source_dataset.id_for_label }}" class="block font-semibold text-slate-200">
-            {{ form.source_dataset.label }}
-          </label>
-          {{ form.source_dataset }}
-          {% if form.source_dataset.errors %}
-            <p class="text-red-400 mt-1">{{ form.source_dataset.errors.0 }}</p>
-          {% endif %}
+<div class="max-w-4xl mx-auto space-y-8 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Nuevo Esquema de Certificación</h2>
+            <p class="text-slate-500 text-sm">Deriva un dataset de validación mensual a partir de registros operativos diarios.</p>
         </div>
+        <a href="{% url 'schemas:schema_list' %}" class="text-xs font-bold text-slate-400 hover:text-emerald-400 uppercase tracking-widest transition-colors">
+            ← Volver al listado
+        </a>
+    </div>
 
-        <div class="space-y-1">
-          <label for="{{ form.name.id_for_label }}" class="block font-semibold text-slate-200">
-            {{ form.name.label }}
-          </label>
-          {{ form.name }}
-          {% if form.name.errors %}
-            <p class="text-red-400 mt-1">{{ form.name.errors.0 }}</p>
-          {% endif %}
-        </div>
-
-        <div class="space-y-2">
-          <div class="flex items-baseline justify-between">
-            <span class="font-semibold text-slate-200">{{ form.columns.label }}</span>
-            <span class="text-[11px] text-slate-400">
-              Los campos disponibles dependen del dataset base seleccionado.
-            </span>
-          </div>
-          <div class="space-y-1 bg-slate-950/80 border border-slate-800 rounded-md px-3 py-2 max-h-64 overflow-y-auto">
-            {% with column_qs=form.columns.field.queryset %}
-              {% if column_qs %}
-                {% for checkbox in form.columns %}
-                  <label class="flex items-start gap-2 cursor-pointer">
-                    {{ checkbox.tag }}
-                    <span class="text-slate-200">{{ checkbox.choice_label }}</span>
-                  </label>
-                {% endfor %}
-              {% else %}
-                <p class="text-slate-400 text-[11px]">
-                  Selecciona primero un dataset base para cargar los campos disponibles.
+    <div class="grid lg:grid-cols-3 gap-8">
+        <aside class="space-y-6">
+            <div class="glass-card rounded-3xl p-6 border-white/5 bg-amber-500/5">
+                <h3 class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Nota del Sistema
+                </h3>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                    La certificación mensual consolida los datos diarios aprobados para generar la cifra oficial que será validada por los niveles jerárquicos superiores.
                 </p>
-              {% endif %}
-            {% endwith %}
-          </div>
-          {% if form.columns.errors %}
-            <p class="text-red-400 mt-1">{{ form.columns.errors.0 }}</p>
-          {% endif %}
-        </div>
+                <div class="p-3 bg-black/20 rounded-xl border border-white/5 text-[10px] text-slate-500 italic">
+                    "Elija cuidadosamente el dataset base; los campos seleccionados serán los que se materialicen en el acta de certificación."
+                </div>
+            </div>
+        </aside>
 
-        <div class="flex items-center justify-between pt-2">
-          <a href="{% url 'schemas:schema_list' %}" class="text-xs text-slate-300 hover:text-slate-100">
-            Volver al listado de esquemas
-          </a>
-          <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
-            Crear esquema de certificación
-          </button>
-        </div>
-      </form>
-    </section>
-  </div>
-{% endblock %}
+        <section class="lg:col-span-2 space-y-6">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="glass-card rounded-3xl p-8 space-y-6 border-white/5">
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dataset Operativo Base</label>
+                        {{ form.source_dataset }}
+                        {% if form.source_dataset.errors %}<p class="text-red-500 text-[10px]">{{ form.source_dataset.errors.0 }}</p>{% endif %}
+                    </div>
 
-{% block extra_js %}
-  <script>
+                    <div class="space-y-2">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre de la Certificación</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="text-red-500 text-[10px]">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Columnas a Certificar</label>
+                            <span class="text-[9px] text-slate-600 font-bold uppercase tracking-widest">Solo se muestran datos del base</span>
+                        </div>
+                        
+                        <div class="bg-slate-900/40 rounded-2xl border border-white/5 p-4 max-h-[300px] overflow-y-auto custom-scrollbar space-y-1">
+                            {% for checkbox in form.columns %}
+                            <label class="flex items-center gap-3 p-2 rounded-xl hover:bg-white/[0.03] transition-all cursor-pointer group">
+                                <div class="relative flex items-center">
+                                    {{ checkbox.tag }}
+                                </div>
+                                <span class="text-xs font-bold text-slate-300 group-hover:text-emerald-400 transition-colors">{{ checkbox.choice_label }}</span>
+                            </label>
+                            {% empty %}
+                            <p class="text-center py-8 text-slate-600 italic text-xs">Seleccione un dataset base para ver las columnas disponibles.</p>
+                            {% endfor %}
+                        </div>
+                        {% if form.columns.errors %}<p class="text-red-500 text-[10px]">{{ form.columns.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="btn-primary glow-emerald px-12 py-4">
+                        Crear Esquema de Certificación
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+
+<script>
     document.addEventListener("DOMContentLoaded", function () {
-      const select = document.getElementById("{{ form.source_dataset.id_for_label }}");
-      if (!select) {
-        return;
-      }
-      select.addEventListener("change", function () {
-        const value = this.value;
-        const url = new URL(window.location.href);
-        if (value) {
-          url.searchParams.set("source_dataset", value);
-        } else {
-          url.searchParams.delete("source_dataset");
-        }
-        window.location.href = url.toString();
-      });
+        const select = document.getElementById("{{ form.source_dataset.id_for_label }}");
+        if (!select) return;
+        select.addEventListener("change", function () {
+            const value = this.value;
+            const url = new URL(window.location.href);
+            if (value) url.searchParams.set("source_dataset", value);
+            else url.searchParams.delete("source_dataset");
+            window.location.href = url.toString();
+        });
     });
-  </script>
+</script>
 {% endblock %}

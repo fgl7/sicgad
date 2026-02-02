@@ -5,280 +5,195 @@
 {% block page_title %}KPIs y gr&aacute;ficos{% endblock %}
 
 {% block content %}
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3 mb-4">
-    <div class="grid gap-4 text-xs md:grid-cols-12">
-      <div class="md:col-span-2">
-        <label class="block mb-1 text-slate-300">Modo de datos</label>
-        <select
-          id="kpi-mode-select"
-          class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-        >
-          <option value="published">Datos publicados (oficiales)</option>
-          {% if can_see_drafts %}
-            <option value="draft">Borradores / en validaci&oacute;n</option>
-          {% endif %}
-        </select>
-      </div>
-      <div class="md:col-span-4 lg:col-span-5">
-        <label class="block mb-1 text-slate-300">Dataset</label>
-        <select
-          id="kpi-instance-select"
-          class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-        >
-          <option value="">Selecciona un dataset...</option>
-          {% for ds in datasets %}
-            <option
-              value="{{ ds.id }}"
-            >
-              [{{ ds.plant.code }}] {{ ds.name }} ({{ ds.get_validation_frequency_display }})
-            </option>
-          {% endfor %}
-        </select>
-        {% if not datasets %}
-          <p class="mt-1 text-[11px] text-slate-500">A&uacute;n no existen datasets con datos cargados.</p>
-        {% endif %}
-      </div>
-      <div class="md:col-span-6 lg:col-span-5">
-        <label class="block mb-1 text-slate-300">Rango de fechas</label>
-        <div class="flex flex-col gap-2 sm:flex-row">
-          <div class="flex-1">
-            <input
-              type="date"
-              id="kpi-date-start"
-              class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-            />
-          </div>
-          <div class="flex-1">
-            <input
-              type="date"
-              id="kpi-date-end"
-              class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-            />
-          </div>
-          <button
-            id="kpi-date-apply"
-            class="px-3 py-1 rounded bg-emerald-500 text-slate-900 font-semibold text-[11px] hover:bg-emerald-400"
-            type="button"
-          >
-            Filtrar
-          </button>
+<section class="glass-effect mb-6 p-6">
+    <div class="grid gap-6 text-sm md:grid-cols-12">
+        <div class="md:col-span-2">
+            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Modo de
+                datos</label>
+            <select id="kpi-mode-select" class="w-full">
+                <option value="published">Datos oficiales</option>
+                {% if can_see_drafts %}
+                <option value="draft">Borradores</option>
+                {% endif %}
+            </select>
         </div>
-      </div>
+        <div class="md:col-span-4 lg:col-span-5">
+            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Dataset</label>
+            <select id="kpi-instance-select" class="w-full">
+                <option value="">Selecciona un dataset...</option>
+                {% for ds in datasets %}
+                <option value="{{ ds.id }}">
+                    [{{ ds.plant.code }}] {{ ds.name }} ({{ ds.get_validation_frequency_display }})
+                </option>
+                {% endfor %}
+            </select>
+            {% if not datasets %}
+            <p class="mt-2 text-[10px] text-slate-500 italic">A&uacute;n no existen datasets con datos cargados.</p>
+            {% endif %}
+        </div>
+        <div class="md:col-span-6 lg:col-span-5">
+            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Rango de
+                fechas</label>
+            <div class="flex flex-col gap-3 sm:flex-row">
+                <div class="flex-1">
+                    <input type="date" id="kpi-date-start" class="w-full" />
+                </div>
+                <div class="flex-1">
+                    <input type="date" id="kpi-date-end" class="w-full" />
+                </div>
+                <button id="kpi-date-apply" class="btn-primary" type="button">
+                    Filtrar
+                </button>
+            </div>
+        </div>
     </div>
-    <p class="mt-2 text-[11px] text-slate-400">
-      Los datos en modo <span class="text-emerald-300">publicados</span> son oficiales.
-      Los datos en modo <span class="text-amber-300">borrador</span> est&aacute;n en revisi&oacute;n y solo son visibles para cargadores, validadores y administraci&oacute;n.
-    </p>
-  </section>
+</section>
 
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-4">
-    <div class="grid gap-4 md:grid-cols-12">
-      <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
-        <div class="rounded-2xl border border-slate-800/80 bg-slate-950/70 shadow-2xl shadow-slate-950/60 ring-1 ring-emerald-500/10 p-2">
-          <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
+<section class="glass-effect mb-6 p-6">
+    <div class="grid gap-6 md:grid-cols-12">
+        <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
+            <div class="rounded-2xl border border-white/5 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+                <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
+            </div>
         </div>
-      </div>
-      <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 space-y-4 text-xs">
-        <div>
-          <label class="block mb-1 text-slate-300">Tipo de gr&aacute;fico</label>
-          <select
-            id="kpi-chart-type-select"
-            class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-          >
-            <option value="line">L&iacute;nea</option>
-            <option value="bar">Barras</option>
-            <option value="stacked_bar">Barras apiladas</option>
-          </select>
+        <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 space-y-6 text-sm">
+            <div>
+                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de
+                    gr&aacute;fico</label>
+                <select id="kpi-chart-type-select" class="w-full">
+                    <option value="line">L&iacute;nea suave</option>
+                    <option value="bar">Barras modernas</option>
+                    <option value="stacked_bar">Barras apiladas</option>
+                </select>
+            </div>
+            <div>
+                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje
+                    X</label>
+                <select id="kpi-x-field-select" class="w-full"></select>
+            </div>
+            <div>
+                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores
+                    (Eje Y)</label>
+                <div id="kpi-y-field-box"
+                    class="rounded-xl border border-white/10 bg-black/20 p-3 grid gap-2.5 max-h-64 overflow-auto text-[11px]">
+                </div>
+            </div>
         </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Eje X</label>
-          <select
-            id="kpi-x-field-select"
-            class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-          ></select>
-        </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Eje Y (indicadores)</label>
-          <div
-            id="kpi-y-field-box"
-            class="rounded-lg border border-slate-800 bg-slate-950/70 p-2 grid gap-2 max-h-56 overflow-auto text-[11px]"
-          ></div>
-          <p class="mt-1 text-[11px] text-slate-500">Activa o desactiva indicadores con las casillas.</p>
-        </div>
-      </div>
     </div>
-  </section>
+</section>
 
-  {% if performance_indicators %}
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3 mb-4">
-      <div class="grid gap-4 text-xs md:grid-cols-12">
+{% if performance_indicators %}
+<section class="glass-effect mb-6 px-6 py-4">
+    <div class="grid gap-6 text-xs md:grid-cols-12">
         <div class="md:col-span-4 lg:col-span-4">
-          <label class="block mb-1 text-slate-300">Indicadores de desempe&ntilde;o</label>
-          <div
-            id="performance-indicator-box"
-            class="rounded-lg border border-slate-800 bg-slate-950/70 p-2 grid gap-2 max-h-28 overflow-auto text-[11px]"
-          >
-            {% for ind in performance_indicators %}
-              <label class="flex items-center gap-2 text-[11px] text-slate-200">
-                <input
-                  type="checkbox"
-                  value="{{ ind.id }}"
-                  class="size-3.5 rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-500"
-                  {% if forloop.first %}checked{% endif %}
-                />
-                <span>[{{ ind.plant.code }}] {{ ind.label }}</span>
-              </label>
-            {% endfor %}
-          </div>
-          <p class="mt-1 text-[11px] text-slate-500">Selecciona uno o m&aacute;s indicadores.</p>
+            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores de
+                desempe&ntilde;o</label>
+            <div id="performance-indicator-box"
+                class="rounded-xl border border-white/10 bg-black/20 p-3 grid gap-2.5 max-h-32 overflow-auto text-[11px]">
+                {% for ind in performance_indicators %}
+                <label
+                    class="flex items-center gap-3 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer group">
+                    <input type="checkbox" value="{{ ind.id }}"
+                        class="size-4 rounded-md border-slate-600 bg-black/40 text-amber-500 focus:ring-amber-500/20" {% if forloop.first %}checked{% endif %} />
+                    <span class="font-medium">[{{ ind.plant.code }}] {{ ind.label }}</span>
+                </label>
+                {% endfor %}
+            </div>
         </div>
         <div class="md:col-span-2">
-          <label class="block mb-1 text-slate-300">Tipo de gr&aacute;fico</label>
-          <select
-            id="performance-chart-type-select"
-            class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-          >
-            <option value="line">L&iacute;nea</option>
-            <option value="bar">Barras</option>
-            <option value="stacked_bar">Barras apiladas</option>
-          </select>
+            <label
+                class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Visualizaci&oacute;n</label>
+            <select id="performance-chart-type-select" class="w-full">
+                <option value="line">Tendencia (L&iacute;nea)</option>
+                <option value="bar">Comparativa (Barras)</option>
+                <option value="stacked_bar">Composici&oacute;n</option>
+            </select>
         </div>
         <div class="md:col-span-2">
-          <label class="block mb-1 text-slate-300">Resoluci&oacute;n</label>
-          <select
-            id="performance-frequency-select"
-            class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-          >
-            <option value="MONTHLY">Mensual</option>
-            <option value="DAILY">Diario</option>
-          </select>
+            <label
+                class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Granularidad</label>
+            <select id="performance-frequency-select" class="w-full">
+                <option value="MONTHLY">Vista Mensual</option>
+                <option value="DAILY">Vista Diaria</option>
+            </select>
         </div>
         <div class="md:col-span-4 lg:col-span-4">
-          <label class="block mb-1 text-slate-300">Rango de fechas</label>
-          <div class="flex flex-col gap-2 sm:flex-row">
-            <div class="flex-1">
-              <input
-                type="date"
-                id="performance-date-start"
-                class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-              />
+            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Periodo de
+                an&aacute;lisis</label>
+            <div class="flex flex-col gap-3 sm:flex-row">
+                <div class="flex-1">
+                    <input type="date" id="performance-date-start" class="w-full" />
+                </div>
+                <div class="flex-1">
+                    <input type="date" id="performance-date-end" class="w-full" />
+                </div>
+                <button id="performance-date-apply" class="btn-primary" type="button">
+                    Aplicar
+                </button>
             </div>
-            <div class="flex-1">
-              <input
-                type="date"
-                id="performance-date-end"
-                class="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs"
-              />
-            </div>
-            <button
-              id="performance-date-apply"
-              class="px-3 py-1 rounded bg-emerald-500 text-slate-900 font-semibold text-[11px] hover:bg-emerald-400"
-              type="button"
-            >
-              Filtrar
-            </button>
-          </div>
         </div>
-      </div>
-    </section>
+    </div>
+</section>
 
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 mb-4">
-      <div class="rounded-2xl border border-slate-800/80 bg-slate-950/70 shadow-2xl shadow-slate-950/60 ring-1 ring-emerald-500/10 p-2">
+<section class="glass-effect mb-6 p-6">
+    <div class="rounded-2xl border border-white/5 bg-black/20 shadow-inner p-4 overflow-hidden relative">
         <div id="performance-chart" class="w-full" style="height: 360px;"></div>
-      </div>
-      <div id="performance-chart-empty" class="mt-3 text-[11px] text-slate-500 hidden">
-        No hay resultados de desempe&ntilde;o para el rango seleccionado.
-      </div>
-    </section>
-  {% endif %}
-
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-    <div class="grid gap-4 lg:grid-cols-12">
-      <div class="{% if performance_indicators %}lg:col-span-6{% else %}lg:col-span-12{% endif %} rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
-          <h2 class="text-sm font-semibold">Datos tabulares</h2>
-          <div class="flex items-center gap-2">
-            <button
-              id="kpi-export-csv"
-              type="button"
-              class="px-3 py-1 rounded bg-emerald-500 text-slate-900 font-semibold text-[11px] hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled
-            >
-              Descargar CSV
-            </button>
-            <button
-              id="kpi-export-excel"
-              type="button"
-              class="px-3 py-1 rounded bg-amber-300 text-slate-900 font-semibold text-[11px] hover:bg-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled
-            >
-              Descargar Excel
-            </button>
-          </div>
-        </div>
-        <div id="kpi-table-container" class="max-h-80 overflow-auto border border-slate-800 rounded-lg bg-slate-950/80"></div>
-      </div>
-
-      {% if performance_indicators %}
-        <div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 lg:col-span-3">
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
-            <h2 class="text-sm font-semibold">Desempe&ntilde;o diario</h2>
-            <div class="flex items-center gap-2">
-              <button
-                id="performance-export-csv-daily"
-                type="button"
-                class="px-3 py-1 rounded bg-emerald-500 text-slate-900 font-semibold text-[11px] hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled
-              >
-                Descargar CSV
-              </button>
-              <button
-                id="performance-export-excel-daily"
-                type="button"
-                class="px-3 py-1 rounded bg-amber-300 text-slate-900 font-semibold text-[11px] hover:bg-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled
-              >
-                Descargar Excel
-              </button>
-            </div>
-          </div>
-          <div id="performance-table-daily" class="max-h-80 overflow-auto border border-slate-800 rounded-lg bg-slate-950/80"></div>
-        </div>
-
-        <div class="rounded-xl border border-slate-800 bg-slate-950/70 p-3 lg:col-span-3">
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2">
-            <h2 class="text-sm font-semibold">Desempe&ntilde;o mensual</h2>
-            <div class="flex items-center gap-2">
-              <button
-                id="performance-export-csv-monthly"
-                type="button"
-                class="px-3 py-1 rounded bg-emerald-500 text-slate-900 font-semibold text-[11px] hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled
-              >
-                Descargar CSV
-              </button>
-              <button
-                id="performance-export-excel-monthly"
-                type="button"
-                class="px-3 py-1 rounded bg-amber-300 text-slate-900 font-semibold text-[11px] hover:bg-amber-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled
-              >
-                Descargar Excel
-              </button>
-            </div>
-          </div>
-          <div id="performance-table-monthly" class="max-h-80 overflow-auto border border-slate-800 rounded-lg bg-slate-950/80"></div>
-        </div>
-      {% endif %}
     </div>
-  </section>
+    <div id="performance-chart-empty" class="mt-4 text-[11px] text-slate-500 italic hidden text-center">
+        No se encontraron registros de desempe&ntilde;o para el periodo seleccionado.
+    </div>
+</section>
+{% endif %}
+
+<section class="glass-effect p-6 text-sm">
+    <div class="grid gap-6 lg:grid-cols-12">
+        <div
+            class="{% if performance_indicators %}lg:col-span-6{% else %}lg:col-span-12{% endif %} rounded-2xl border border-white/5 bg-black/20 p-5">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                <h2 class="text-base font-bold text-white tracking-tight flex items-center gap-2 font-heading">
+                    <span class="w-1.5 h-6 bg-amber-500 rounded-full"></span>
+                    Detalle de Datos
+                </h2>
+                <div class="flex items-center gap-3">
+                    <button id="kpi-export-csv" type="button"
+                        class="px-4 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled>
+                        CSV
+                    </button>
+                    <button id="kpi-export-excel" type="button"
+                        class="px-4 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px] hover:bg-emerald-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled>
+                        EXCEL
+                    </button>
+                </div>
+            </div>
+            <div id="kpi-table-container"
+                class="max-h-96 overflow-auto border border-white/5 rounded-xl bg-transparent transition-all">
+            </div>
+        </div>
+
+        {% if performance_indicators %}
+        <div class="rounded-xl border border-white/5 bg-black/20 p-3 lg:col-span-3">
+            <h2 class="text-sm font-semibold text-slate-300 mb-2 font-heading">Desempe&ntilde;o diario</h2>
+            <div id="performance-table-daily"
+                class="max-h-80 overflow-auto border border-white/5 rounded-lg bg-transparent"></div>
+        </div>
+
+        <div class="rounded-xl border border-white/5 bg-black/20 p-3 lg:col-span-3">
+            <h2 class="text-sm font-semibold text-slate-300 mb-2 font-heading">Desempe&ntilde;o mensual</h2>
+            <div id="performance-table-monthly"
+                class="max-h-80 overflow-auto border border-white/5 rounded-lg bg-transparent"></div>
+        </div>
+        {% endif %}
+    </div>
+</section>
 {% endblock %}
 
 {% block extra_js %}
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="{% static 'js/kpis_charts.js' %}?v=14"></script>
-  {% if performance_indicators %}
-    <script src="{% static 'js/performance_charts.js' %}?v=4"></script>
-  {% endif %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="{% static 'js/kpis_charts.js' %}?v=15"></script>
+{% if performance_indicators %}
+<script src="{% static 'js/performance_charts.js' %}?v=5"></script>
+{% endif %}
 {% endblock %}

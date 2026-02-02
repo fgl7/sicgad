@@ -383,7 +383,7 @@ document.addEventListener("DOMContentLoaded", function () {
       stack = "total";
     }
 
-    const seriesColors = ["#10b981", "#0ea5e9", "#f59e0b", "#ec4899", "#8b5cf6", "#f97316"];
+    const seriesColors = ["#6366f1", "#10b981", "#8b5cf6", "#f43f5e", "#f59e0b", "#06b6d4"];
     const series = yCols.map(function (yCol, idx) {
       const values = rows.map(function (row) {
         const raw = (row.values || {})[yCol.name];
@@ -394,9 +394,23 @@ document.addEventListener("DOMContentLoaded", function () {
         type: seriesType,
         smooth: smooth,
         stack: stack,
-        showSymbol: seriesType === "line" ? false : true,
-        lineStyle: { width: 2 },
-        itemStyle: { color: seriesColors[idx % seriesColors.length] },
+        showSymbol: false,
+        lineStyle: {
+          width: 3,
+          shadowColor: 'rgba(0, 0, 0, 0.3)',
+          shadowBlur: 10,
+          shadowOffsetY: 5
+        },
+        itemStyle: {
+          color: seriesColors[idx % seriesColors.length],
+          borderRadius: seriesType === 'bar' ? [6, 6, 0, 0] : 0
+        },
+        areaStyle: seriesType === 'line' && !stack ? {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: seriesColors[idx % seriesColors.length] + '33' },
+            { offset: 1, color: seriesColors[idx % seriesColors.length] + '00' }
+          ])
+        } : undefined,
         data: values,
       };
     });
@@ -406,21 +420,24 @@ document.addEventListener("DOMContentLoaded", function () {
     return {
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(3, 7, 18, 0.9)",
-        borderColor: "rgba(255, 255, 255, 0.1)",
+        backgroundColor: "rgba(15, 23, 42, 0.95)",
+        borderColor: "rgba(99, 102, 241, 0.2)",
         borderWidth: 1,
-        textStyle: { color: "#f8fafc", fontSize: 12, fontFamily: 'Inter' },
+        borderRadius: 12,
+        padding: [10, 14],
+        textStyle: { color: "#f8fafc", fontSize: 13, fontFamily: 'Plus Jakarta Sans' },
         axisPointer: {
           type: "line",
-          lineStyle: { color: "rgba(16, 185, 129, 0.5)", width: 2 },
+          lineStyle: { color: "rgba(99, 102, 241, 0.4)", width: 2 },
         },
       },
       legend: {
         show: yCols.length > 1,
         top: 0,
         textStyle: {
-          color: "#e2e8f0",
+          color: "#475569", // Slate 600 for better visibility in light mode
           fontSize: 11,
+          fontWeight: 600
         },
       },
       dataZoom: [
@@ -437,14 +454,14 @@ document.addEventListener("DOMContentLoaded", function () {
           bottom: 0,
           brushSelect: false,
           handleStyle: {
-            color: "#34d399",
-            borderColor: "#1f2937",
+            color: "#6366f1",
+            borderColor: "#1e293b",
           },
           textStyle: {
-            color: "#94a3b8",
+            color: "#64748b",
           },
-          fillerColor: "rgba(16, 185, 129, 0.1)",
-          borderColor: "rgba(255, 255, 255, 0.05)",
+          fillerColor: "rgba(99, 102, 241, 0.08)",
+          borderColor: "rgba(255, 255, 255, 0.03)",
         },
       ],
       grid: {

@@ -6,6 +6,19 @@ from plants.models import Plant
 from schemas.models import ColumnDef, DatasetType
 
 
+FREQ_DAILY = "DAILY"
+FREQ_WEEKLY = "WEEKLY"
+FREQ_MONTHLY = "MONTHLY"
+FREQ_YEARLY = "YEARLY"
+
+FREQ_CHOICES = [
+    (FREQ_DAILY, "Diario"),
+    (FREQ_WEEKLY, "Semanal"),
+    (FREQ_MONTHLY, "Mensual"),
+    (FREQ_YEARLY, "Anual"),
+]
+
+
 class PerformanceVariable(models.Model):
     """
     Variable metodológica "estable" (según la propuesta de desempeño).
@@ -144,6 +157,21 @@ class PerformanceIndicator(models.Model):
         blank=True,
         help_text="Descripción textual de la fórmula (referencial, para auditoría).",
     )
+    frequency = models.CharField(
+        max_length=20,
+        choices=FREQ_CHOICES,
+        default=FREQ_MONTHLY,
+        help_text="Frecuencia por defecto para evaluar esta fórmula.",
+    )
+    expression = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Expresión (tokens) configurada desde el constructor visual.",
+    )
+    expression_text = models.TextField(
+        blank=True,
+        help_text="Expresión legible para el usuario (generada desde el builder).",
+    )
     variables = models.ManyToManyField(
         PerformanceVariable,
         related_name="indicators",
@@ -162,10 +190,55 @@ class PerformanceIndicator(models.Model):
         return f"{self.plant.code} - {self.key}"
 
 
-class PerformanceIndicatorResult(models.Model):
-    FREQ_DAILY = "DAILY"
-    FREQ_MONTHLY = "MONTHLY"
 
+class PerformanceIndicatorInput(models.Model):
+    indicator = models.ForeignKey(
+        PerformanceIndicator,
+        on_delete=models.CASCADE,
+        related_name="inputs",
+    )
+    token = models.SlugField(
+        max_length=40,
+        help_text="Identificador usado dentro de la fórmula (ej: v1, var_kcl).",
+    )
+    column = models.ForeignKey(
+        ColumnDef,
+        on_delete=models.PROTECT,
+        related_name="performance_inputs",
+    )
+    label = models.CharField(max_length=255, blank=True)
+    aggregation = models.CharField(
+        max_length=10,
+        choices=PerformanceVariableMapping.AGG_CHOICES,
+        default="SUM",
+    )
+    transform = models.CharField(
+        max_length=10,
+        choices=PerformanceVariableMapping.TRANSFORM_CHOICES,
+        default="NONE",
+    )
+    transform_value = models.FloatField(null=True, blank=True)
+    offset_periods = models.IntegerField(
+        default=0,
+        help_text="Desfase de periodos según la frecuencia seleccionada (p. ej. 1 = periodo anterior).",
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["indicator__plant__code", "indicator__key", "token"]
+        unique_together = ("indicator", "token")
+
+    def __str__(self) -> str:
+        return f"{self.indicator.key}:{self.token}"
+
+
+class PerformanceIndicatorResult(models.Model):
+    FREQ_DAILY = FREQ_DAILY
+    FREQ_WEEKLY = FREQ_WEEKLY
+    FREQ_MONTHLY = FREQ_MONTHLY
+    FREQ_YEARLY = FREQ_YEARLY
     STATUS_SUCCESS = "SUCCESS"
     STATUS_NOT_CALCULABLE = "NOT_CALCULABLE"
     STATUS_ERROR = "ERROR"
@@ -178,7 +251,9 @@ class PerformanceIndicatorResult(models.Model):
 
     FREQ_CHOICES = [
         (FREQ_DAILY, "Diario"),
+        (FREQ_WEEKLY, "Semanal"),
         (FREQ_MONTHLY, "Mensual"),
+        (FREQ_YEARLY, "Anual"),
     ]
 
     indicator = models.ForeignKey(

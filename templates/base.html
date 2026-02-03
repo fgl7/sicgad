@@ -52,11 +52,12 @@
     <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40"></div>
   </div>
 
-  <div class="flex min-h-screen relative z-10">
-    {% include "partials/sidebar.html" %}
-    <div class="flex-1 flex flex-col">
-      {% include "partials/topbar.html" %}
-      <main class="flex-1 p-4 lg:p-6 relative z-10">
+  <div class="app-shell">
+    <div class="flex min-h-screen relative z-10">
+      {% include "partials/sidebar.html" %}
+      <div class="flex-1 flex flex-col">
+        {% include "partials/topbar.html" %}
+        <main class="flex-1 p-4 lg:p-6 relative z-10">
         <!-- System Messages (Toasts) -->
         <div x-data="{ 
                   toasts: [
@@ -110,7 +111,7 @@
 
               <!-- Text -->
               <div class="flex-1">
-                <p class="text-sm font-bold text-slate-900 leading-snug" x-text="toast.text"></p>
+                <p class="text-sm font-bold text-slate-100 leading-snug" x-text="toast.text"></p>
               </div>
 
               <!-- Close Button -->
@@ -122,10 +123,12 @@
             </div>
           </template>
         </div>
-        {% block content %}{% endblock %}
-      </main>
+          {% block content %}{% endblock %}
+        </main>
+      </div>
     </div>
   </div>
+  {% block modal %}{% endblock %}
   {% block extra_js %}{% endblock %}
 </body>
 

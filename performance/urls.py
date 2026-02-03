@@ -6,4 +6,5 @@ app_name = "performance"
 
 urlpatterns = [
     path("kcl/formula-9/", views.kcl_formula_9, name="kcl_formula_9"),
+    path("formulas/", views.formula_builder, name="formulas"),
 ]

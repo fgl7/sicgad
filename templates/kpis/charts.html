@@ -5,12 +5,12 @@
 {% block page_title %}KPIs y gr&aacute;ficos{% endblock %}
 
 {% block content %}
-<section class="glass-effect mb-6 p-6">
-    <div class="grid gap-6 text-sm md:grid-cols-12">
+<section class="glass-effect mb-5 px-5 py-3">
+    <div class="grid gap-3 text-[13px] md:grid-cols-12">
         <div class="md:col-span-2">
-            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Modo de
+            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Modo de
                 datos</label>
-            <select id="kpi-mode-select" class="w-full">
+            <select id="kpi-mode-select" class="w-full h-10">
                 <option value="published">Datos oficiales</option>
                 {% if can_see_drafts %}
                 <option value="draft">Borradores</option>
@@ -18,8 +18,8 @@
             </select>
         </div>
         <div class="md:col-span-4 lg:col-span-5">
-            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Dataset</label>
-            <select id="kpi-instance-select" class="w-full">
+            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Dataset</label>
+            <select id="kpi-instance-select" class="w-full h-10">
                 <option value="">Selecciona un dataset...</option>
                 {% for ds in datasets %}
                 <option value="{{ ds.id }}">
@@ -28,20 +28,20 @@
                 {% endfor %}
             </select>
             {% if not datasets %}
-            <p class="mt-2 text-[10px] text-slate-500 italic">A&uacute;n no existen datasets con datos cargados.</p>
+            <p class="mt-1 text-[10px] text-slate-500 italic">A&uacute;n no existen datasets con datos cargados.</p>
             {% endif %}
         </div>
         <div class="md:col-span-6 lg:col-span-5">
-            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Rango de
+            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Rango de
                 fechas</label>
-            <div class="flex flex-col gap-3 sm:flex-row">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div class="flex-1">
-                    <input type="date" id="kpi-date-start" class="w-full" />
+                    <input type="date" id="kpi-date-start" class="w-full h-10" />
                 </div>
                 <div class="flex-1">
-                    <input type="date" id="kpi-date-end" class="w-full" />
+                    <input type="date" id="kpi-date-end" class="w-full h-10" />
                 </div>
-                <button id="kpi-date-apply" class="btn-primary" type="button">
+                <button id="kpi-date-apply" class="btn-primary h-10 px-5" type="button">
                     Filtrar
                 </button>
             </div>

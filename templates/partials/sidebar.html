@@ -19,7 +19,7 @@
     {% url 'projects:project_list' as projects_url %}
     {% url 'accounts:admin_user_list' as users_url %}
     {% url 'audit:log_list' as audit_url %}
-    {% url 'performance:kcl_formula_9' as performance_url %}
+    {% url 'performance:formulas' as performance_url %}
     {% url 'projects:report_list' as projects_report_url %}
 
     <div class="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-4 mb-2">General</div>
@@ -93,6 +93,18 @@
       </svg>
       <span class="font-medium">KPIs / Gráficos</span>
     </a>
+
+    {% if is_admin %}
+    <a href='{{ performance_url }}'
+      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path|slice:":12" == "/performance/" %}active{% endif %}'>
+      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M11 12a1 1 0 102 0 1 1 0 00-2 0zm-7 7h7m2 0h7M5 4h14a2 2 0 012 2v4H3V6a2 2 0 012-2zm-2 8h18v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2z" />
+      </svg>
+      <span class="font-medium">Desempe&ntilde;o / F&oacute;rmulas</span>
+    </a>
+    {% endif %}
 
     {% if is_admin or is_loader or is_validator %}
     <a href='{{ projects_report_url }}'
@@ -169,8 +181,12 @@
     <form method='post' action='{% url "logout" %}'>
       {% csrf_token %}
       <button type='submit'
-        class='w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-red-400 hover:bg-red-500/10 transition-colors'>
-        Cerrar Sesión
+        class='w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-[0.25em] text-red-100 bg-red-500/15 border border-red-500/30 shadow-[0_10px_24px_-18px_rgba(239,68,68,0.8)] transition hover:bg-red-500/25 hover:border-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60'>
+        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15 12H3m0 0l3-3m-3 3l3 3m6-9V5a2 2 0 012-2h3a2 2 0 012 2v14a2 2 0 01-2 2h-3a2 2 0 01-2-2v-1" />
+        </svg>
+        Cerrar sesi?n
       </button>
     </form>
   </div>

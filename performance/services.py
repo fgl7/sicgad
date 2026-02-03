@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from calendar import monthrange
 
 from django.db.models import Avg, Max, Min, Sum
 
 from ingest.models import PublishedDataPoint
-from performance.models import PerformanceIndicator, PerformanceIndicatorResult, PerformanceVariable
+from performance.models import (
+    FREQ_DAILY,
+    FREQ_MONTHLY,
+    FREQ_WEEKLY,
+    FREQ_YEARLY,
+    PerformanceIndicator,
+    PerformanceIndicatorInput,
+    PerformanceIndicatorResult,
+    PerformanceVariable,
+)
 
 
 @dataclass(frozen=True)
@@ -26,6 +35,88 @@ def shift_months(d: date, months: int) -> date:
     month = (d.month - 1 + months) % 12 + 1
     day = min(d.day, monthrange(year, month)[1])
     return date(year, month, day)
+
+
+def shift_period(d: date, frequency: str, offset: int) -> date:
+    if offset == 0:
+        return d
+    if frequency == FREQ_DAILY:
+        return d - timedelta(days=offset)
+    if frequency == FREQ_WEEKLY:
+        return d - timedelta(weeks=offset)
+    if frequency == FREQ_YEARLY:
+        return shift_months(d, -(offset * 12))
+    return shift_months(d, -offset)
+
+
+def _is_number(token: str) -> bool:
+    try:
+        float(token)
+        return True
+    except Exception:
+        return False
+
+
+def _to_rpn(tokens: list[str]) -> list[str]:
+    output: list[str] = []
+    stack: list[str] = []
+    precedence = {"+": 1, "-": 1, "*": 2, "/": 2}
+    for tok in tokens:
+        if tok in precedence:
+            while stack and stack[-1] in precedence and precedence[stack[-1]] >= precedence[tok]:
+                output.append(stack.pop())
+            stack.append(tok)
+        elif tok == "(":
+            stack.append(tok)
+        elif tok == ")":
+            while stack and stack[-1] != "(":
+                output.append(stack.pop())
+            if not stack:
+                raise ValueError("paréntesis no balanceados")
+            stack.pop()
+        else:
+            output.append(tok)
+    while stack:
+        if stack[-1] in ("(", ")"):
+            raise ValueError("paréntesis no balanceados")
+        output.append(stack.pop())
+    return output
+
+
+def evaluate_expression(tokens: list[str], values: dict[str, float]) -> tuple[float | None, str | None]:
+    if not tokens:
+        return None, "expresión vacía"
+    try:
+        rpn = _to_rpn(tokens)
+    except ValueError as exc:
+        return None, str(exc)
+    stack: list[float] = []
+    for tok in rpn:
+        if tok in {"+", "-", "*", "/"}:
+            if len(stack) < 2:
+                return None, "expresión inválida"
+            b = stack.pop()
+            a = stack.pop()
+            if tok == "+":
+                stack.append(a + b)
+            elif tok == "-":
+                stack.append(a - b)
+            elif tok == "*":
+                stack.append(a * b)
+            elif tok == "/":
+                if b == 0:
+                    return None, "división por cero"
+                stack.append(a / b)
+        else:
+            if tok in values:
+                stack.append(values[tok])
+            elif _is_number(tok):
+                stack.append(float(tok))
+            else:
+                return None, f"token desconocido: {tok}"
+    if len(stack) != 1:
+        return None, "expresión inválida"
+    return stack[0], None
 
 
 def resolve_variable_value(variable: PerformanceVariable, window: MonthWindow) -> tuple[float | None, dict]:
@@ -147,6 +238,103 @@ def resolve_variable_value(variable: PerformanceVariable, window: MonthWindow) -
     return float(value), trace
 
 
+def resolve_input_value(
+    input_def: PerformanceIndicatorInput,
+    window: MonthWindow,
+    *,
+    frequency: str,
+) -> tuple[float | None, dict]:
+    column = input_def.column
+    dataset_type = column.dataset_type
+    shifted_start = shift_period(window.period_start, frequency, input_def.offset_periods)
+    shifted_end = shift_period(window.period_end, frequency, input_def.offset_periods)
+
+    qs = (
+        PublishedDataPoint.objects.filter(
+            instance__plant=input_def.indicator.plant,
+            instance__dataset_type=dataset_type,
+            instance__period__gte=shifted_start,
+            instance__period__lte=shifted_end,
+            column=column,
+            numeric_value__isnull=False,
+        )
+        .values_list("numeric_value", flat=True)
+    )
+
+    trace: dict = {
+        "token": input_def.token,
+        "column": column.name,
+        "dataset": dataset_type.slug,
+        "aggregation": input_def.aggregation,
+        "window_used": [shifted_start.isoformat(), shifted_end.isoformat()],
+    }
+
+    agg = input_def.aggregation.upper()
+    value: float | None
+    if agg == "SUM":
+        value = qs.aggregate(v=Sum("numeric_value"))["v"]
+    elif agg == "AVG":
+        value = qs.aggregate(v=Avg("numeric_value"))["v"]
+    elif agg == "MAX":
+        value = qs.aggregate(v=Max("numeric_value"))["v"]
+    elif agg == "MIN":
+        value = qs.aggregate(v=Min("numeric_value"))["v"]
+    elif agg == "NONE":
+        values = list(qs[:2])
+        if len(values) == 1:
+            value = float(values[0])
+        else:
+            value = None
+            trace["error"] = f"NONE requiere 1 valor; se encontraron {len(values)}"
+    elif agg == "LAST":
+        last = (
+            PublishedDataPoint.objects.filter(
+                instance__plant=input_def.indicator.plant,
+                instance__dataset_type=dataset_type,
+                instance__period__gte=shifted_start,
+                instance__period__lte=shifted_end,
+                column=column,
+                numeric_value__isnull=False,
+            )
+            .order_by("-instance__period", "-id")
+            .values_list("numeric_value", flat=True)
+            .first()
+        )
+        value = float(last) if last is not None else None
+    else:
+        value = None
+        trace["error"] = f"Aggregation no soportada: {agg}"
+
+    if value is None:
+        return None, trace
+
+    transform = input_def.transform.upper()
+    if transform == "MULTIPLY":
+        if input_def.transform_value is None:
+            trace["error"] = "transform MULTIPLY requiere transform_value"
+            return None, trace
+        value = float(value) * float(input_def.transform_value)
+    elif transform == "ADD":
+        if input_def.transform_value is None:
+            trace["error"] = "transform ADD requiere transform_value"
+            return None, trace
+        value = float(value) + float(input_def.transform_value)
+    elif transform == "NONE":
+        pass
+    else:
+        trace["error"] = f"Transform no soportada: {transform}"
+        return None, trace
+
+    trace.update(
+        {
+            "transform": transform,
+            "transform_value": input_def.transform_value,
+            "value": float(value),
+        }
+    )
+    return float(value), trace
+
+
 def _compute_indicator_value(
     key: str,
     variable_values: dict[str, float],
@@ -206,12 +394,63 @@ def _compute_indicator_value(
         }
 
 
-def compute_indicator(indicator: PerformanceIndicator, window: MonthWindow) -> tuple[float | None, str, dict]:
+def _compute_indicator_expression(
+    indicator: PerformanceIndicator,
+    window: MonthWindow,
+    *,
+    frequency: str,
+) -> tuple[float | None, str, dict]:
+    inputs = list(
+        indicator.inputs.filter(is_active=True)
+        .select_related("column", "column__dataset_type")
+        .order_by("token")
+    )
+    if not inputs:
+        return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {
+            "error": "sin variables configuradas",
+        }
+
+    values: dict[str, float] = {}
+    traces: dict[str, dict] = {}
+    for inp in inputs:
+        val, tr = resolve_input_value(inp, window, frequency=frequency)
+        traces[inp.token] = tr
+        if val is None:
+            return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {"inputs": traces}
+        values[inp.token] = float(val)
+
+    tokens_raw = indicator.expression or []
+    tokens = [str(t) for t in tokens_raw] if isinstance(tokens_raw, list) else []
+    value, err = evaluate_expression(tokens, values)
+    if err:
+        status = (
+            PerformanceIndicatorResult.STATUS_NOT_CALCULABLE
+            if err == "división por cero"
+            else PerformanceIndicatorResult.STATUS_ERROR
+        )
+        return None, status, {"inputs": traces, "error": err, "expression": tokens}
+    return float(value), PerformanceIndicatorResult.STATUS_SUCCESS, {"inputs": traces, "expression": tokens}
+
+
+def compute_indicator(
+    indicator: PerformanceIndicator,
+    window: MonthWindow,
+    *,
+    frequency: str,
+) -> tuple[float | None, str, dict]:
     """
     Devuelve (valor, status, trace).
 
     Implementacion inicial para 3 indicadores semilla; el resto queda NO_CALCULABLE.
     """
+
+    if indicator.expression:
+        return _compute_indicator_expression(indicator, window, frequency=frequency)
+
+    if frequency not in {FREQ_DAILY, FREQ_MONTHLY}:
+        return None, PerformanceIndicatorResult.STATUS_NOT_CALCULABLE, {
+            "error": "frecuencia no soportada para fórmulas legacy",
+        }
 
     variable_values: dict[str, float] = {}
     variable_traces: dict[str, dict] = {}
@@ -230,10 +469,14 @@ def compute_indicator_for_stage(
     window: MonthWindow,
     *,
     stage: str,
+    frequency: str,
 ) -> tuple[float | None, str, dict]:
     """
     Compatibilidad: usa los mapeos activos sin diferenciar stage.
     """
+    if indicator.expression:
+        return _compute_indicator_expression(indicator, window, frequency=frequency)
+
     variable_values: dict[str, float] = {}
     variable_traces: dict[str, dict] = {}
     for v in indicator.variables.filter(is_active=True):
@@ -259,7 +502,7 @@ def compute_and_store_indicators(
     )
     updated = 0
     for indicator in indicators:
-        value, status, trace = compute_indicator(indicator, window)
+        value, status, trace = compute_indicator(indicator, window, frequency=frequency)
         PerformanceIndicatorResult.objects.update_or_create(
             indicator=indicator,
             plant=plant,

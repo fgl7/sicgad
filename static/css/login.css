@@ -1,0 +1,171 @@
+﻿:root {
+    --primary-glow: conic-gradient(from 180deg at 50% 50%, #2563eb 0deg, #38bdf8 160deg, #2563eb 360deg);
+}
+
+body {
+    overflow: hidden;
+    font-family: 'Source Sans 3', sans-serif;
+}
+
+.glow-sphere {
+    position: absolute;
+    width: 800px;
+    height: 800px;
+    background: var(--primary-glow);
+    filter: blur(120px);
+    opacity: 0.15;
+    border-radius: 50%;
+    animation: pulse-glow 15s infinite alternate;
+}
+
+@keyframes pulse-glow {
+    0% {
+        transform: translate(-30%, -30%) scale(1);
+        opacity: 0.1;
+    }
+    100% {
+        transform: translate(-20%, -20%) scale(1.2);
+        opacity: 0.2;
+    }
+}
+
+.glass-login {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 30px 70px -50px rgba(2, 6, 23, 0.8);
+}
+
+.login-field {
+    position: relative;
+}
+
+.login-toggle {
+    position: absolute;
+    right: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 2.25rem;
+    width: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: #cbd5e1;
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    transition: all 0.2s ease;
+}
+
+.login-toggle:hover,
+.login-toggle:focus-visible {
+    color: #e2e8f0;
+    border-color: rgba(148, 163, 184, 0.55);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    outline: none;
+}
+
+.login-toggle-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.login-toggle.is-active {
+    color: #a7f3d0;
+    border-color: rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+.login-placeholder {
+    position: absolute;
+    left: 2.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(148, 163, 184, 0.35);
+    font-size: 0.875rem;
+    font-weight: 400;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.login-input:focus + .login-placeholder,
+.login-input:not(:placeholder-shown) + .login-placeholder {
+    opacity: 0;
+}
+
+/* Password reveal icon (Edge/IE) */
+.login-input[type="password"] {
+    padding-right: 3rem !important;
+}
+
+/* Hide native password reveal to avoid double-eye */
+.login-input[type="password"]::-ms-reveal,
+.login-input[type="password"]::-ms-clear {
+    display: none;
+}
+
+.login-input[type="password"]::-webkit-credentials-auto-fill-button {
+    display: none;
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.login-stagger > * {
+    opacity: 0;
+    animation: fadeInUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.login-stagger > *:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.login-stagger > *:nth-child(2) {
+    animation-delay: 0.25s;
+}
+
+.login-stagger > *:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.login-card-stagger > * {
+    opacity: 0;
+    animation: fadeInUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.login-card-stagger > *:nth-child(1) {
+    animation-delay: 0.3s;
+}
+
+.login-card-stagger > *:nth-child(2) {
+    animation-delay: 0.45s;
+}
+
+.login-card-stagger > *:nth-child(3) {
+    animation-delay: 0.6s;
+}
+
+.login-card-stagger > *:nth-child(4) {
+    animation-delay: 0.75s;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .login-stagger > *,
+    .login-card-stagger > * {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}

@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 
@@ -14,149 +14,88 @@
         rel="stylesheet" />
 
     <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=3" />
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=3" />
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <style>
-        html {
-            scroll-behavior: smooth;
-        }
-
-        .animate-enter {
-            animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        .delay-100 {
-            animation-delay: 0.1s;
-        }
-
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            html {
-                scroll-behavior: auto;
-            }
-
-            .animate-enter {
-                animation: none;
-            }
-        }
-    </style>
 </head>
 
-<body class="min-h-screen selection:bg-sky-400/30 saas-hybrid">
+<body class="min-h-screen selection:bg-emerald-400/30 saas-hybrid">
     <a href="#contenido"
         class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-full focus:bg-slate-900 focus:text-white">
         Saltar al contenido
     </a>
 
-    <div class="fixed inset-0 -z-10" aria-hidden="true">
-        <div class="absolute -top-36 -left-24 h-[28rem] w-[28rem] rounded-full bg-white/10 blur-3xl"></div>
-        <div class="absolute bottom-0 right-0 h-[36rem] w-[36rem] rounded-full bg-blue-500/20 blur-3xl"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40"></div>
+    <div class="landing-backdrop" aria-hidden="true">
+        <img src="{% static 'background.png' %}" alt="" class="landing-image" />
+        <div class="landing-overlay"></div>
+        <div class="landing-glow landing-glow-left"></div>
+        <div class="landing-glow landing-glow-right"></div>
     </div>
 
-    <header class="fixed top-4 left-4 right-4 z-40">
-        <nav class="glass-card flex flex-wrap items-center justify-between gap-4 rounded-2xl px-6 py-3">
-            <div class="flex items-center gap-3">
-                <div class="h-12 w-12 rounded-2xl glass-card flex items-center justify-center">
-                    <img src="{% static 'escudo.png' %}" alt="Escudo de Bolivia" class="h-8 w-8" />
-                </div>
-                <div class="leading-tight">
-                    <p class="text-xs uppercase tracking-[0.3em] text-slate-300 font-semibold">SICGAD</p>
-                    <p class="text-sm font-semibold text-slate-100">Plataforma institucional</p>
+    <main id="contenido" class="relative z-10 min-h-screen flex items-center px-6 py-16">
+        <section class="landing-stagger w-full max-w-6xl mx-auto space-y-16">
+            <div class="flex justify-end">
+                <div class="system-status inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.35em]"
+                    data-system-status aria-live="polite">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span data-status-label>Sistema en línea</span>
                 </div>
             </div>
-            <div class="hidden lg:flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-300">
-                Acceso privado
-            </div>
-            <div class="flex items-center gap-3">
-                {% if user.is_authenticated %}
-                <a href="{% url 'home' %}"
-                    class="btn-primary px-5 py-2 text-xs">
-                    Panel de control
-                </a>
-                <a href="{% url 'kpis_charts' %}"
-                    class="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-200 transition hover:border-white/40">
-                    Ver KPIs
-                </a>
-                {% else %}
-                <a href="{% url 'login' %}"
-                    class="btn-primary px-5 py-2 text-xs">
-                    Ingresar
-                </a>
-                {% endif %}
-            </div>
-        </nav>
-    </header>
 
-    <main id="contenido" class="relative z-10 pt-28 pb-16">
-        <section class="max-w-5xl mx-auto px-6">
-            <div class="glass-card rounded-[2.5rem] p-10 md:p-12 space-y-8 animate-enter">
+            <div class="landing-header text-center space-y-8">
+                <div class="landing-emblem mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-white/95">
+                    <img src="{% static 'escudo.png' %}" alt="Escudo del Estado Plurinacional de Bolivia" class="h-24 w-24 sm:h-28 sm:w-28" />
+                </div>
+                <div class="text-[11px] sm:text-xs uppercase tracking-[0.38em] text-slate-300">
+                    <p>Ministerio de Hidrocarburos y Energías</p>
+                    <p class="text-[10px] sm:text-[11px] tracking-[0.3em] text-slate-400">Viceministerio de Exploración y Explotación de Recursos Energéticos</p>
+                </div>
                 <div class="space-y-4">
-                    <div
-                        class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-200">
-                        Ministerio de Hidrocarburos y Energías
-                    </div>
-                    <h1 class="text-3xl md:text-5xl font-heading font-semibold text-white leading-tight">
-                        SICGAD centraliza la carga, validación y análisis de datos institucionales.
+                    <p class="text-sm sm:text-base text-slate-300">Bienvenidos a la plataforma institucional.</p>
+                    <h1 class="text-3xl sm:text-4xl lg:text-6xl font-heading font-semibold text-white">
+                        Sistema Integral de Carga, Gestión y Análisis de Datos
                     </h1>
-                    <p class="text-base md:text-lg text-slate-300 max-w-3xl">
-                        Acceso restringido a instituciones autorizadas. Cada envío queda trazado con controles de
-                        aprobación, auditoría y consistencia operativa.
-                    </p>
+                    <p class="text-base sm:text-lg font-semibold uppercase tracking-[0.45em] text-emerald-300">(SICGAD)</p>
                 </div>
-
-                <div class="grid gap-4 md:grid-cols-3 text-sm text-slate-200">
-                    <div class="rounded-2xl bg-white/[0.06] border border-white/10 p-4">
-                        <p class="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">Trazabilidad</p>
-                        <p class="mt-2">Registro completo de cargas, revisiones y aprobaciones.</p>
-                    </div>
-                    <div class="rounded-2xl bg-white/[0.06] border border-white/10 p-4">
-                        <p class="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">Control</p>
-                        <p class="mt-2">Flujos de validación con responsables definidos.</p>
-                    </div>
-                    <div class="rounded-2xl bg-white/[0.06] border border-white/10 p-4">
-                        <p class="text-[11px] uppercase tracking-widest text-slate-400 font-semibold">Seguridad</p>
-                        <p class="mt-2">Accesos institucionales con permisos claros.</p>
-                    </div>
-                </div>
-
-                <div class="flex flex-wrap gap-4">
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'home' %}" class="btn-primary px-6 py-3 text-sm">
-                        Panel de control
-                    </a>
+                <div class="landing-actions flex flex-wrap items-center justify-center gap-4 pt-6">
                     <a href="{% url 'kpis_charts' %}"
-                        class="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-white/40">
-                        Ver KPIs
+                        class="inline-flex items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_32px_-18px_rgba(16,185,129,0.65)] transition hover:bg-emerald-400">
+                        Visualización de datos
+                    </a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'home' %}"
+                        class="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:bg-white/10">
+                        Volver a Panel de control
                     </a>
                     {% else %}
-                    <a href="{% url 'login' %}" class="btn-primary px-6 py-3 text-sm">
-                        Ingresar
-                    </a>
-                    {% endif %}
+                            <a href="{% url 'login' %}"
+                                class="inline-flex items-center justify-center rounded-full border border-emerald-300/40 bg-white/5 px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_-20px_rgba(16,185,129,0.6)] transition hover:border-emerald-200 hover:bg-emerald-400/20 landing-login-cta">
+                                Login
+                            </a>
+                            {% endif %}
                 </div>
+            </div>
 
-                <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-[11px] text-slate-400">
-                    Si pertenece a una institución autorizada, utilice sus credenciales institucionales para acceder.
+            <div class="landing-stats grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-semibold">Publicadas</p>
+                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
+                </div>
+                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-sky-300 font-semibold">Esquemas</p>
+                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
+                </div>
+                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-amber-300 font-semibold">Pendientes</p>
+                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
+                </div>
+                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-slate-300 font-semibold">Totales</p>
+                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
                 </div>
             </div>
         </section>
     </main>
-
-    <footer class="relative z-10 py-10 text-center text-[10px] uppercase tracking-[0.3em] text-slate-500">
-        Plataforma oficial · Estado Plurinacional
-    </footer>
+    <script src="{% static 'js/landing_status.js' %}?v=1"></script>
 </body>
 
 </html>

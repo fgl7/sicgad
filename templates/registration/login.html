@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -9,50 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=3">
-    
-    <style>
-        :root {
-            --primary-glow: conic-gradient(from 180deg at 50% 50%, #2563eb 0deg, #38bdf8 160deg, #2563eb 360deg);
-        }
-
-        body {
-            overflow: hidden;
-            font-family: 'Source Sans 3', sans-serif;
-        }
-
-        .glow-sphere {
-            position: absolute;
-            width: 800px;
-            height: 800px;
-            background: var(--primary-glow);
-            filter: blur(120px);
-            opacity: 0.15;
-            border-radius: 50%;
-            animation: pulse-glow 15s infinite alternate;
-        }
-
-        @keyframes pulse-glow {
-            0% { transform: translate(-30%, -30%) scale(1); opacity: 0.1; }
-            100% { transform: translate(-20%, -20%) scale(1.2); opacity: 0.2; }
-        }
-
-        .glass-login {
-            background: rgba(15, 23, 42, 0.65);
-            backdrop-filter: blur(20px) saturate(150%);
-            border: 1px solid rgba(148, 163, 184, 0.35);
-            box-shadow: 0 30px 70px -50px rgba(2, 6, 23, 0.8);
-        }
-
-        .fade-in-up {
-            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=4">
+    <link rel="stylesheet" href="{% static 'css/login.css' %}?v=6">
 </head>
 <body class="flex items-center justify-center min-h-screen saas-hybrid">
     <div class="fixed inset-0 -z-10" aria-hidden="true">
@@ -63,7 +21,7 @@
     <div class="glow-sphere top-0 left-0"></div>
     <div class="glow-sphere bottom-0 right-0" style="animation-delay: -7s;"></div>
 
-    <div class="relative z-10 w-full max-w-md px-6 fade-in-up">
+    <div class="relative z-10 w-full max-w-md px-6 login-stagger">
         <div class="flex flex-col items-center mb-10">
             <div class="w-16 h-16 mb-6 relative group">
                 <div class="absolute inset-0 bg-blue-500 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
@@ -73,7 +31,7 @@
             <p class="text-slate-500 text-xs font-bold uppercase tracking-[0.3em] text-center">Sistema Integral de Carga y Gestión</p>
         </div>
 
-        <div class="glass-login rounded-[2rem] p-10 space-y-8">
+        <div class="glass-login rounded-[2rem] p-10 space-y-8 login-card-stagger">
             <div class="space-y-1">
                 <h2 class="text-xl font-bold text-white tracking-tight">Bienvenido</h2>
                 <p class="text-slate-400 text-xs">Ingresa tus credenciales para acceder al ecosistema.</p>
@@ -90,21 +48,31 @@
                 {% csrf_token %}
                 <div class="space-y-2">
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Identidad de Usuario</label>
-                    <div class="relative group">
+                    <div class="relative group login-field">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <svg class="h-4 w-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                         </div>
-                        <input type="text" name="username" required class="block w-full !pl-11 pr-4 !py-4 bg-slate-900/50 border border-white/5 rounded-2xl text-white text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all placeholder-slate-600" placeholder="Nombre de usuario o RUT">
+                        <input type="text" name="username" required autofocus class="login-input block w-full !pl-11 pr-4 !py-4 bg-slate-900/50 border border-white/5 rounded-2xl text-white text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all" placeholder=" ">
+                        <span class="login-placeholder">Nombre de usuario o RUT</span>
                     </div>
                 </div>
 
                 <div class="space-y-2">
                     <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Contraseña</label>
-                    <div class="relative group">
+                    <div class="relative group login-field">
                         <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <svg class="h-4 w-4 text-slate-600 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                         </div>
-                        <input type="password" name="password" required class="block w-full !pl-11 pr-4 !py-4 bg-slate-900/50 border border-white/5 rounded-2xl text-white text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all placeholder-slate-600" placeholder="••••••••">
+                        <input id="login-password" type="password" name="password" required class="login-input block w-full !pl-11 pr-12 !py-4 bg-slate-900/50 border border-white/5 rounded-2xl text-white text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all" placeholder=" ">
+                        <button type="button" class="login-toggle" data-toggle-password="login-password" aria-label="Mostrar contraseña" tabindex="-1">
+                            <svg class="login-toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                        <span class="login-placeholder">••••••••</span>
                     </div>
                 </div>
 
@@ -118,5 +86,6 @@
             &copy; {% now "Y" %} SICGAD · Sistema de Gestión de Datos
         </p>
     </div>
+    <script src="{% static 'js/login_password.js' %}?v=1"></script>
 </body>
 </html>

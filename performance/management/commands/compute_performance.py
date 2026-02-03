@@ -67,7 +67,7 @@ class Command(BaseCommand):
         errors = 0
 
         for indicator in indicators:
-            value, status, trace = compute_indicator(indicator, window)
+            value, status, trace = compute_indicator(indicator, window, frequency=frequency)
 
             existing = PerformanceIndicatorResult.objects.filter(
                 indicator=indicator,

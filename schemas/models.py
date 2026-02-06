@@ -3,8 +3,7 @@ from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 
-from plants.models import Plant
-from projects.models import Project
+from structure.models import Entity
 
 
 class DatasetType(models.Model):
@@ -32,19 +31,10 @@ class DatasetType(models.Model):
         (STATUS_REJECTED, "Rechazado"),
     ]
 
-    plant = models.ForeignKey(
-        Plant,
+    entity = models.ForeignKey(
+        Entity,
         on_delete=models.CASCADE,
         related_name="dataset_types",
-        null=True,
-        blank=True,
-    )
-    project = models.ForeignKey(
-        Project,
-        on_delete=models.CASCADE,
-        related_name="dataset_types",
-        null=True,
-        blank=True,
     )
     source_dataset = models.ForeignKey(
         "self",
@@ -97,34 +87,21 @@ class DatasetType(models.Model):
     )
 
     class Meta:
-        ordering = ["plant__code", "project__name", "name", "-version"]
+        ordering = ["entity__name", "name", "-version"]
         constraints = [
             models.UniqueConstraint(
-                fields=["plant", "name", "version"],
-                condition=Q(plant__isnull=False),
-                name="uniq_datasettype_plant_name_version",
-            ),
-            models.UniqueConstraint(
-                fields=["project", "name", "version"],
-                condition=Q(project__isnull=False),
-                name="uniq_datasettype_project_name_version",
+                fields=["entity", "name", "version"],
+                name="uniq_datasettype_entity_name_version",
             ),
         ]
 
     def __str__(self) -> str:
-        if self.plant:
-            prefix = self.plant.code
-        elif self.project:
-            prefix = self.project.code or self.project.name
-        else:
-            prefix = "SIN-DESTINO"
+        prefix = self.entity.code or self.entity.name
         return f"{prefix} - {self.name} v{self.version}"
 
     def clean(self):
-        if bool(self.plant_id) == bool(self.project_id):
-            raise ValidationError(
-                "Debe seleccionar una planta o un proyecto (solo uno)."
-            )
+        if not self.entity_id:
+            raise ValidationError("Debe seleccionar una entidad.")
 
     slug = models.SlugField(
         max_length=255,
@@ -135,11 +112,9 @@ class DatasetType(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug and self.name and self.version:
-            if self.plant_id:
-                base = f"{self.plant.code}-{self.name}-v{self.version}"
-            elif self.project_id:
-                project_code = self.project.code or self.project.name
-                base = f"{project_code}-{self.name}-v{self.version}"
+            if self.entity_id:
+                entity_code = self.entity.code or self.entity.name
+                base = f"{entity_code}-{self.name}-v{self.version}"
             else:
                 base = f"{self.name}-v{self.version}"
             self.slug = slugify(base)

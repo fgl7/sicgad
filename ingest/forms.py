@@ -3,16 +3,15 @@ from django.db.models import Exists, OuterRef, Q
 from django.forms import formset_factory
 
 from schemas.models import DatasetType, ColumnDef
-from plants.models import Plant
-from projects.models import Project
+from structure.models import Entity
 from .models import DatasetInstance
 from .utils import month_number_from_label
 
 
 def _exclude_one_time_with_instance(qs):
     inst_qs = DatasetInstance.objects.filter(dataset_type=OuterRef("pk")).filter(
-        Q(plant_id=OuterRef("plant_id"), plant_id__isnull=False)
-        | Q(project_id=OuterRef("project_id"), project_id__isnull=False)
+        entity_id=OuterRef("entity_id"),
+        entity_id__isnull=False,
     )
     return qs.annotate(has_instance=Exists(inst_qs)).exclude(is_one_time=True, has_instance=True)
 
@@ -21,16 +20,14 @@ def _has_one_time_instance(dataset: DatasetType | None) -> bool:
     if not dataset or not dataset.is_one_time:
         return False
     qs = DatasetInstance.objects.filter(dataset_type=dataset)
-    if dataset.plant_id:
-        qs = qs.filter(plant_id=dataset.plant_id)
-    elif dataset.project_id:
-        qs = qs.filter(project_id=dataset.project_id)
+    if dataset.entity_id:
+        qs = qs.filter(entity_id=dataset.entity_id)
     return qs.exists()
 
 
 class DatasetInstanceUploadForm(forms.ModelForm):
     dataset_type = forms.ModelChoiceField(
-        queryset=DatasetType.objects.select_related("plant")
+        queryset=DatasetType.objects.select_related("entity")
         .filter(is_active=True, status=DatasetType.STATUS_APPROVED),
         widget=forms.Select(
             attrs={
@@ -43,26 +40,23 @@ class DatasetInstanceUploadForm(forms.ModelForm):
     def __init__(
         self,
         *args,
+        loader_entities: list[int] | None = None,
         loader_plants: list[int] | None = None,
         loader_projects: list[int] | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if loader_plants is not None or loader_projects is not None:
-            plant_ids = loader_plants or []
-            project_ids = loader_projects or []
-
-            # Restringir plantas/proyectos disponibles
-            self.fields["plant"].queryset = Plant.objects.filter(id__in=plant_ids)
-            self.fields["project"].queryset = Project.objects.filter(id__in=project_ids)
-
-            qs = DatasetType.objects.select_related("plant", "project").filter(
-                is_active=True, status=DatasetType.STATUS_APPROVED
+        entity_ids = loader_entities if loader_entities is not None else []
+        if loader_entities is not None:
+            self.fields["entity"].queryset = Entity.objects.filter(
+                id__in=entity_ids,
+                is_active=True,
             )
-            if plant_ids or project_ids:
-                qs = qs.filter(Q(plant_id__in=plant_ids) | Q(project_id__in=project_ids))
-            else:
-                qs = qs.none()
+            qs = DatasetType.objects.select_related("entity").filter(
+                is_active=True,
+                status=DatasetType.STATUS_APPROVED,
+                entity_id__in=entity_ids,
+            )
             self.fields["dataset_type"].queryset = qs
 
         self.fields["dataset_type"].queryset = _exclude_one_time_with_instance(
@@ -71,14 +65,9 @@ class DatasetInstanceUploadForm(forms.ModelForm):
 
     class Meta:
         model = DatasetInstance
-        fields = ["dataset_type", "plant", "project", "period", "raw_file"]
+        fields = ["dataset_type", "entity", "period", "raw_file"]
         widgets = {
-            "plant": forms.Select(
-                attrs={
-                    "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
-                }
-            ),
-            "project": forms.Select(
+            "entity": forms.Select(
                 attrs={
                     "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
                 }
@@ -101,15 +90,8 @@ class DatasetInstanceUploadForm(forms.ModelForm):
         dataset = cleaned.get("dataset_type")
         if not dataset:
             return cleaned
-        if dataset.plant_id:
-            cleaned["plant"] = dataset.plant
-            cleaned["project"] = None
-        elif dataset.project_id:
-            cleaned["project"] = dataset.project
-            cleaned["plant"] = None
-        else:
-            self.add_error("dataset_type", "El esquema no tiene planta ni proyecto asociado.")
-            return cleaned
+
+        cleaned["entity"] = dataset.entity
 
         if _has_one_time_instance(dataset):
             self.add_error(
@@ -121,12 +103,11 @@ class DatasetInstanceUploadForm(forms.ModelForm):
 
 class HistoricalDatasetUploadForm(forms.Form):
     dataset_type = forms.ModelChoiceField(
-        queryset=DatasetType.objects.select_related("plant").filter(
+        queryset=DatasetType.objects.select_related("entity").filter(
             is_active=True,
             is_certification=False,
             validation_frequency=DatasetType.DAILY,
             status=DatasetType.STATUS_APPROVED,
-            project__isnull=True,
         ),
         widget=forms.Select(
             attrs={
@@ -135,14 +116,14 @@ class HistoricalDatasetUploadForm(forms.Form):
         ),
         label="Tipo de dataset",
     )
-    plant = forms.ModelChoiceField(
-        queryset=Plant.objects.all(),
+    entity = forms.ModelChoiceField(
+        queryset=Entity.objects.filter(is_active=True),
         widget=forms.Select(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
             }
         ),
-        label="Planta",
+        label="Entidad",
     )
     date_column_name = forms.CharField(
         max_length=100,
@@ -168,21 +149,21 @@ class HistoricalDatasetUploadForm(forms.Form):
     def __init__(
         self,
         *args,
+        loader_entities: list[int] | None = None,
         loader_plants: list[int] | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if loader_plants is not None:
-            self.fields["plant"].queryset = Plant.objects.filter(id__in=loader_plants)
+        if loader_entities is not None:
+            self.fields["entity"].queryset = Entity.objects.filter(id__in=loader_entities, is_active=True)
             self.fields["dataset_type"].queryset = (
-                DatasetType.objects.select_related("plant")
+                DatasetType.objects.select_related("entity")
                 .filter(
-                    plant_id__in=loader_plants,
+                    entity_id__in=loader_entities,
                     is_active=True,
                     is_certification=False,
                     validation_frequency=DatasetType.DAILY,
                     status=DatasetType.STATUS_APPROVED,
-                    project__isnull=True,
                 )
             )
 
@@ -229,7 +210,7 @@ class DatasetInstanceEditForm(forms.ModelForm):
 
 class ManualDatasetForm(forms.ModelForm):
     dataset_type = forms.ModelChoiceField(
-        queryset=DatasetType.objects.select_related("plant")
+        queryset=DatasetType.objects.select_related("entity")
         .filter(is_active=True, status=DatasetType.STATUS_APPROVED),
         widget=forms.Select(
             attrs={
@@ -241,14 +222,9 @@ class ManualDatasetForm(forms.ModelForm):
 
     class Meta:
         model = DatasetInstance
-        fields = ["dataset_type", "plant", "project", "period"]
+        fields = ["dataset_type", "entity", "period"]
         widgets = {
-            "plant": forms.Select(
-                attrs={
-                    "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
-                }
-            ),
-            "project": forms.Select(
+            "entity": forms.Select(
                 attrs={
                     "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
                 }
@@ -264,24 +240,20 @@ class ManualDatasetForm(forms.ModelForm):
     def __init__(
         self,
         *args,
+        loader_entities: list[int] | None = None,
         loader_plants: list[int] | None = None,
         loader_projects: list[int] | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if loader_plants is not None or loader_projects is not None:
-            plant_ids = loader_plants or []
-            project_ids = loader_projects or []
-
-            self.fields["plant"].queryset = Plant.objects.filter(id__in=plant_ids)
-            self.fields["project"].queryset = Project.objects.filter(id__in=project_ids)
-            qs = DatasetType.objects.select_related("plant", "project").filter(
-                is_active=True, status=DatasetType.STATUS_APPROVED
+        if loader_entities is not None:
+            entity_ids = loader_entities or []
+            self.fields["entity"].queryset = Entity.objects.filter(id__in=entity_ids, is_active=True)
+            qs = DatasetType.objects.select_related("entity").filter(
+                is_active=True,
+                status=DatasetType.STATUS_APPROVED,
+                entity_id__in=entity_ids,
             )
-            if plant_ids or project_ids:
-                qs = qs.filter(Q(plant_id__in=plant_ids) | Q(project_id__in=project_ids))
-            else:
-                qs = qs.none()
             self.fields["dataset_type"].queryset = qs
 
         self.fields["dataset_type"].queryset = _exclude_one_time_with_instance(
@@ -293,15 +265,8 @@ class ManualDatasetForm(forms.ModelForm):
         dataset = cleaned.get("dataset_type")
         if not dataset:
             return cleaned
-        if dataset.plant_id:
-            cleaned["plant"] = dataset.plant
-            cleaned["project"] = None
-        elif dataset.project_id:
-            cleaned["project"] = dataset.project
-            cleaned["plant"] = None
-        else:
-            self.add_error("dataset_type", "El esquema no tiene planta ni proyecto asociado.")
-            return cleaned
+
+        cleaned["entity"] = dataset.entity
 
         if _has_one_time_instance(dataset):
             self.add_error(

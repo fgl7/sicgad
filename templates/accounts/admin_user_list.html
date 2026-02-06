@@ -17,7 +17,7 @@
 
     <!-- Filters Section -->
     <div class="glass-card rounded-2xl p-6 border-white/5">
-        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div class="space-y-2">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rol</label>
                 <select name="role">
@@ -28,20 +28,11 @@
                 </select>
             </div>
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Planta</label>
-                <select name="plant">
-                    <option value="">Todas las Plantas</option>
-                    {% for p in plants %}
-                    <option value="{{ p.id }}" {% if filter_plant == p.id|stringformat:'s' %}selected{% endif %}>{{ p.code }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Proyecto</label>
-                <select name="project">
-                    <option value="">Todos los Proyectos</option>
-                    {% for proj in projects %}
-                    <option value="{{ proj.id }}" {% if filter_project == proj.id|stringformat:'s' %}selected{% endif %}>{{ proj.code|default:proj.name }}</option>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entidad</label>
+                <select name="entity">
+                    <option value="">Todas las Entidades</option>
+                    {% for ent in entities %}
+                    <option value="{{ ent.id }}" {% if filter_entity == ent.id|stringformat:'s' %}selected{% endif %}>{{ ent.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -96,7 +87,7 @@
                                 {% for m in mems %}
                                 <div class="flex flex-col mb-2 last:mb-0">
                                     <span class="text-slate-300 font-medium text-xs">
-                                        {% if m.plant %}{{ m.plant.name }}{% elif m.project %}{{ m.project.code }}{% else %}Alcance Global{% endif %}
+                                        {% if m.entity %}{{ m.entity.name }}{% else %}Alcance Global{% endif %}
                                     </span>
                                     <span class="text-[10px] text-slate-500 uppercase font-bold">{{ m.institution.code|default:"Sin Institución" }}</span>
                                 </div>

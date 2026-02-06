@@ -1,31 +1,26 @@
 from django import forms
 
 from .models import ColumnDef, DatasetType
-from projects.models import Project
 
 
 class DatasetTypeForm(forms.ModelForm):
     def __init__(
         self,
         *args,
-        allowed_plants_qs=None,
-        allowed_projects_qs=None,
+        allowed_entities_qs=None,
         allow_set_active: bool = True,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        if allowed_plants_qs is not None:
-            self.fields["plant"].queryset = allowed_plants_qs
-        if allowed_projects_qs is not None:
-            self.fields["project"].queryset = allowed_projects_qs
+        if allowed_entities_qs is not None:
+            self.fields["entity"].queryset = allowed_entities_qs
         if not allow_set_active:
             self.fields["is_active"].disabled = True
 
     class Meta:
         model = DatasetType
         fields = [
-            "plant",
-            "project",
+            "entity",
             "name",
             "version",
             "validation_frequency",
@@ -33,23 +28,13 @@ class DatasetTypeForm(forms.ModelForm):
             "is_one_time",
         ]
         widgets = {
+            "entity": forms.Select(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
             "name": forms.TextInput(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
             "version": forms.NumberInput(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
             "validation_frequency": forms.Select(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
-            "plant": forms.Select(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
-            "project": forms.Select(attrs={"class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm"}),
             "is_active": forms.CheckboxInput(attrs={"class": "rounded border-slate-700"}),
             "is_one_time": forms.CheckboxInput(attrs={"class": "rounded border-slate-700"}),
         }
-
-    def clean(self):
-        cleaned = super().clean()
-        plant = cleaned.get("plant")
-        project = cleaned.get("project")
-        if bool(plant) == bool(project):
-            self.add_error("plant", "Debe seleccionar una planta o un proyecto.")
-            self.add_error("project", "Debe seleccionar una planta o un proyecto.")
-        return cleaned
 
 
 class ColumnDefForm(forms.ModelForm):
@@ -85,7 +70,7 @@ class CertificationSchemaForm(forms.Form):
         ),
     )
     name = forms.CharField(
-        label="Nombre del esquema de certificación",
+        label="Nombre del esquema de certificacion",
         widget=forms.TextInput(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
@@ -94,7 +79,7 @@ class CertificationSchemaForm(forms.Form):
     )
     columns = forms.ModelMultipleChoiceField(
         queryset=ColumnDef.objects.none(),
-        label="Campos a incluir en la certificación",
+        label="Campos a incluir en la certificacion",
         widget=forms.CheckboxSelectMultiple(
             attrs={
                 "class": "space-y-1 text-xs",
@@ -110,10 +95,9 @@ class CertificationSchemaForm(forms.Form):
                 validation_frequency=DatasetType.DAILY,
                 is_active=True,
                 is_certification=False,
-                project__isnull=True,
             )
-            .select_related("plant")
-            .order_by("plant__code", "name", "-version")
+            .select_related("entity")
+            .order_by("entity__name", "name", "-version")
         )
 
         source = None
@@ -140,6 +124,6 @@ class CertificationSchemaForm(forms.Form):
             ).order_by("display_order", "name")
 
             if not self.initial.get("name") and not self.data.get("name"):
-                self.fields["name"].initial = f"{source.name} - Certificación mensual"
+                self.fields["name"].initial = f"{source.name} - Certificacion mensual"
         else:
             self.fields["columns"].queryset = ColumnDef.objects.none()

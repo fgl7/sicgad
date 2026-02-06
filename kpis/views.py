@@ -10,7 +10,7 @@ from audit.models import AuditLog
 from ingest.models import DatasetInstance, PublishedDataPoint
 from performance.models import PerformanceIndicator, PerformanceIndicatorResult
 from ingest.utils import _read_instance_file
-from schemas.models import DatasetType, ColumnDef
+from schemas.models import DatasetType
 
 
 def landing(request):
@@ -40,7 +40,7 @@ def home(request):
 
     # Últimas cargas de datos (independiente del estado)
     recent_instances = (
-        DatasetInstance.objects.select_related("dataset_type", "plant", "project")
+        DatasetInstance.objects.select_related("dataset_type", "entity")
         .order_by("-created_at")[:5]
     )
 
@@ -76,40 +76,33 @@ def charts(request):
     user = request.user
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
 
-    datasets = DatasetType.objects.select_related("plant").filter(project__isnull=True)
+    datasets = DatasetType.objects.select_related("entity")
 
     if not is_admin:
         memberships = Membership.objects.filter(user=user, is_active=True)
-        plant_ids = list(memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True))
-        has_global = memberships.filter(plant__isnull=True, project__isnull=True).exists()
-        if plant_ids and not has_global:
-            datasets = datasets.filter(plant_id__in=plant_ids)
-        elif not plant_ids and not has_global:
+        entity_ids = list(memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True))
+        has_global = memberships.filter(entity__isnull=True).exists()
+        if entity_ids and not has_global:
+            datasets = datasets.filter(entity_id__in=entity_ids)
+        elif not entity_ids and not has_global:
             datasets = datasets.none()
 
     datasets = (
         datasets.filter(instances__isnull=False)
         .distinct()
-        .order_by("plant__code", "name", "-version")
+        .order_by("entity__name", "name", "-version")
     )
 
     can_see_drafts = is_admin or is_loader or is_validator
 
-    performance_indicators = (
-        PerformanceIndicator.objects.select_related("plant")
-        .filter(is_active=True, results__isnull=False)
-        .distinct()
-    )
-    if not is_admin:
-        memberships = Membership.objects.filter(user=user, is_active=True)
-        plant_ids = list(memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True))
-        has_global = memberships.filter(plant__isnull=True, project__isnull=True).exists()
-        if plant_ids and not has_global:
-            performance_indicators = performance_indicators.filter(plant_id__in=plant_ids)
-        elif not plant_ids and not has_global:
-            performance_indicators = performance_indicators.none()
-
-    performance_indicators = performance_indicators.order_by("plant__code", "label", "key")
+    performance_indicators = PerformanceIndicator.objects.none()
+    if is_admin:
+        performance_indicators = (
+            PerformanceIndicator.objects.select_related("plant")
+            .filter(is_active=True, results__isnull=False)
+            .distinct()
+            .order_by("plant__code", "label", "key")
+        )
 
     return render(
         request,
@@ -128,17 +121,15 @@ def dataset_data(request, dataset_id: int):
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
 
     dataset = get_object_or_404(
-        DatasetType.objects.select_related("plant").filter(project__isnull=True),
+        DatasetType.objects.select_related("entity"),
         pk=dataset_id,
     )
 
     if not is_admin:
         memberships = Membership.objects.filter(user=user, is_active=True)
-        plant_ids = list(
-            memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
-        )
-        has_global = memberships.filter(plant__isnull=True, project__isnull=True).exists()
-        if not (has_global or (plant_ids and dataset.plant_id in plant_ids)):
+        entity_ids = list(memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True))
+        has_global = memberships.filter(entity__isnull=True).exists()
+        if not (has_global or (entity_ids and dataset.entity_id in entity_ids)):
             raise Http404
 
     can_see_drafts = is_admin or is_loader or is_validator
@@ -302,8 +293,11 @@ def dataset_data(request, dataset_id: int):
         "dataset": {
             "id": dataset.id,
             "name": dataset.name,
-            "plant_code": dataset.plant.code,
-            "plant_name": dataset.plant.name,
+            "entity_code": dataset.entity.code,
+            "entity_name": dataset.entity.name,
+            # Compatibilidad temporal para JS legado.
+            "plant_code": dataset.entity.code,
+            "plant_name": dataset.entity.name,
             "validation_frequency": dataset.validation_frequency,
             "is_certification": dataset.is_certification,
         },
@@ -319,19 +313,10 @@ def performance_data(request, indicator_id: int):
     user = request.user
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
 
-    indicator = get_object_or_404(
-        PerformanceIndicator.objects.select_related("plant"),
-        pk=indicator_id,
-    )
-
     if not is_admin:
-        memberships = Membership.objects.filter(user=user, is_active=True)
-        plant_ids = list(
-            memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
-        )
-        has_global = memberships.filter(plant__isnull=True, project__isnull=True).exists()
-        if not (has_global or (plant_ids and indicator.plant_id in plant_ids)):
-            raise Http404
+        raise Http404
+
+    indicator = get_object_or_404(PerformanceIndicator.objects.select_related("plant"), pk=indicator_id)
 
     if not (is_admin or is_loader or is_validator or is_viewer):
         raise Http404

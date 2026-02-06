@@ -4,9 +4,8 @@ from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 
-from plants.models import Plant
-from projects.models import Project
 from audit.utils import record_action
+from structure.models import Entity
 
 from .decorators import admin_required
 from .forms import AdminUserCreateForm, InstitutionForm
@@ -31,31 +30,26 @@ class ForcePasswordChangeView(PasswordChangeView):
 @admin_required
 def admin_user_list(request):
     role = request.GET.get("role") or ""
-    plant_id = request.GET.get("plant") or ""
-    project_id = request.GET.get("project") or ""
+    entity_id = request.GET.get("entity") or ""
     institution = request.GET.get("institution") or ""
 
     users_qs = User.objects.filter(is_superuser=False).prefetch_related(
-        "memberships__plant",
-        "memberships__project",
+        "memberships__entity",
         "memberships__institution",
     )
 
     if role:
         users_qs = users_qs.filter(memberships__role=role)
-    if plant_id:
-        users_qs = users_qs.filter(memberships__plant_id=plant_id)
-    if project_id:
-        users_qs = users_qs.filter(memberships__project_id=project_id)
+    if entity_id:
+        users_qs = users_qs.filter(memberships__entity_id=entity_id)
     if institution:
         users_qs = users_qs.filter(memberships__institution_id=institution)
 
     users = users_qs.order_by("username").distinct()
 
     roles = Membership.ROLE_CHOICES
-    plants = Plant.objects.all().order_by("code")
+    entities = Entity.objects.filter(is_active=True).order_by("name")
     institutions = Institution.objects.all().order_by("code")
-    projects = Project.objects.filter(is_active=True).order_by("name")
 
     return render(
         request,
@@ -63,12 +57,10 @@ def admin_user_list(request):
         {
             "users": users,
             "roles": roles,
-            "plants": plants,
+            "entities": entities,
             "institutions": institutions,
-            "projects": projects,
             "filter_role": role,
-            "filter_plant": plant_id,
-            "filter_project": project_id,
+            "filter_entity": entity_id,
             "filter_institution": institution,
         },
     )
@@ -81,10 +73,8 @@ def admin_user_create(request):
         if form.is_valid():
             user = form.save()
             scope_label = "GLOBAL"
-            if form.cleaned_data.get("plant"):
-                scope_label = f"Planta {form.cleaned_data.get('plant')}"
-            elif form.cleaned_data.get("project"):
-                scope_label = f"Proyecto {form.cleaned_data.get('project')}"
+            if form.cleaned_data.get("entity"):
+                scope_label = f"Entidad {form.cleaned_data.get('entity')}"
             record_action(
                 "USER",
                 request=request,
@@ -109,8 +99,7 @@ def admin_user_edit(request, user_id):
         initial.update(
             {
                 "role": membership.role,
-                "plant": membership.plant,
-                "project": membership.project,
+                "entity": membership.entity,
                 "validation_level": membership.validation_level,
                 "can_validate_daily": membership.can_validate_daily,
                 "can_validate_monthly": membership.can_validate_monthly,
@@ -139,8 +128,7 @@ def admin_user_edit(request, user_id):
             if membership is None:
                 membership = Membership(user=user)
 
-            membership.plant = data.get("plant")
-            membership.project = data.get("project")
+            membership.entity = data.get("entity")
             membership.role = data["role"]
             membership.validation_level = data.get("validation_level")
             membership.can_validate_daily = data.get("can_validate_daily", False)
@@ -152,10 +140,8 @@ def admin_user_edit(request, user_id):
             membership.save()
 
             scope_label = "GLOBAL"
-            if membership.plant:
-                scope_label = f"Planta {membership.plant}"
-            elif membership.project:
-                scope_label = f"Proyecto {membership.project}"
+            if membership.entity:
+                scope_label = f"Entidad {membership.entity}"
             record_action(
                 "USER",
                 request=request,

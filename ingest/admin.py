@@ -13,8 +13,7 @@ from .models import (
 class DatasetInstanceAdmin(admin.ModelAdmin):
     list_display = (
         "dataset_type",
-        "plant",
-        "project",
+        "entity",
         "period",
         "state",
         "row_count",
@@ -25,21 +24,17 @@ class DatasetInstanceAdmin(admin.ModelAdmin):
     )
     list_filter = (
         "state",
-        "dataset_type__plant",
-        "dataset_type__project",
+        "dataset_type__entity",
         "dataset_type__validation_frequency",
         "dataset_type__is_one_time",
-        "plant",
-        "project",
+        "entity",
     )
     search_fields = (
         "dataset_type__name",
-        "plant__code",
-        "plant__name",
-        "project__code",
-        "project__name",
+        "entity__code",
+        "entity__name",
     )
-    autocomplete_fields = ("dataset_type", "plant", "project", "created_by")
+    autocomplete_fields = ("dataset_type", "entity", "created_by")
     date_hierarchy = "period"
 
 
@@ -79,7 +74,7 @@ class DatasetChangeAttachmentAdmin(admin.ModelAdmin):
 class HistoricalImportBatchAdmin(admin.ModelAdmin):
     list_display = (
         "dataset_type",
-        "plant",
+        "entity",
         "status",
         "created_by",
         "created_at",
@@ -89,6 +84,6 @@ class HistoricalImportBatchAdmin(admin.ModelAdmin):
         "updated_instances",
         "skipped_instances",
     )
-    list_filter = ("status", "plant", "created_at")
-    search_fields = ("dataset_type__name", "plant__code", "plant__name")
-    autocomplete_fields = ("dataset_type", "plant", "created_by")
+    list_filter = ("status", "entity", "created_at")
+    search_fields = ("dataset_type__name", "entity__code", "entity__name")
+    autocomplete_fields = ("dataset_type", "entity", "created_by")

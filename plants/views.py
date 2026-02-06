@@ -1,18 +1,18 @@
 from django.shortcuts import get_object_or_404, redirect, render
 
-from accounts.decorators import admin_required
+from accounts.decorators import admin_role_required
 
 from .forms import PlantForm
 from .models import Plant
 
 
-@admin_required
+@admin_role_required
 def plant_list(request):
     plants = Plant.objects.all().order_by("code")
     return render(request, "plants/plant_list.html", {"plants": plants})
 
 
-@admin_required
+@admin_role_required
 def plant_create(request):
     if request.method == "POST":
         form = PlantForm(request.POST)
@@ -24,7 +24,7 @@ def plant_create(request):
     return render(request, "plants/plant_form.html", {"form": form, "plant": None})
 
 
-@admin_required
+@admin_role_required
 def plant_edit(request, pk):
     plant = get_object_or_404(Plant, pk=pk)
     if request.method == "POST":
@@ -37,7 +37,7 @@ def plant_edit(request, pk):
     return render(request, "plants/plant_form.html", {"form": form, "plant": plant})
 
 
-@admin_required
+@admin_role_required
 def plant_delete(request, pk):
     plant = get_object_or_404(Plant, pk=pk)
     if request.method == "POST":

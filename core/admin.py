@@ -1,3 +1,3 @@
 from django.contrib import admin
 
-# Register your models here.
+# Core app keeps the default admin module for autodiscovery.

@@ -3,9 +3,8 @@ from django.db.models import Q
 from django.core.exceptions import ValidationError
 
 from accounts.models import Membership
-from plants.models import Plant
-from projects.models import Project
 from schemas.models import DatasetType, ColumnDef
+from structure.models import Entity
 
 
 class DatasetInstance(models.Model):
@@ -30,19 +29,10 @@ class DatasetInstance(models.Model):
         on_delete=models.CASCADE,
         related_name="instances",
     )
-    plant = models.ForeignKey(
-        Plant,
+    entity = models.ForeignKey(
+        Entity,
         on_delete=models.CASCADE,
         related_name="dataset_instances",
-        null=True,
-        blank=True,
-    )
-    project = models.ForeignKey(
-        Project,
-        on_delete=models.CASCADE,
-        related_name="dataset_instances",
-        null=True,
-        blank=True,
     )
     period = models.DateField(
         help_text="Fecha o día de referencia del dataset (para diarios).",
@@ -90,14 +80,8 @@ class DatasetInstance(models.Model):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["dataset_type", "plant", "period"],
-                condition=Q(plant__isnull=False),
-                name="uniq_instance_dataset_plant_period",
-            ),
-            models.UniqueConstraint(
-                fields=["dataset_type", "project", "period"],
-                condition=Q(project__isnull=False),
-                name="uniq_instance_dataset_project_period",
+                fields=["dataset_type", "entity", "period"],
+                name="uniq_instance_dataset_entity_period",
             ),
         ]
 
@@ -112,18 +96,12 @@ class DatasetInstance(models.Model):
         }
 
     def clean(self):
-        if bool(self.plant_id) == bool(self.project_id):
-            raise ValidationError(
-                "Debe seleccionar una planta o un proyecto (solo uno)."
-            )
+        if not self.entity_id:
+            raise ValidationError("Debe seleccionar una entidad.")
         if self.dataset_type_id:
-            if self.dataset_type.plant_id and self.plant_id != self.dataset_type.plant_id:
+            if self.dataset_type.entity_id and self.entity_id != self.dataset_type.entity_id:
                 raise ValidationError(
-                    "La planta no coincide con el esquema seleccionado."
-                )
-            if self.dataset_type.project_id and self.project_id != self.dataset_type.project_id:
-                raise ValidationError(
-                    "El proyecto no coincide con el esquema seleccionado."
+                    "La entidad no coincide con el esquema seleccionado."
                 )
 
 
@@ -230,8 +208,8 @@ class HistoricalImportBatch(models.Model):
         on_delete=models.CASCADE,
         related_name="historical_imports",
     )
-    plant = models.ForeignKey(
-        Plant,
+    entity = models.ForeignKey(
+        Entity,
         on_delete=models.CASCADE,
         related_name="historical_imports",
     )
@@ -276,4 +254,5 @@ class HistoricalImportBatch(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        return f"Histórico {self.dataset_type} ({self.plant.code}) - {self.created_at:%Y-%m-%d %H:%M}"
+        code = self.entity.code or self.entity.name
+        return f"Histórico {self.dataset_type} ({code}) - {self.created_at:%Y-%m-%d %H:%M}"

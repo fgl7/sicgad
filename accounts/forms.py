@@ -1,9 +1,8 @@
 from django import forms
 from django.contrib.auth import get_user_model
 
-from plants.models import Plant
-from projects.models import Project
 from .models import Institution, Membership
+from structure.models import Entity
 
 
 User = get_user_model()
@@ -37,22 +36,11 @@ class AdminUserCreateForm(forms.ModelForm):
             }
         ),
     )
-    plant = forms.ModelChoiceField(
-        label="Planta",
-        queryset=Plant.objects.all(),
+    entity = forms.ModelChoiceField(
+        label="Entidad",
+        queryset=Entity.objects.filter(is_active=True).order_by("name"),
         required=False,
-        empty_label="GLOBAL (todas las plantas)",
-        widget=forms.Select(
-            attrs={
-                "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
-            }
-        ),
-    )
-    project = forms.ModelChoiceField(
-        label="Proyecto",
-        queryset=Project.objects.filter(is_active=True).order_by("name"),
-        required=False,
-        empty_label="(sin proyecto)",
+        empty_label="GLOBAL (todas las entidades)",
         widget=forms.Select(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
@@ -158,8 +146,7 @@ class AdminUserCreateForm(forms.ModelForm):
         p1 = cleaned.get("password1")
         p2 = cleaned.get("password2")
         role = cleaned.get("role")
-        plant = cleaned.get("plant")
-        project = cleaned.get("project")
+        entity = cleaned.get("entity")
         validation_level = cleaned.get("validation_level")
         is_editing = bool(getattr(self.instance, "pk", None))
 
@@ -174,12 +161,9 @@ class AdminUserCreateForm(forms.ModelForm):
             if p1 and p2 and p1 != p2:
                 self.add_error("password2", "Las contrasenas no coinciden.")
 
-        # La planta o proyecto es obligatoria para cargadores; otros roles pueden ser globales.
-        if role == "LOADER" and not plant and not project:
-            self.add_error("plant", "Debe seleccionar una planta o proyecto para este rol.")
-        if plant and project:
-            self.add_error("plant", "Seleccione solo planta o proyecto, no ambos.")
-            self.add_error("project", "Seleccione solo planta o proyecto, no ambos.")
+        # La entidad es obligatoria para cargadores; otros roles pueden ser globales.
+        if role == "LOADER" and not entity:
+            self.add_error("entity", "Debe seleccionar una entidad para este rol.")
 
         if role == "VALIDATOR" and not validation_level:
             self.add_error("validation_level", "Debe definir un nivel de validacion para un Validador.")
@@ -215,8 +199,7 @@ class AdminUserCreateForm(forms.ModelForm):
             user.save()
             Membership.objects.create(
                 user=user,
-                plant=self.cleaned_data.get("plant"),
-                project=self.cleaned_data.get("project"),
+                entity=self.cleaned_data.get("entity"),
                 role=self.cleaned_data["role"],
                 validation_level=self.cleaned_data.get("validation_level"),
                 can_validate_daily=self.cleaned_data.get("can_validate_daily", False),

@@ -14,6 +14,13 @@ class Project(models.Model):
     end_date = models.DateField(null=True, blank=True)
     stage = models.CharField(max_length=120, blank=True)
     budget_mmbs = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    category = models.ForeignKey(
+        "structure.Category",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="projects",
+    )
     plants = models.ManyToManyField(
         Plant,
         related_name="projects",

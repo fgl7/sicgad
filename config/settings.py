@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # Project apps
     "accounts",
     "plants",
+    "structure",
     "schemas",
     "ingest",
     "validation",

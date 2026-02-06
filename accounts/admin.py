@@ -7,8 +7,7 @@ from .models import AccountProfile, Institution, Membership
 class MembershipAdmin(admin.ModelAdmin):
     list_display = (
         "user",
-        "plant",
-        "project",
+        "entity",
         "role",
         "institution",
         "validation_level",
@@ -22,8 +21,7 @@ class MembershipAdmin(admin.ModelAdmin):
         "role",
         "institution",
         "is_active",
-        "plant",
-        "project",
+        "entity",
         "can_validate_daily",
         "can_validate_weekly",
         "can_validate_projections",
@@ -32,10 +30,8 @@ class MembershipAdmin(admin.ModelAdmin):
     search_fields = (
         "user__username",
         "user__email",
-        "plant__code",
-        "plant__name",
-        "project__code",
-        "project__name",
+        "entity__code",
+        "entity__name",
     )
 
 

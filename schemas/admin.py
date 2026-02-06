@@ -12,8 +12,7 @@ class ColumnDefInline(admin.TabularInline):
 class DatasetTypeAdmin(admin.ModelAdmin):
     list_display = (
         "name",
-        "plant",
-        "project",
+        "entity",
         "version",
         "validation_frequency",
         "is_one_time",
@@ -22,16 +21,15 @@ class DatasetTypeAdmin(admin.ModelAdmin):
         "is_active",
     )
     list_filter = (
-        "plant",
-        "project",
+        "entity",
         "validation_frequency",
         "is_one_time",
         "is_certification",
         "status",
         "is_active",
     )
-    search_fields = ("name", "plant__code", "plant__name", "project__code", "project__name")
-    autocomplete_fields = ("plant", "project", "source_dataset")
+    search_fields = ("name", "entity__code", "entity__name")
+    autocomplete_fields = ("entity", "source_dataset")
     inlines = [ColumnDefInline]
 
 
@@ -51,14 +49,12 @@ class ColumnDefAdmin(admin.ModelAdmin):
         "data_type",
         "axis_role",
         "is_active",
-        "dataset_type__plant",
-        "dataset_type__project",
+        "dataset_type__entity",
     )
     search_fields = (
         "name",
         "label",
         "dataset_type__name",
-        "dataset_type__plant__code",
-        "dataset_type__project__code",
-        "dataset_type__project__name",
+        "dataset_type__entity__code",
+        "dataset_type__entity__name",
     )

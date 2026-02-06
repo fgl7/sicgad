@@ -1,7 +1,8 @@
+{% load static %}
 <aside class='w-64 sidebar border-r border-white/10 hidden lg:flex flex-col h-screen sticky top-0 z-50'>
   <div class='p-6 flex items-center gap-3'>
-    <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-      <span class="text-blue-600 font-bold text-lg font-heading">S</span>
+    <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
+      <img src="{% static 'escudo.png' %}" alt="Escudo Bolivia" class="w-7 h-7 object-contain" />
     </div>
     {% url 'landing' as landing_url %}
     <a href='{{ landing_url }}'
@@ -15,12 +16,9 @@
     {% url 'schemas:schema_list' as schemas_url %}
     {% url 'ingest:upload' as ingest_url %}
     {% url 'validation:inbox' as validation_url %}
-    {% url 'plants:plant_list' as plants_url %}
-    {% url 'projects:project_list' as projects_url %}
     {% url 'accounts:admin_user_list' as users_url %}
     {% url 'audit:log_list' as audit_url %}
     {% url 'performance:formulas' as performance_url %}
-    {% url 'projects:report_list' as projects_report_url %}
 
     <div class="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-4 mb-2">General</div>
 
@@ -106,42 +104,20 @@
     </a>
     {% endif %}
 
-    {% if is_admin or is_loader or is_validator %}
-    <a href='{{ projects_report_url }}'
-      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path|slice:":10" == "/projects/" %}active{% endif %}'>
-      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor"
-        viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-        </path>
-      </svg>
-      <span class="font-medium">Proyectos</span>
-    </a>
-    {% endif %}
-
     {% if is_admin %}
     <div class="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-6 mb-2">Administración</div>
 
-    <a href='{{ plants_url }}'
-      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path|slice:":8" == "/plants/" %}active{% endif %}'>
+    {% if not request.user.is_superuser %}
+    <a href='{% url "structure:manage_levels" %}'
+      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path|slice:":11" == "/structure/" %}active{% endif %}'>
       <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor"
         viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
-        </path>
+          d="M4 6h16M4 12h16M4 18h16"></path>
       </svg>
-      <span class="font-medium">Plantas</span>
+      <span class="font-medium">Crear Niveles</span>
     </a>
-
-    <a href='{{ projects_url }}'
-      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path == projects_url %}active{% endif %}'>
-      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor"
-        viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-      </svg>
-      <span class="font-medium">Gestión Proyectos</span>
-    </a>
+    {% endif %}
 
     <a href='{{ users_url }}'
       class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path|slice:":15" == "/accounts/users" %}active{% endif %}'>

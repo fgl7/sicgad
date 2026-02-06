@@ -37,11 +37,10 @@ urlpatterns = [
     ),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("accounts/", include("accounts.urls")),
-    path("plants/", include("plants.urls")),
     path("schemas/", include("schemas.urls")),
     path("ingest/", include("ingest.urls")),
     path("validate/", include("validation.urls")),
     path("audit/", include("audit.urls")),
     path("performance/", include("performance.urls")),
-    path("projects/", include("projects.urls")),
+    path("structure/", include("structure.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.models import Membership
-from accounts.decorators import admin_required
+from accounts.decorators import admin_role_required
 from audit.utils import record_action
 from ingest.models import DatasetInstance, PublishedDataPoint
 from ingest.utils import _read_instance_file, parse_date_cell
@@ -298,13 +298,13 @@ def _pick_year(request, fallback_year: int | None = None) -> int:
     return timezone.now().year
 
 
-@admin_required
+@admin_role_required
 def project_list(request):
     projects = Project.objects.prefetch_related("plants").order_by("name")
     return render(request, "projects/project_list.html", {"projects": projects})
 
 
-@admin_required
+@admin_role_required
 def project_create(request):
     if request.method == "POST":
         form = ProjectForm(request.POST)
@@ -327,7 +327,7 @@ def project_create(request):
     )
 
 
-@admin_required
+@admin_role_required
 def project_edit(request, pk: int):
     project = get_object_or_404(Project, pk=pk)
     if request.method == "POST":
@@ -358,7 +358,7 @@ def project_edit(request, pk: int):
     )
 
 
-@admin_required
+@admin_role_required
 def project_delete(request, pk: int):
     project = get_object_or_404(Project, pk=pk)
     if request.method == "POST":
@@ -371,7 +371,7 @@ def project_delete(request, pk: int):
     )
 
 
-@admin_required
+@admin_role_required
 def report_config_list(request):
     configs = ProjectReportConfig.objects.select_related(
         "project",
@@ -386,7 +386,7 @@ def report_config_list(request):
     )
 
 
-@admin_required
+@admin_role_required
 def report_config_create(request):
     if request.method == "POST":
         form = ProjectReportConfigForm(request.POST)
@@ -410,7 +410,7 @@ def report_config_create(request):
     )
 
 
-@admin_required
+@admin_role_required
 def report_config_edit(request, config_id: int):
     config = get_object_or_404(ProjectReportConfig, pk=config_id)
     if request.method == "POST":
@@ -435,7 +435,7 @@ def report_config_edit(request, config_id: int):
     )
 
 
-@admin_required
+@admin_role_required
 def report_config_delete(request, config_id: int):
     config = get_object_or_404(ProjectReportConfig, pk=config_id)
     if request.method == "POST":

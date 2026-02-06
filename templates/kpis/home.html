@@ -104,7 +104,7 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                            <th class="px-6 py-4">Planta / Proyecto</th>
+                            <th class="px-6 py-4">Entidad</th>
                             <th class="px-6 py-4">Dataset</th>
                             <th class="px-6 py-4">Estado</th>
                         </tr>
@@ -114,7 +114,7 @@
                         <tr class="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
                             <td class="px-6 py-4">
                                 <span class="font-bold text-white">
-                                    {% if inst.plant %}{{ inst.plant.code }}{% elif inst.project %}{{ inst.project.code|default:inst.project.name }}{% else %}-{% endif %}
+                                    {% if inst.entity %}{{ inst.entity.code|default:inst.entity.name }}{% else %}-{% endif %}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-slate-400">{{ inst.dataset_type.name }}</td>
@@ -141,10 +141,10 @@
             <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-100 transition-opacity">
                 <svg class="w-12 h-12 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
             </div>
-            <h4 class="text-xl font-header font-extrabold text-white mb-2">Gestión de Unidades</h4>
-            <p class="text-slate-400 mb-6 text-sm">Configura plantas operativas y asocia datasets de control ambiental y productivo.</p>
-            <a href="{% url 'plants:plant_list' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold transition-all hover:bg-emerald-500 hover:text-slate-950">
-                Administrar Plantas
+            <h4 class="text-xl font-header font-extrabold text-white mb-2">Clasificación y Entidades</h4>
+            <p class="text-slate-400 mb-6 text-sm">Define el arbol Sector/Subsector/Categoria y crea entidades dinamicas desde un flujo unificado.</p>
+            <a href="{% url 'structure:manage_levels' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold transition-all hover:bg-emerald-500 hover:text-slate-950">
+                Abrir Crear Niveles
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
             </a>
         </div>

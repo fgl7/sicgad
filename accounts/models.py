@@ -4,8 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from plants.models import Plant
-from projects.models import Project
+from structure.models import Entity
 
 
 class Institution(models.Model):
@@ -37,21 +36,13 @@ class Membership(models.Model):
         on_delete=models.CASCADE,
         related_name="memberships",
     )
-    plant = models.ForeignKey(
-        Plant,
+    entity = models.ForeignKey(
+        Entity,
         on_delete=models.CASCADE,
         related_name="memberships",
         null=True,
         blank=True,
-        help_text="Dejar vacio solo para roles globales (por ejemplo, Admin global).",
-    )
-    project = models.ForeignKey(
-        Project,
-        on_delete=models.CASCADE,
-        related_name="memberships",
-        null=True,
-        blank=True,
-        help_text="Proyecto asociado (si aplica). Dejar vacio para roles por planta o globales.",
+        help_text="Entidad asociada. Vacio solo para roles globales.",
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     validation_level = models.PositiveIntegerField(
@@ -93,29 +84,19 @@ class Membership(models.Model):
         verbose_name_plural = "Memberships"
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "plant", "role", "validation_level"],
-                condition=models.Q(plant__isnull=False),
-                name="uniq_membership_user_plant_role_level",
-            ),
-            models.UniqueConstraint(
-                fields=["user", "project", "role", "validation_level"],
-                condition=models.Q(project__isnull=False),
-                name="uniq_membership_user_project_role_level",
+                fields=["user", "entity", "role", "validation_level"],
+                condition=models.Q(entity__isnull=False),
+                name="uniq_membership_user_entity_role_level",
             ),
         ]
 
     def __str__(self) -> str:
-        if self.project:
-            scope_label = self.project.code or self.project.name
-        else:
-            scope_label = self.plant.code if self.plant else "GLOBAL"
+        scope_label = self.entity.name if self.entity else "GLOBAL"
         return f"{self.user.username} - {self.get_role_display()} - {scope_label}"
 
     def clean(self):
-        if self.plant_id and self.project_id:
-            raise ValidationError(
-                "El membership no puede tener planta y proyecto al mismo tiempo."
-            )
+        if self.role == "LOADER" and self.entity_id is None:
+            raise ValidationError("Los cargadores deben estar asociados a una entidad.")
 
 
 class AccountProfile(models.Model):

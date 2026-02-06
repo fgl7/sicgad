@@ -1,6 +1,7 @@
 from django import forms
 
 from plants.models import Plant
+from structure.models import Category
 from schemas.models import DatasetType
 from .models import Project, ProjectReportConfig
 
@@ -28,6 +29,7 @@ class ProjectForm(forms.ModelForm):
         "end_date",
         "budget_mmbs",
         "plants",
+        "category",
         "is_active",
     }
 
@@ -36,6 +38,7 @@ class ProjectForm(forms.ModelForm):
         fields = [
             "name",
             "code",
+            "category",
             "description",
             "executor",
             "location",
@@ -52,6 +55,11 @@ class ProjectForm(forms.ModelForm):
                 }
             ),
             "code": forms.TextInput(
+                attrs={
+                    "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
+                }
+            ),
+            "category": forms.Select(
                 attrs={
                     "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
                 }
@@ -105,6 +113,12 @@ class ProjectForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["plants"].queryset = Plant.objects.all().order_by("code")
+        self.fields["category"].required = True
+        self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by(
+            "subsector__sector__name",
+            "subsector__name",
+            "name",
+        )
         if not getattr(self.instance, "pk", None):
             self.fields.pop("change_justification", None)
 

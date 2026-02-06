@@ -31,7 +31,12 @@
                     {% for plant in plants %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
                         <td class="px-6 py-4 font-mono text-[10px] text-emerald-400 font-bold">{{ plant.code }}</td>
-                        <td class="px-6 py-4 text-slate-200 font-medium">{{ plant.name }}</td>
+                        <td class="px-6 py-4">
+    <div class="flex flex-col">
+        <span class="text-slate-200 font-medium">{{ plant.name }}</span>
+        <span class="text-[10px] text-slate-500 uppercase tracking-widest">{{ plant.category.name|default:"Sin categoria" }}</span>
+    </div>
+</td>
                         <td class="px-6 py-4 text-center">
                             {% if plant.is_active %}
                                 <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Activa</span>

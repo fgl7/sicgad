@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Clasificacion - SICGAD{% endblock %}
+{% block page_title %}Crear niveles{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="glass-effect rounded-xl p-5 space-y-4">
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h3 class="text-xs font-black text-white uppercase tracking-widest">Asistente de clasificacion</h3>
+                <p class="text-[11px] text-slate-500">Flujo secuencial: Sector, Subsector, Categoria y Entidades.</p>
+            </div>
+            {% if current_sector %}
+            <button type="button" id="toggle-new-sector-form" class="btn-primary glow-emerald shrink-0">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Crear otro sector
+            </button>
+            {% endif %}
+        </div>
+
+        <div class="rounded-lg border border-white/10 bg-slate-900/40 px-3 py-2 text-[11px] text-slate-300">
+            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">Arbol actual</div>
+            <div class="mt-1 flex flex-wrap items-center gap-2">
+                <span class="rounded-full border border-slate-500/40 px-2 py-0.5 text-[10px] uppercase tracking-widest {{ current_sector|yesno:'text-emerald-200,text-slate-500' }}">Sector: {{ current_sector.name|default:"-" }}</span>
+                <span class="text-slate-500">/</span>
+                <span class="rounded-full border border-slate-500/40 px-2 py-0.5 text-[10px] uppercase tracking-widest {{ current_subsector|yesno:'text-sky-200,text-slate-500' }}">Subsector: {{ current_subsector.name|default:"-" }}</span>
+                <span class="text-slate-500">/</span>
+                <span class="rounded-full border border-slate-500/40 px-2 py-0.5 text-[10px] uppercase tracking-widest {{ current_category|yesno:'text-amber-200,text-slate-500' }}">Categoria: {{ current_category.name|default:"-" }}</span>
+            </div>
+        </div>
+
+        <div class="space-y-3 max-w-5xl">
+            <section class="rounded-xl border border-white/10 bg-slate-900/40 px-4 py-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black {% if current_sector %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/40{% else %}bg-sky-500/20 text-sky-300 border border-sky-500/40{% endif %}">1</span>
+                        <div>
+                            <h4 class="text-xs font-black text-white uppercase tracking-widest">Crear sector</h4>
+                            <p class="text-[11px] text-slate-500">Nivel principal del arbol.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] uppercase tracking-widest {% if current_sector %}text-emerald-300{% else %}text-sky-300{% endif %}">{% if current_sector %}Completado{% else %}Activo{% endif %}</span>
+                    </div>
+                </div>
+                {% if not current_sector %}
+                <form method="post" class="space-y-2 mt-3" data-lock-group="sector">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_sector">
+                    <input type="text" name="sector_name" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Nombre del sector">
+                    <textarea name="sector_description" rows="2" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Descripcion"></textarea>
+                    <button class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar sector</button>
+                </form>
+                {% else %}
+                <div class="mt-2 flex items-center gap-3">
+                    <p class="text-[11px] text-slate-300">Sector actual: <span class="text-white font-semibold">{{ current_sector.name }}</span></p>
+                </div>
+                <form method="post" class="mt-3 flex flex-wrap items-end gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="set_current_sector">
+                    <div class="min-w-[240px]">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Cambiar sector activo</label>
+                        <select name="sector_id" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">
+                            {% for sector in sectors %}
+                            <option value="{{ sector.id }}" {% if current_sector and sector.id == current_sector.id %}selected{% endif %}>{{ sector.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-900/70 border border-white/10 text-slate-300 hover:text-white">Aplicar</button>
+                </form>
+                <form id="new-sector-form" method="post" class="space-y-2 mt-3 hidden">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_sector">
+                    <input type="text" name="sector_name" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Nombre del nuevo sector">
+                    <textarea name="sector_description" rows="2" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Descripcion"></textarea>
+                    <button class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar sector</button>
+                </form>
+                {% endif %}
+            </section>
+
+            {% if current_sector %}
+            <section class="rounded-xl border border-white/10 bg-slate-900/40 px-4 py-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black {% if current_subsector %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/40{% else %}bg-sky-500/20 text-sky-300 border border-sky-500/40{% endif %}">2</span>
+                        <div>
+                            <h4 class="text-xs font-black text-white uppercase tracking-widest">Crear subsector</h4>
+                            <p class="text-[11px] text-slate-500">Rama asociada al sector actual.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] uppercase tracking-widest {% if current_subsector %}text-emerald-300{% else %}text-sky-300{% endif %}">{% if current_subsector %}Completado{% else %}Activo{% endif %}</span>
+                </div>
+                {% if not current_subsector %}
+                <form method="post" class="space-y-2 mt-3" data-lock-group="subsector">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_subsector">
+                    <input type="hidden" name="sector_id" value="{{ current_sector.id }}">
+                    <p class="text-[11px] text-slate-300">Sector actual: <span class="text-white font-semibold">{{ current_sector.name }}</span></p>
+                    <input type="text" name="subsector_name" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Nombre del subsector">
+                    <textarea name="subsector_description" rows="2" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Descripcion"></textarea>
+                    <button class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar subsector</button>
+                </form>
+                {% else %}
+                <div class="mt-2 flex items-center justify-between gap-2">
+                    <p class="text-[11px] text-slate-300">Subsector actual: <span class="text-white font-semibold">{{ current_subsector.name }}</span></p>
+                    <button type="button" id="toggle-new-subsector-form" class="text-[10px] text-sky-300 uppercase tracking-widest hover:text-sky-200">Crear otro subsector</button>
+                </div>
+                <form method="post" class="mt-3 flex flex-wrap items-end gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="set_current_subsector">
+                    <div class="min-w-[240px]">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Cambiar subsector activo</label>
+                        <select name="subsector_id" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">
+                            {% for subsector in sector_subsectors %}
+                            <option value="{{ subsector.id }}" {% if current_subsector and subsector.id == current_subsector.id %}selected{% endif %}>{{ subsector.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-900/70 border border-white/10 text-slate-300 hover:text-white">Aplicar</button>
+                </form>
+                <form id="new-subsector-form" method="post" class="space-y-2 mt-3 hidden">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_subsector">
+                    <input type="hidden" name="sector_id" value="{{ current_sector.id }}">
+                    <input type="text" name="subsector_name" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Nombre del nuevo subsector">
+                    <textarea name="subsector_description" rows="2" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Descripcion"></textarea>
+                    <button class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar subsector</button>
+                </form>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            {% if current_subsector %}
+            <section class="rounded-xl border border-white/10 bg-slate-900/40 px-4 py-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black {% if current_category %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/40{% else %}bg-sky-500/20 text-sky-300 border border-sky-500/40{% endif %}">3</span>
+                        <div>
+                            <h4 class="text-xs font-black text-white uppercase tracking-widest">Crear categoria</h4>
+                            <p class="text-[11px] text-slate-500">Nivel de clasificacion final.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] uppercase tracking-widest {% if current_category %}text-emerald-300{% else %}text-sky-300{% endif %}">{% if current_category %}Completado{% else %}Activo{% endif %}</span>
+                </div>
+                {% if not current_category %}
+                <form method="post" class="space-y-2 mt-3" data-lock-group="category">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_category">
+                    <input type="hidden" name="subsector_id" value="{{ current_subsector.id }}">
+                    <p class="text-[11px] text-slate-300">Subsector actual: <span class="text-white font-semibold">{{ current_subsector.name }}</span></p>
+                    <input type="text" name="category_name" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Nombre de la categoria">
+                    <textarea name="category_description" rows="2" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Descripcion"></textarea>
+                    <button class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar categoria</button>
+                </form>
+                {% else %}
+                <div class="mt-2 flex items-center justify-between gap-2">
+                    <p class="text-[11px] text-slate-300">Categoria actual: <span class="text-white font-semibold">{{ current_category.name }}</span></p>
+                    <button type="button" id="toggle-new-category-form" class="text-[10px] text-sky-300 uppercase tracking-widest hover:text-sky-200">Crear otra categoria</button>
+                </div>
+                <form method="post" class="mt-3 flex flex-wrap items-end gap-2">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="set_current_category">
+                    <div class="min-w-[240px]">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Cambiar categoria activa</label>
+                        <select name="category_id" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">
+                            {% for category in subsector_categories %}
+                            <option value="{{ category.id }}" {% if current_category and category.id == current_category.id %}selected{% endif %}>{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-900/70 border border-white/10 text-slate-300 hover:text-white">Aplicar</button>
+                </form>
+                <form id="new-category-form" method="post" class="space-y-2 mt-3 hidden">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_category">
+                    <input type="hidden" name="subsector_id" value="{{ current_subsector.id }}">
+                    <input type="text" name="category_name" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Nombre de la nueva categoria">
+                    <textarea name="category_description" rows="2" class="w-full max-w-3xl px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Descripcion"></textarea>
+                    <button class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar categoria</button>
+                </form>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            {% if current_category %}
+            <section class="rounded-xl border border-sky-500/20 bg-slate-900/50 px-4 py-3 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black bg-sky-500/20 text-sky-300 border border-sky-500/40">4</span>
+                        <div>
+                            <h4 class="text-xs font-black text-white uppercase tracking-widest">Crear entidades dinamicas</h4>
+                            <p class="text-[11px] text-slate-500">Define tipos y crea entidades asociadas a la categoria activa.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] uppercase tracking-widest text-sky-300">Activo</span>
+                </div>
+                <div class="grid gap-3 lg:grid-cols-2">
+                    <form method="post" class="space-y-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_entity_type">
+                        <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500">Nuevo tipo de entidad</label>
+                        <input type="text" name="entity_type_name" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Ej: Unidad operativa, Contrato, Regalía">
+                        <textarea name="entity_type_description" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Descripcion del tipo (opcional)"></textarea>
+                        <button class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar tipo</button>
+                    </form>
+
+                    <form method="post" class="space-y-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="create_entity">
+                        <p class="text-[11px] text-slate-300">Categoria: <span class="text-white font-semibold">{{ current_category.name }}</span></p>
+                        <select name="entity_type_id" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm">
+                            <option value="">Selecciona tipo de entidad</option>
+                            {% for entity_type in entity_types_active %}
+                            <option value="{{ entity_type.id }}">{{ entity_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="entity_name" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Nombre de la entidad">
+                        <input type="text" name="entity_code" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm" placeholder="Codigo (opcional)">
+                        <textarea name="entity_description" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Descripcion (opcional)"></textarea>
+                        <button class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Guardar entidad</button>
+                        {% if latest_entity %}
+                        <p class="text-[11px] text-sky-300">Ultima entidad: <span class="text-white font-semibold">{{ latest_entity.entity_type.name }} - {{ latest_entity.name }}</span></p>
+                        {% endif %}
+                    </form>
+                </div>
+            </section>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="glass-effect rounded-xl p-4 space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-xs font-black text-white uppercase tracking-widest">Listado de niveles</h3>
+                <p class="text-[11px] text-slate-500">Edicion compacta por pestañas.</p>
+            </div>
+            <span class="text-[10px] text-slate-400">Las bajas son reversibles.</span>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            <button type="button" data-level-tab="sectores" class="level-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-sky-500/20 text-sky-300 border border-sky-500/40">Sectores</button>
+            <button type="button" data-level-tab="subsectores" class="level-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-900/60 text-slate-300 border border-white/10">Subsectores</button>
+            <button type="button" data-level-tab="categorias" class="level-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-900/60 text-slate-300 border border-white/10">Categorias</button>
+            <button type="button" data-level-tab="tipos" class="level-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-900/60 text-slate-300 border border-white/10">Tipos de entidad</button>
+            <button type="button" data-level-tab="entidades" class="level-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-900/60 text-slate-300 border border-white/10">Entidades dinamicas</button>
+        </div>
+
+        <div data-level-panel="sectores" class="level-tab-panel space-y-3">
+            {% for sector in sectors_all %}
+            <details class="rounded-lg border border-white/5 bg-slate-900/40 p-3 group">
+                <summary class="list-none cursor-pointer flex items-center justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-semibold text-white truncate">{{ sector.name }}</p>
+                        <p class="text-[11px] text-slate-400 truncate">{{ sector.description|default:"Sin descripcion" }}</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0 ml-3">
+                        <span class="text-[10px] {{ sector.is_active|yesno:'text-emerald-300,text-slate-500' }}">{{ sector.is_active|yesno:"Activo,Inactivo" }}</span>
+                        <span class="text-slate-500 group-open:rotate-90 transition-transform">&rsaquo;</span>
+                    </div>
+                </summary>
+                <form method="post" class="space-y-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_sector">
+                    <input type="hidden" name="sector_id" value="{{ sector.id }}">
+                    <input type="text" name="sector_name" value="{{ sector.name }}" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">
+                    <textarea name="sector_description" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">{{ sector.description }}</textarea>
+                    <div class="flex items-center gap-2">
+                        <button class="btn-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">Actualizar</button>
+                        {% if sector.is_active %}
+                        <button type="button" class="text-[10px] text-rose-300 uppercase tracking-widest" data-confirm-action="deactivate_sector" data-sector-id="{{ sector.id }}">Desactivar</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </details>
+            {% empty %}
+            <p class="text-[11px] text-slate-500">Sin sectores registrados.</p>
+            {% endfor %}
+        </div>
+
+        <div data-level-panel="subsectores" class="level-tab-panel space-y-3 hidden">
+            {% for subsector in subsectors_all %}
+            <details class="rounded-lg border border-white/5 bg-slate-900/40 p-3 group">
+                <summary class="list-none cursor-pointer flex items-center justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[11px] text-slate-400 truncate">{{ subsector.sector.name }}</p>
+                        <p class="text-[11px] font-semibold text-white truncate">{{ subsector.name }}</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0 ml-3">
+                        <span class="text-[10px] {{ subsector.is_active|yesno:'text-emerald-300,text-slate-500' }}">{{ subsector.is_active|yesno:"Activo,Inactivo" }}</span>
+                        <span class="text-slate-500 group-open:rotate-90 transition-transform">&rsaquo;</span>
+                    </div>
+                </summary>
+                <form method="post" class="space-y-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_subsector">
+                    <input type="hidden" name="subsector_id" value="{{ subsector.id }}">
+                    <input type="text" name="subsector_name" value="{{ subsector.name }}" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">
+                    <textarea name="subsector_description" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">{{ subsector.description }}</textarea>
+                    <div class="flex items-center gap-2">
+                        <button class="btn-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">Actualizar</button>
+                        {% if subsector.is_active %}
+                        <button type="button" class="text-[10px] text-rose-300 uppercase tracking-widest" data-confirm-action="deactivate_subsector" data-subsector-id="{{ subsector.id }}">Desactivar</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </details>
+            {% empty %}
+            <p class="text-[11px] text-slate-500">Sin subsectores registrados.</p>
+            {% endfor %}
+        </div>
+
+        <div data-level-panel="categorias" class="level-tab-panel space-y-3 hidden">
+            {% for category in categories_all %}
+            <details class="rounded-lg border border-white/5 bg-slate-900/40 p-3 group">
+                <summary class="list-none cursor-pointer flex items-center justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[11px] text-slate-400 truncate">{{ category.subsector.sector.name }} / {{ category.subsector.name }}</p>
+                        <p class="text-[11px] font-semibold text-white truncate">{{ category.name }}</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0 ml-3">
+                        <span class="text-[10px] {{ category.is_active|yesno:'text-emerald-300,text-slate-500' }}">{{ category.is_active|yesno:"Activo,Inactivo" }}</span>
+                        <span class="text-slate-500 group-open:rotate-90 transition-transform">&rsaquo;</span>
+                    </div>
+                </summary>
+                <form method="post" class="space-y-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_category">
+                    <input type="hidden" name="category_id" value="{{ category.id }}">
+                    <input type="text" name="category_name" value="{{ category.name }}" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">
+                    <textarea name="category_description" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">{{ category.description }}</textarea>
+                    <div class="flex items-center gap-2">
+                        <button class="btn-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">Actualizar</button>
+                        {% if category.is_active %}
+                        <button type="button" class="text-[10px] text-rose-300 uppercase tracking-widest" data-confirm-action="deactivate_category" data-category-id="{{ category.id }}">Desactivar</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </details>
+            {% empty %}
+            <p class="text-[11px] text-slate-500">Sin categorias registradas.</p>
+            {% endfor %}
+        </div>
+
+        <div data-level-panel="tipos" class="level-tab-panel space-y-3 hidden">
+            {% for entity_type in entity_types_all %}
+            <details class="rounded-lg border border-white/5 bg-slate-900/40 p-3 group">
+                <summary class="list-none cursor-pointer flex items-center justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[11px] text-slate-400 truncate">{{ entity_type.slug }}</p>
+                        <p class="text-[11px] font-semibold text-white truncate">{{ entity_type.name }}</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0 ml-3">
+                        <span class="text-[10px] {{ entity_type.is_active|yesno:'text-emerald-300,text-slate-500' }}">{{ entity_type.is_active|yesno:"Activo,Inactivo" }}</span>
+                        <span class="text-slate-500 group-open:rotate-90 transition-transform">&rsaquo;</span>
+                    </div>
+                </summary>
+                <form method="post" class="space-y-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_entity_type">
+                    <input type="hidden" name="entity_type_id" value="{{ entity_type.id }}">
+                    <input type="text" name="entity_type_name" value="{{ entity_type.name }}" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Nombre del tipo">
+                    <textarea name="entity_type_description" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">{{ entity_type.description }}</textarea>
+                    <div class="flex items-center gap-2">
+                        <button class="btn-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">Actualizar</button>
+                        {% if entity_type.is_active %}
+                        <button type="button" class="text-[10px] text-rose-300 uppercase tracking-widest" data-confirm-action="deactivate_entity_type" data-entity-type-id="{{ entity_type.id }}">Desactivar</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </details>
+            {% empty %}
+            <p class="text-[11px] text-slate-500">Sin tipos de entidad registrados.</p>
+            {% endfor %}
+        </div>
+
+        <div data-level-panel="entidades" class="level-tab-panel space-y-3 hidden">
+            {% for entity in entities_all %}
+            <details class="rounded-lg border border-white/5 bg-slate-900/40 p-3 group">
+                <summary class="list-none cursor-pointer flex items-center justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[11px] text-slate-400 truncate">{{ entity.category.subsector.sector.name|default:"Sin sector" }} / {{ entity.category.subsector.name|default:"Sin subsector" }} / {{ entity.category.name|default:"Sin categoria" }}</p>
+                        <p class="text-[11px] font-semibold text-white truncate">{{ entity.entity_type.name }} - {{ entity.name }}{% if entity.code %} ({{ entity.code }}){% endif %}</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0 ml-3">
+                        <span class="text-[10px] {{ entity.is_active|yesno:'text-emerald-300,text-slate-500' }}">{{ entity.is_active|yesno:"Activo,Inactivo" }}</span>
+                        <span class="text-slate-500 group-open:rotate-90 transition-transform">&rsaquo;</span>
+                    </div>
+                </summary>
+                <form method="post" class="space-y-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_entity">
+                    <input type="hidden" name="entity_id" value="{{ entity.id }}">
+                    <input type="text" name="entity_name" value="{{ entity.name }}" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Nombre de la entidad">
+                    <input type="text" name="entity_code" value="{{ entity.code }}" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs" placeholder="Codigo (opcional)">
+                    <select name="entity_type_id" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">
+                        {% for entity_type in entity_types_active %}
+                        <option value="{{ entity_type.id }}" {% if entity.entity_type_id == entity_type.id %}selected{% endif %}>{{ entity_type.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="category_id" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">
+                        {% for category in categories_active %}
+                        <option value="{{ category.id }}" {% if entity.category_id == category.id %}selected{% endif %}>
+                            {{ category.subsector.sector.name }} / {{ category.subsector.name }} / {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <textarea name="entity_description" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-xs">{{ entity.description }}</textarea>
+                    <div class="flex items-center gap-2">
+                        <button class="btn-primary px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest">Actualizar</button>
+                        {% if entity.is_active %}
+                        <button type="button" class="text-[10px] text-rose-300 uppercase tracking-widest" data-confirm-action="deactivate_entity" data-entity-id="{{ entity.id }}">Desactivar</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </details>
+            {% empty %}
+            <p class="text-[11px] text-slate-500">Sin entidades registradas.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div id="confirm-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-950/60 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/90 p-5 shadow-2xl">
+        <h3 class="text-sm font-black text-white uppercase tracking-widest">Confirmar desactivacion</h3>
+        <p class="mt-2 text-[11px] text-slate-300">Esta accion desactiva el nivel seleccionado. No elimina datos, pero puede afectar filtros y usuarios.</p>
+        <div class="mt-4 flex items-center justify-end gap-3">
+            <button type="button" id="confirm-cancel" class="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Cancelar</button>
+            <button type="button" id="confirm-accept" class="btn-primary px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest">Desactivar</button>
+        </div>
+    </div>
+</div>
+
+<form id="confirm-form" method="post" class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="">
+    <input type="hidden" name="sector_id" value="">
+    <input type="hidden" name="subsector_id" value="">
+    <input type="hidden" name="category_id" value="">
+    <input type="hidden" name="entity_id" value="">
+    <input type="hidden" name="entity_type_id" value="">
+</form>
+
+<script>
+    (() => {
+        const modal = document.getElementById("confirm-modal");
+        const form = document.getElementById("confirm-form");
+        const actionInput = form.querySelector('input[name="action"]');
+        const sectorInput = form.querySelector('input[name="sector_id"]');
+        const subsectorInput = form.querySelector('input[name="subsector_id"]');
+        const categoryInput = form.querySelector('input[name="category_id"]');
+        const entityInput = form.querySelector('input[name="entity_id"]');
+        const entityTypeInput = form.querySelector('input[name="entity_type_id"]');
+        const cancelBtn = document.getElementById("confirm-cancel");
+        const acceptBtn = document.getElementById("confirm-accept");
+
+        document.addEventListener("click", (event) => {
+            const trigger = event.target.closest("[data-confirm-action]");
+            if (!trigger) {
+                return;
+            }
+            event.preventDefault();
+            actionInput.value = trigger.getAttribute("data-confirm-action") || "";
+            sectorInput.value = trigger.getAttribute("data-sector-id") || "";
+            subsectorInput.value = trigger.getAttribute("data-subsector-id") || "";
+            categoryInput.value = trigger.getAttribute("data-category-id") || "";
+            entityInput.value = trigger.getAttribute("data-entity-id") || "";
+            entityTypeInput.value = trigger.getAttribute("data-entity-type-id") || "";
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        });
+
+        const closeModal = () => {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        };
+
+        cancelBtn.addEventListener("click", closeModal);
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+        acceptBtn.addEventListener("click", () => {
+            form.submit();
+        });
+
+        document.addEventListener("click", (event) => {
+            const unlockBtn = event.target.closest("[data-unlock]");
+            if (!unlockBtn) {
+                return;
+            }
+            const target = unlockBtn.getAttribute("data-unlock");
+            const lockGroup = document.querySelector(`[data-lock-group='${target}']`);
+            if (!lockGroup) {
+                return;
+            }
+            lockGroup.querySelectorAll("input, textarea, select, button").forEach((el) => {
+                if (el !== unlockBtn) {
+                    el.removeAttribute("disabled");
+                }
+            });
+        });
+
+        const tabButtons = document.querySelectorAll(".level-tab-btn");
+        const tabPanels = document.querySelectorAll(".level-tab-panel");
+        tabButtons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const tab = btn.getAttribute("data-level-tab");
+                tabButtons.forEach((b) => {
+                    b.classList.remove("bg-sky-500/20", "text-sky-300", "border-sky-500/40");
+                    b.classList.add("bg-slate-900/60", "text-slate-300", "border-white/10");
+                });
+                btn.classList.remove("bg-slate-900/60", "text-slate-300", "border-white/10");
+                btn.classList.add("bg-sky-500/20", "text-sky-300", "border-sky-500/40");
+                tabPanels.forEach((panel) => {
+                    panel.classList.toggle("hidden", panel.getAttribute("data-level-panel") !== tab);
+                });
+            });
+        });
+
+        const toggleNewSectorBtn = document.getElementById("toggle-new-sector-form");
+        const newSectorForm = document.getElementById("new-sector-form");
+        if (toggleNewSectorBtn && newSectorForm) {
+            toggleNewSectorBtn.addEventListener("click", () => {
+                newSectorForm.classList.toggle("hidden");
+            });
+        }
+
+        const toggleNewSubsectorBtn = document.getElementById("toggle-new-subsector-form");
+        const newSubsectorForm = document.getElementById("new-subsector-form");
+        if (toggleNewSubsectorBtn && newSubsectorForm) {
+            toggleNewSubsectorBtn.addEventListener("click", () => {
+                newSubsectorForm.classList.toggle("hidden");
+            });
+        }
+
+        const toggleNewCategoryBtn = document.getElementById("toggle-new-category-form");
+        const newCategoryForm = document.getElementById("new-category-form");
+        if (toggleNewCategoryBtn && newCategoryForm) {
+            toggleNewCategoryBtn.addEventListener("click", () => {
+                newCategoryForm.classList.toggle("hidden");
+            });
+        }
+    })();
+</script>
+{% endblock %}

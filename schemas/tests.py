@@ -1,14 +1,19 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from plants.models import Plant
-from projects.models import Project
+from structure.models import Category, Entity, Sector, Subsector
 
 from .models import DatasetType
 
 
 class DatasetTypeCleanTests(TestCase):
-    def test_requires_plant_or_project(self):
+    def _build_entity(self, code="PCS") -> Entity:
+        sector = Sector.objects.create(name=f"Sector {code}")
+        subsector = Subsector.objects.create(sector=sector, name=f"Subsector {code}")
+        category = Category.objects.create(subsector=subsector, name=f"Categoria {code}")
+        return Entity.objects.create(category=category, code=code, name=f"Entidad {code}")
+
+    def test_requires_entity(self):
         dataset = DatasetType(
             name="Daily Production",
             version=1,
@@ -17,28 +22,26 @@ class DatasetTypeCleanTests(TestCase):
         with self.assertRaises(ValidationError):
             dataset.full_clean()
 
-    def test_rejects_both_plant_and_project(self):
-        plant = Plant.objects.create(code="PLANT", name="Plant")
-        project = Project.objects.create(name="Project")
+    def test_accepts_entity(self):
+        entity = self._build_entity("ENT")
         dataset = DatasetType(
             name="Daily Production",
             version=1,
             validation_frequency=DatasetType.DAILY,
-            plant=plant,
-            project=project,
+            entity=entity,
         )
-        with self.assertRaises(ValidationError):
-            dataset.full_clean()
 
-    def test_slug_generated_for_plant(self):
-        plant = Plant.objects.create(code="PCS", name="Plant")
+        dataset.full_clean()
+
+    def test_slug_generated_for_entity(self):
+        entity = self._build_entity("PCS")
         dataset = DatasetType.objects.create(
             name="Daily Production",
             version=1,
             validation_frequency=DatasetType.DAILY,
-            plant=plant,
+            entity=entity,
             status=DatasetType.STATUS_APPROVED,
             is_active=True,
         )
         self.assertTrue(dataset.slug)
-        self.assertIn("pcs-daily-production-v1", dataset.slug)
+        self.assertIn("pcs-daily-production-v1", dataset.slug)

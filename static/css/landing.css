@@ -1,282 +1,282 @@
-﻿html {
-    scroll-behavior: smooth;
-}
-
-.landing-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: -10;
-    overflow: hidden;
-}
-
-.landing-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    filter: saturate(0.9) contrast(1.05);
-}
-
-.landing-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(5, 10, 20, 0.65) 0%, rgba(5, 10, 20, 0.82) 55%, rgba(2, 6, 23, 0.95) 100%);
-}
-
-.landing-glow {
-    position: absolute;
-    width: 26rem;
-    height: 26rem;
-    border-radius: 999px;
-    filter: blur(90px);
-    opacity: 0.28;
-}
-
-.landing-glow-left {
-    top: -7rem;
-    left: -6rem;
-    background: rgba(255, 255, 255, 0.16);
-}
-
-.landing-glow-right {
-    bottom: -6rem;
-    right: -5rem;
-    background: rgba(56, 189, 248, 0.18);
-}
-
-.landing-header {
-    max-width: 56rem;
-    margin: 0 auto;
-}
-
-.landing-stagger > * {
-    opacity: 0;
-    animation: fadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.landing-stagger > *:nth-child(1) {
-    animation-delay: 0.05s;
-}
-
-.landing-stagger > *:nth-child(2) {
-    animation-delay: 0.15s;
-}
-
-.landing-stagger > *:nth-child(3) {
-    animation-delay: 0.25s;
-}
-
-.landing-header > * {
-    opacity: 0;
-    animation: fadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.landing-header > *:nth-child(1) {
-    animation-delay: 0.2s;
-}
-
-.landing-header > *:nth-child(2) {
-    animation-delay: 0.3s;
-}
-
-.landing-header > *:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-.landing-header > *:nth-child(4) {
-    animation-delay: 0.5s;
-}
-
-.landing-actions > * {
-    opacity: 0;
-    animation: fadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.landing-actions > *:nth-child(1) {
-    animation-delay: 0.55s;
-}
-
-.landing-actions > *:nth-child(2) {
-    animation-delay: 0.65s;
-}
-
-.landing-stats > * {
-    opacity: 0;
-    animation: fadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.landing-stats > *:nth-child(1) {
-    animation-delay: 0.65s;
-}
-
-.landing-stats > *:nth-child(2) {
-    animation-delay: 0.72s;
-}
-
-.landing-stats > *:nth-child(3) {
-    animation-delay: 0.79s;
-}
-
-.landing-stats > *:nth-child(4) {
-    animation-delay: 0.86s;
-}
-
-.system-status {
-    border: 1px solid rgba(16, 185, 129, 0.35);
-    background: rgba(16, 185, 129, 0.12);
-    color: rgba(167, 243, 208, 0.95);
-    box-shadow: 0 18px 36px -26px rgba(16, 185, 129, 0.7);
-}
-
-.system-status .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: #34d399;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-}
-
-.system-status.is-online .status-dot {
-    animation: statusPulse 2.4s ease-in-out infinite;
-}
-
-.system-status.is-offline {
-    border-color: rgba(251, 191, 36, 0.45);
-    background: rgba(251, 191, 36, 0.1);
-    color: rgba(252, 211, 77, 0.95);
-    box-shadow: 0 16px 32px -26px rgba(251, 191, 36, 0.6);
-}
-
-.system-status.is-offline .status-dot {
-    background: #f59e0b;
-    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.25);
-    animation: statusBlink 1.8s ease-in-out infinite;
-}
-
-.animate-enter {
-    animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.delay-100 {
-    animation-delay: 0.1s;
-}
-
-.hero-ring {
-    box-shadow: 0 24px 60px -30px rgba(3, 7, 18, 0.9), 0 0 0 6px rgba(255, 255, 255, 0.12);
-}
-
-.landing-emblem {
-    box-shadow: 0 20px 50px -30px rgba(2, 6, 23, 0.85);
-}
-
-.landing-card {
-    backdrop-filter: blur(18px) saturate(145%);
-}
-
-.landing-card-sheen {
-    background: linear-gradient(120deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(16, 185, 129, 0.12) 100%);
-}
-
-.landing-stat {
-    backdrop-filter: blur(12px);
-}
-
-.landing-login-cta {
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 20px 40px -22px rgba(16, 185, 129, 0.9);
-    animation: loginPulse 2.6s ease-in-out infinite, fadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
-    animation-delay: 0s, 0.65s;
-}
-
-.landing-login-cta::after {
-    content: "";
-    position: absolute;
-    inset: -60% 10% auto 10%;
-    height: 180%;
-    background: radial-gradient(circle, rgba(16, 185, 129, 0.55), transparent 65%);
-    opacity: 0.85;
-    animation: loginGlow 2.4s ease-in-out infinite;
-    pointer-events: none;
-}
-
-@keyframes fadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes loginGlow {
-    0%,
-    100% {
-        transform: translateY(-10%);
-        opacity: 0.6;
-    }
-    50% {
-        transform: translateY(18%);
-        opacity: 1;
-    }
-}
-
-@keyframes loginPulse {
-    0%,
-    100% {
-        transform: translateY(0) scale(1);
-        box-shadow: 0 20px 40px -22px rgba(16, 185, 129, 0.85);
-    }
-    50% {
-        transform: translateY(-1px) scale(1.03);
-        box-shadow: 0 24px 46px -22px rgba(16, 185, 129, 1);
-    }
-}
-
-@keyframes statusPulse {
-    0%,
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-    }
-    50% {
-        transform: scale(1.25);
-        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.12);
-    }
-}
-
-@keyframes statusBlink {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.35;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    html {
-        scroll-behavior: auto;
-    }
-
-    .landing-stagger > *,
-    .landing-header > *,
-    .landing-actions > *,
-    .landing-stats > * {
-        animation: none;
-        opacity: 1;
-        transform: none;
-    }
-
-    .system-status .status-dot {
-        animation: none !important;
-    }
-
-    .landing-login-cta {
-        animation: none;
-    }
-}
+html {
+    scroll-behavior: smooth;
+}
+
+.landing-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    overflow: hidden;
+}
+
+.landing-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    filter: saturate(0.9) contrast(1.05);
+}
+
+.landing-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(5, 10, 20, 0.65) 0%, rgba(5, 10, 20, 0.82) 55%, rgba(2, 6, 23, 0.95) 100%);
+}
+
+.landing-glow {
+    position: absolute;
+    width: 26rem;
+    height: 26rem;
+    border-radius: 999px;
+    filter: blur(90px);
+    opacity: 0.28;
+}
+
+.landing-glow-left {
+    top: -7rem;
+    left: -6rem;
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.landing-glow-right {
+    bottom: -6rem;
+    right: -5rem;
+    background: rgba(56, 189, 248, 0.18);
+}
+
+.landing-header {
+    max-width: 56rem;
+    margin: 0 auto;
+}
+
+.landing-stagger > * {
+    opacity: 0;
+    animation: fadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.landing-stagger > *:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.landing-stagger > *:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.landing-stagger > *:nth-child(3) {
+    animation-delay: 0.25s;
+}
+
+.landing-header > * {
+    opacity: 0;
+    animation: fadeUp 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.landing-header > *:nth-child(1) {
+    animation-delay: 0.2s;
+}
+
+.landing-header > *:nth-child(2) {
+    animation-delay: 0.3s;
+}
+
+.landing-header > *:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.landing-header > *:nth-child(4) {
+    animation-delay: 0.5s;
+}
+
+.landing-actions > * {
+    opacity: 0;
+    animation: fadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.landing-actions > *:nth-child(1) {
+    animation-delay: 0.55s;
+}
+
+.landing-actions > *:nth-child(2) {
+    animation-delay: 0.65s;
+}
+
+.landing-stats > * {
+    opacity: 0;
+    animation: fadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.landing-stats > *:nth-child(1) {
+    animation-delay: 0.65s;
+}
+
+.landing-stats > *:nth-child(2) {
+    animation-delay: 0.72s;
+}
+
+.landing-stats > *:nth-child(3) {
+    animation-delay: 0.79s;
+}
+
+.landing-stats > *:nth-child(4) {
+    animation-delay: 0.86s;
+}
+
+.system-status {
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.12);
+    color: rgba(167, 243, 208, 0.95);
+    box-shadow: 0 18px 36px -26px rgba(16, 185, 129, 0.7);
+}
+
+.system-status .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #34d399;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.system-status.is-online .status-dot {
+    animation: statusPulse 2.4s ease-in-out infinite;
+}
+
+.system-status.is-offline {
+    border-color: rgba(251, 191, 36, 0.45);
+    background: rgba(251, 191, 36, 0.1);
+    color: rgba(252, 211, 77, 0.95);
+    box-shadow: 0 16px 32px -26px rgba(251, 191, 36, 0.6);
+}
+
+.system-status.is-offline .status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.25);
+    animation: statusBlink 1.8s ease-in-out infinite;
+}
+
+.animate-enter {
+    animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.delay-100 {
+    animation-delay: 0.1s;
+}
+
+.hero-ring {
+    box-shadow: 0 24px 60px -30px rgba(3, 7, 18, 0.9), 0 0 0 6px rgba(255, 255, 255, 0.12);
+}
+
+.landing-emblem {
+    box-shadow: 0 20px 50px -30px rgba(2, 6, 23, 0.85);
+}
+
+.landing-card {
+    backdrop-filter: blur(18px) saturate(145%);
+}
+
+.landing-card-sheen {
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 45%, rgba(16, 185, 129, 0.12) 100%);
+}
+
+.landing-stat {
+    backdrop-filter: blur(12px);
+}
+
+.landing-login-cta {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 40px -22px rgba(16, 185, 129, 0.9);
+    animation: loginPulse 2.6s ease-in-out infinite, fadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: 0s, 0.65s;
+}
+
+.landing-login-cta::after {
+    content: "";
+    position: absolute;
+    inset: -60% 10% auto 10%;
+    height: 180%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.55), transparent 65%);
+    opacity: 0.85;
+    animation: loginGlow 2.4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes loginGlow {
+    0%,
+    100% {
+        transform: translateY(-10%);
+        opacity: 0.6;
+    }
+    50% {
+        transform: translateY(18%);
+        opacity: 1;
+    }
+}
+
+@keyframes loginPulse {
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+        box-shadow: 0 20px 40px -22px rgba(16, 185, 129, 0.85);
+    }
+    50% {
+        transform: translateY(-1px) scale(1.03);
+        box-shadow: 0 24px 46px -22px rgba(16, 185, 129, 1);
+    }
+}
+
+@keyframes statusPulse {
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    50% {
+        transform: scale(1.25);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.12);
+    }
+}
+
+@keyframes statusBlink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    .landing-stagger > *,
+    .landing-header > *,
+    .landing-actions > *,
+    .landing-stats > * {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+
+    .system-status .status-dot {
+        animation: none !important;
+    }
+
+    .landing-login-cta {
+        animation: none;
+    }
+}

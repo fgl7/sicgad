@@ -1,150 +1,326 @@
 from __future__ import annotations
 
 from django.contrib import messages
+from django.db.models import Prefetch
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
-from audit.utils import record_action
 from accounts.decorators import admin_role_required
+from audit.utils import record_action
 
-from .models import Category, Entity, EntityType, Sector, Subsector
-
-SESSION_SECTOR_KEY = "structure_current_sector_id"
-SESSION_SUBSECTOR_KEY = "structure_current_subsector_id"
-SESSION_CATEGORY_KEY = "structure_current_category_id"
+from .models import Category, Entity, Sector, Subsector
 
 
-def _set_current_ids(request, sector_id=None, subsector_id=None, category_id=None):
-    if sector_id is not None:
-        request.session[SESSION_SECTOR_KEY] = sector_id
-    if subsector_id is not None:
-        request.session[SESSION_SUBSECTOR_KEY] = subsector_id
-    if category_id is not None:
-        request.session[SESSION_CATEGORY_KEY] = category_id
+def _as_positive_int(value: str | None) -> int | None:
+    if not value:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
 
 
-def _clear_current_ids(request, clear_sector=False, clear_subsector=False, clear_category=False):
-    if clear_sector:
-        request.session.pop(SESSION_SECTOR_KEY, None)
-    if clear_subsector:
-        request.session.pop(SESSION_SUBSECTOR_KEY, None)
-    if clear_category:
-        request.session.pop(SESSION_CATEGORY_KEY, None)
+def _redirect_manage_levels(open_sector_id: int | None = None):
+    url = reverse("structure:manage_levels")
+    if open_sector_id:
+        return redirect(f"{url}?open={open_sector_id}")
+    return redirect(url)
 
 
-def _resolve_current_tree(request):
-    current_sector = None
-    current_subsector = None
-    current_category = None
+def _get_sector_operational_impact(sector: Sector) -> dict:
+    from accounts.models import Membership
+    from ingest.models import DatasetInstance, HistoricalImportBatch
+    from plants.models import Plant
+    from projects.models import Project
+    from schemas.models import DatasetType
+    from validation.models import ValidationAction
 
-    sector_id = request.session.get(SESSION_SECTOR_KEY)
-    if sector_id:
-        current_sector = Sector.objects.filter(id=sector_id, is_active=True).first()
+    counts = {
+        "memberships": Membership.objects.filter(entity__category__subsector__sector=sector).count(),
+        "dataset_types": DatasetType.objects.filter(entity__category__subsector__sector=sector).count(),
+        "approved_dataset_types": DatasetType.objects.filter(
+            entity__category__subsector__sector=sector,
+            status=DatasetType.STATUS_APPROVED,
+        ).count(),
+        "dataset_instances": DatasetInstance.objects.filter(entity__category__subsector__sector=sector).count(),
+        "historical_imports": HistoricalImportBatch.objects.filter(entity__category__subsector__sector=sector).count(),
+        "validation_actions": ValidationAction.objects.filter(
+            dataset_instance__entity__category__subsector__sector=sector
+        ).count(),
+        "projects": Project.objects.filter(category__subsector__sector=sector).count(),
+        "plants": Plant.objects.filter(category__subsector__sector=sector).count(),
+    }
 
-    if not current_sector:
-        current_sector = Sector.objects.filter(is_active=True).order_by("-created_at").first()
-        if current_sector:
-            _set_current_ids(request, sector_id=current_sector.id)
-        else:
-            _clear_current_ids(request, clear_sector=True, clear_subsector=True, clear_category=True)
+    labels = {
+        "memberships": "usuarios",
+        "dataset_types": "esquemas",
+        "approved_dataset_types": "esquemas aprobados",
+        "dataset_instances": "cargas",
+        "historical_imports": "cargas historicas",
+        "validation_actions": "validaciones",
+        "projects": "proyectos",
+        "plants": "plantas",
+    }
 
-    subsector_id = request.session.get(SESSION_SUBSECTOR_KEY)
-    if current_sector and subsector_id:
-        current_subsector = Subsector.objects.filter(
-            id=subsector_id, is_active=True, sector=current_sector
-        ).first()
+    blocking_keys = (
+        "memberships",
+        "dataset_types",
+        "dataset_instances",
+        "historical_imports",
+        "validation_actions",
+        "projects",
+        "plants",
+    )
+    has_blocking_data = any(counts[key] > 0 for key in blocking_keys)
 
-    if current_sector and not current_subsector:
-        current_subsector = (
-            Subsector.objects.filter(is_active=True, sector=current_sector)
-            .order_by("-created_at")
-            .first()
-        )
-        if current_subsector:
-            _set_current_ids(request, subsector_id=current_subsector.id)
-        else:
-            _clear_current_ids(request, clear_subsector=True, clear_category=True)
-    elif not current_sector:
-        _clear_current_ids(request, clear_subsector=True, clear_category=True)
+    summary_items = []
+    for key in blocking_keys:
+        value = counts[key]
+        if value > 0:
+            summary_items.append(f"{labels[key]}: {value}")
 
-    category_id = request.session.get(SESSION_CATEGORY_KEY)
-    if current_subsector and category_id:
-        current_category = Category.objects.filter(
-            id=category_id, is_active=True, subsector=current_subsector
-        ).first()
+    return {
+        "counts": counts,
+        "has_blocking_data": has_blocking_data,
+        "summary": ", ".join(summary_items),
+    }
 
-    if current_subsector and not current_category:
-        current_category = (
-            Category.objects.filter(is_active=True, subsector=current_subsector)
-            .order_by("-created_at")
-            .first()
-        )
-        if current_category:
-            _set_current_ids(request, category_id=current_category.id)
-        else:
-            _clear_current_ids(request, clear_category=True)
-    elif not current_subsector:
-        _clear_current_ids(request, clear_category=True)
 
-    return current_sector, current_subsector, current_category
+def _get_entity_operational_impact(entity: Entity) -> dict:
+    from accounts.models import Membership
+    from ingest.models import DatasetInstance, HistoricalImportBatch
+    from schemas.models import DatasetType
+    from validation.models import ValidationAction
+
+    counts = {
+        "memberships": Membership.objects.filter(entity=entity).count(),
+        "dataset_types": DatasetType.objects.filter(entity=entity).count(),
+        "approved_dataset_types": DatasetType.objects.filter(
+            entity=entity,
+            status=DatasetType.STATUS_APPROVED,
+        ).count(),
+        "dataset_instances": DatasetInstance.objects.filter(entity=entity).count(),
+        "historical_imports": HistoricalImportBatch.objects.filter(entity=entity).count(),
+        "validation_actions": ValidationAction.objects.filter(dataset_instance__entity=entity).count(),
+    }
+
+    labels = {
+        "memberships": "usuarios",
+        "dataset_types": "esquemas",
+        "approved_dataset_types": "esquemas aprobados",
+        "dataset_instances": "cargas",
+        "historical_imports": "cargas historicas",
+        "validation_actions": "validaciones",
+    }
+    blocking_keys = (
+        "memberships",
+        "dataset_types",
+        "dataset_instances",
+        "historical_imports",
+        "validation_actions",
+    )
+    has_blocking_data = any(counts[key] > 0 for key in blocking_keys)
+    summary_items = [f"{labels[key]}: {counts[key]}" for key in blocking_keys if counts[key] > 0]
+
+    return {
+        "counts": counts,
+        "has_blocking_data": has_blocking_data,
+        "summary": ", ".join(summary_items),
+    }
+
+
+def _get_category_operational_impact(category: Category) -> dict:
+    from plants.models import Plant
+    from projects.models import Project
+
+    entity_ids = list(Entity.objects.filter(category=category).values_list("id", flat=True))
+    projects_count = Project.objects.filter(category=category).count()
+    plants_count = Plant.objects.filter(category=category).count()
+
+    operational = {
+        "memberships": 0,
+        "dataset_types": 0,
+        "approved_dataset_types": 0,
+        "dataset_instances": 0,
+        "historical_imports": 0,
+        "validation_actions": 0,
+    }
+
+    if entity_ids:
+        from accounts.models import Membership
+        from ingest.models import DatasetInstance, HistoricalImportBatch
+        from schemas.models import DatasetType
+        from validation.models import ValidationAction
+
+        operational = {
+            "memberships": Membership.objects.filter(entity_id__in=entity_ids).count(),
+            "dataset_types": DatasetType.objects.filter(entity_id__in=entity_ids).count(),
+            "approved_dataset_types": DatasetType.objects.filter(
+                entity_id__in=entity_ids,
+                status=DatasetType.STATUS_APPROVED,
+            ).count(),
+            "dataset_instances": DatasetInstance.objects.filter(entity_id__in=entity_ids).count(),
+            "historical_imports": HistoricalImportBatch.objects.filter(entity_id__in=entity_ids).count(),
+            "validation_actions": ValidationAction.objects.filter(
+                dataset_instance__entity_id__in=entity_ids
+            ).count(),
+        }
+
+    counts = {
+        "projects": projects_count,
+        "plants": plants_count,
+        **operational,
+    }
+
+    labels = {
+        "projects": "proyectos",
+        "plants": "plantas",
+        "memberships": "usuarios",
+        "dataset_types": "esquemas",
+        "approved_dataset_types": "esquemas aprobados",
+        "dataset_instances": "cargas",
+        "historical_imports": "cargas historicas",
+        "validation_actions": "validaciones",
+    }
+    blocking_keys = (
+        "projects",
+        "plants",
+        "memberships",
+        "dataset_types",
+        "dataset_instances",
+        "historical_imports",
+        "validation_actions",
+    )
+    has_blocking_data = any(counts[key] > 0 for key in blocking_keys)
+    summary_items = [f"{labels[key]}: {counts[key]}" for key in blocking_keys if counts[key] > 0]
+
+    return {
+        "counts": counts,
+        "has_blocking_data": has_blocking_data,
+        "summary": ", ".join(summary_items),
+    }
+
+
+def _get_subsector_operational_impact(subsector: Subsector) -> dict:
+    from plants.models import Plant
+    from projects.models import Project
+
+    entity_ids = list(Entity.objects.filter(category__subsector=subsector).values_list("id", flat=True))
+    projects_count = Project.objects.filter(category__subsector=subsector).count()
+    plants_count = Plant.objects.filter(category__subsector=subsector).count()
+
+    operational = {
+        "memberships": 0,
+        "dataset_types": 0,
+        "approved_dataset_types": 0,
+        "dataset_instances": 0,
+        "historical_imports": 0,
+        "validation_actions": 0,
+    }
+
+    if entity_ids:
+        from accounts.models import Membership
+        from ingest.models import DatasetInstance, HistoricalImportBatch
+        from schemas.models import DatasetType
+        from validation.models import ValidationAction
+
+        operational = {
+            "memberships": Membership.objects.filter(entity_id__in=entity_ids).count(),
+            "dataset_types": DatasetType.objects.filter(entity_id__in=entity_ids).count(),
+            "approved_dataset_types": DatasetType.objects.filter(
+                entity_id__in=entity_ids,
+                status=DatasetType.STATUS_APPROVED,
+            ).count(),
+            "dataset_instances": DatasetInstance.objects.filter(entity_id__in=entity_ids).count(),
+            "historical_imports": HistoricalImportBatch.objects.filter(entity_id__in=entity_ids).count(),
+            "validation_actions": ValidationAction.objects.filter(
+                dataset_instance__entity_id__in=entity_ids
+            ).count(),
+        }
+
+    counts = {
+        "projects": projects_count,
+        "plants": plants_count,
+        **operational,
+    }
+
+    labels = {
+        "projects": "proyectos",
+        "plants": "plantas",
+        "memberships": "usuarios",
+        "dataset_types": "esquemas",
+        "approved_dataset_types": "esquemas aprobados",
+        "dataset_instances": "cargas",
+        "historical_imports": "cargas historicas",
+        "validation_actions": "validaciones",
+    }
+    blocking_keys = (
+        "projects",
+        "plants",
+        "memberships",
+        "dataset_types",
+        "dataset_instances",
+        "historical_imports",
+        "validation_actions",
+    )
+    has_blocking_data = any(counts[key] > 0 for key in blocking_keys)
+    summary_items = [f"{labels[key]}: {counts[key]}" for key in blocking_keys if counts[key] > 0]
+
+    return {
+        "counts": counts,
+        "has_blocking_data": has_blocking_data,
+        "summary": ", ".join(summary_items),
+    }
 
 
 @admin_role_required
 def manage_levels(request: HttpRequest) -> HttpResponse:
     action = request.POST.get("action") if request.method == "POST" else None
-    current_sector, current_subsector, current_category = _resolve_current_tree(request)
 
     if action == "create_sector":
         name = (request.POST.get("sector_name") or "").strip()
         description = (request.POST.get("sector_description") or "").strip()
         if not name:
             messages.error(request, "Debe ingresar el nombre del sector.")
-        else:
-            sector, created = Sector.objects.get_or_create(
-                name=name, defaults={"description": description}
-            )
-            if not created and description:
-                sector.description = description
-                sector.save(update_fields=["description", "updated_at"])
-            _set_current_ids(request, sector_id=sector.id)
-            _clear_current_ids(request, clear_subsector=True, clear_category=True)
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"Sector:{sector.name}",
-                details="Sector creado/actualizado",
-            )
-            messages.success(request, "Sector guardado.")
-        return redirect("structure:manage_levels")
+            return _redirect_manage_levels()
 
-    if action == "set_current_sector":
-        sector_id = request.POST.get("sector_id")
-        sector = Sector.objects.filter(id=sector_id, is_active=True).first() if sector_id else None
-        if not sector:
-            messages.error(request, "Sector no valido.")
-        else:
-            _set_current_ids(request, sector_id=sector.id)
-            _clear_current_ids(request, clear_subsector=True, clear_category=True)
-            messages.info(request, f"Sector activo: {sector.name}")
-        return redirect("structure:manage_levels")
+        sector, created = Sector.objects.get_or_create(name=name, defaults={"description": description})
+        if not created and description:
+            sector.description = description
+            sector.save(update_fields=["description", "updated_at"])
+
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Sector:{sector.name}",
+            details="Sector creado/actualizado",
+        )
+        messages.success(request, "Sector guardado.")
+        return _redirect_manage_levels(open_sector_id=sector.id)
 
     if action == "create_subsector":
+        sector_id = _as_positive_int(request.POST.get("sector_id"))
+        open_sector_id = sector_id or _as_positive_int(request.POST.get("open_sector_id"))
         name = (request.POST.get("subsector_name") or "").strip()
         description = (request.POST.get("subsector_description") or "").strip()
-        if not current_sector:
-            messages.error(request, "Primero debe crear un sector.")
+
+        sector = Sector.objects.filter(id=sector_id).first() if sector_id else None
+        if not sector:
+            messages.error(request, "Debe seleccionar un sector valido.")
         elif not name:
             messages.error(request, "Debe definir el nombre del subsector.")
         else:
             subsector, created = Subsector.objects.get_or_create(
-                sector=current_sector, name=name, defaults={"description": description}
+                sector=sector,
+                name=name,
+                defaults={"description": description},
             )
             if not created and description:
                 subsector.description = description
                 subsector.save(update_fields=["description", "updated_at"])
-            _set_current_ids(request, subsector_id=subsector.id)
-            _clear_current_ids(request, clear_category=True)
             record_action(
                 "OTHER",
                 request=request,
@@ -153,41 +329,31 @@ def manage_levels(request: HttpRequest) -> HttpResponse:
                 details="Subsector creado/actualizado",
             )
             messages.success(request, "Subsector guardado.")
-        return redirect("structure:manage_levels")
-
-    if action == "set_current_subsector":
-        subsector_id = request.POST.get("subsector_id")
-        if not current_sector:
-            messages.error(request, "Primero seleccione un sector.")
-        else:
-            subsector = Subsector.objects.filter(
-                id=subsector_id,
-                is_active=True,
-                sector=current_sector,
-            ).first() if subsector_id else None
-            if not subsector:
-                messages.error(request, "Subsector no valido para el sector actual.")
-            else:
-                _set_current_ids(request, subsector_id=subsector.id)
-                _clear_current_ids(request, clear_category=True)
-                messages.info(request, f"Subsector activo: {subsector.name}")
-        return redirect("structure:manage_levels")
+        return _redirect_manage_levels(open_sector_id=open_sector_id)
 
     if action == "create_category":
+        subsector_id = _as_positive_int(request.POST.get("subsector_id"))
+        open_sector_id = _as_positive_int(request.POST.get("open_sector_id"))
         name = (request.POST.get("category_name") or "").strip()
         description = (request.POST.get("category_description") or "").strip()
-        if not current_subsector:
-            messages.error(request, "Primero debe crear un subsector.")
+
+        subsector = Subsector.objects.select_related("sector").filter(id=subsector_id).first() if subsector_id else None
+        if subsector and not open_sector_id:
+            open_sector_id = subsector.sector_id
+
+        if not subsector:
+            messages.error(request, "Debe seleccionar un subsector valido.")
         elif not name:
             messages.error(request, "Debe definir el nombre de la categoria.")
         else:
             category, created = Category.objects.get_or_create(
-                subsector=current_subsector, name=name, defaults={"description": description}
+                subsector=subsector,
+                name=name,
+                defaults={"description": description},
             )
             if not created and description:
                 category.description = description
                 category.save(update_fields=["description", "updated_at"])
-            _set_current_ids(request, category_id=category.id)
             record_action(
                 "OTHER",
                 request=request,
@@ -196,15 +362,67 @@ def manage_levels(request: HttpRequest) -> HttpResponse:
                 details="Categoria creada/actualizada",
             )
             messages.success(request, "Categoria guardada.")
-        return redirect("structure:manage_levels")
+        return _redirect_manage_levels(open_sector_id=open_sector_id)
+
+    if action == "create_entity":
+        category_id = _as_positive_int(request.POST.get("category_id"))
+        open_sector_id = _as_positive_int(request.POST.get("open_sector_id"))
+        code = (request.POST.get("entity_code") or "").strip()
+        name = (request.POST.get("entity_name") or "").strip()
+        description = (request.POST.get("entity_description") or "").strip()
+
+        category = (
+            Category.objects.select_related("subsector", "subsector__sector")
+            .filter(id=category_id)
+            .first()
+            if category_id
+            else None
+        )
+
+        if category and not open_sector_id:
+            open_sector_id = category.subsector.sector_id
+
+        if not category:
+            messages.error(request, "Debe seleccionar una categoria valida.")
+        elif not name:
+            messages.error(request, "Debe definir el nombre de la entidad.")
+        else:
+            entity, created = Entity.objects.get_or_create(
+                category=category,
+                name=name,
+                defaults={
+                    "code": code,
+                    "description": description,
+                    "is_active": True,
+                },
+            )
+            if not created:
+                entity.code = code
+                entity.description = description
+                entity.is_active = True
+                entity.save(update_fields=["code", "description", "is_active", "updated_at"])
+
+            record_action(
+                "OTHER",
+                request=request,
+                module="structure",
+                object_repr=f"Entidad:{entity.name}",
+                details=f"Entidad creada/actualizada en categoria {category}",
+            )
+            messages.success(request, "Entidad guardada.")
+        return _redirect_manage_levels(open_sector_id=open_sector_id)
 
     if action == "update_sector":
-        sector_id = request.POST.get("sector_id")
+        sector_id = _as_positive_int(request.POST.get("sector_id"))
+        open_sector_id = _as_positive_int(request.POST.get("open_sector_id")) or sector_id
         name = (request.POST.get("sector_name") or "").strip()
         description = (request.POST.get("sector_description") or "").strip()
         sector = Sector.objects.filter(id=sector_id).first() if sector_id else None
+
         if not sector or not name:
             messages.error(request, "Debe seleccionar un sector y definir el nombre.")
+        elif Sector.objects.exclude(id=sector.id).filter(name=name).exists():
+            messages.error(request, "Ya existe un sector con ese nombre.")
         else:
             sector.name = name
             sector.description = description
@@ -217,33 +435,55 @@ def manage_levels(request: HttpRequest) -> HttpResponse:
                 details="Sector actualizado",
             )
             messages.success(request, "Sector actualizado.")
-        return redirect("structure:manage_levels")
+        return _redirect_manage_levels(open_sector_id=open_sector_id)
 
-    if action == "deactivate_sector":
-        sector_id = request.POST.get("sector_id")
+    if action == "delete_sector":
+        sector_id = _as_positive_int(request.POST.get("sector_id"))
         sector = Sector.objects.filter(id=sector_id).first() if sector_id else None
         if not sector:
             messages.error(request, "Sector no encontrado.")
-        else:
-            sector.is_active = False
-            sector.save(update_fields=["is_active", "updated_at"])
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"Sector:{sector.name}",
-                details="Sector desactivado",
+            return _redirect_manage_levels()
+
+        subsector_count = Subsector.objects.filter(sector=sector).count()
+        impact = _get_sector_operational_impact(sector)
+
+        if subsector_count > 0:
+            messages.error(request, "No se puede eliminar: el sector tiene niveles asociados.")
+            return _redirect_manage_levels(open_sector_id=sector.id)
+
+        if impact["has_blocking_data"]:
+            messages.error(
+                request,
+                f"No se puede eliminar: el sector tiene datos asociados ({impact['summary']}).",
             )
-            messages.success(request, "Sector desactivado.")
-        return redirect("structure:manage_levels")
+            return _redirect_manage_levels(open_sector_id=sector.id)
+
+        sector_name = sector.name
+        sector.delete()
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Sector:{sector_name}",
+            details="Sector eliminado",
+        )
+        messages.success(request, "Sector eliminado.")
+        return _redirect_manage_levels()
 
     if action == "update_subsector":
-        subsector_id = request.POST.get("subsector_id")
+        subsector_id = _as_positive_int(request.POST.get("subsector_id"))
+        open_sector_id = _as_positive_int(request.POST.get("open_sector_id"))
         name = (request.POST.get("subsector_name") or "").strip()
         description = (request.POST.get("subsector_description") or "").strip()
-        subsector = Subsector.objects.filter(id=subsector_id).first() if subsector_id else None
+        subsector = Subsector.objects.select_related("sector").filter(id=subsector_id).first() if subsector_id else None
+
+        if subsector and not open_sector_id:
+            open_sector_id = subsector.sector_id
+
         if not subsector or not name:
             messages.error(request, "Debe seleccionar un subsector y definir el nombre.")
+        elif Subsector.objects.exclude(id=subsector.id).filter(sector=subsector.sector, name=name).exists():
+            messages.error(request, "Ya existe un subsector con ese nombre en el sector.")
         else:
             subsector.name = name
             subsector.description = description
@@ -256,33 +496,62 @@ def manage_levels(request: HttpRequest) -> HttpResponse:
                 details="Subsector actualizado",
             )
             messages.success(request, "Subsector actualizado.")
-        return redirect("structure:manage_levels")
+        return _redirect_manage_levels(open_sector_id=open_sector_id)
 
-    if action == "deactivate_subsector":
-        subsector_id = request.POST.get("subsector_id")
-        subsector = Subsector.objects.filter(id=subsector_id).first() if subsector_id else None
+    if action == "delete_subsector":
+        subsector_id = _as_positive_int(request.POST.get("subsector_id"))
+        subsector = Subsector.objects.select_related("sector").filter(id=subsector_id).first() if subsector_id else None
         if not subsector:
             messages.error(request, "Subsector no encontrado.")
-        else:
-            subsector.is_active = False
-            subsector.save(update_fields=["is_active", "updated_at"])
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"Subsector:{subsector}",
-                details="Subsector desactivado",
+            return _redirect_manage_levels()
+
+        has_child_levels = Category.objects.filter(subsector=subsector).exists()
+        impact = _get_subsector_operational_impact(subsector)
+
+        if has_child_levels:
+            messages.error(request, "No se puede eliminar: el subsector tiene niveles asociados.")
+            return _redirect_manage_levels(open_sector_id=subsector.sector_id)
+
+        if impact["has_blocking_data"]:
+            messages.error(
+                request,
+                f"No se puede eliminar: el subsector tiene datos asociados ({impact['summary']}).",
             )
-            messages.success(request, "Subsector desactivado.")
-        return redirect("structure:manage_levels")
+            return _redirect_manage_levels(open_sector_id=subsector.sector_id)
+
+        sector_id = subsector.sector_id
+        subsector_repr = str(subsector)
+        subsector.delete()
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Subsector:{subsector_repr}",
+            details="Subsector eliminado",
+        )
+        messages.success(request, "Subsector eliminado.")
+        return _redirect_manage_levels(open_sector_id=sector_id)
 
     if action == "update_category":
-        category_id = request.POST.get("category_id")
+        category_id = _as_positive_int(request.POST.get("category_id"))
+        open_sector_id = _as_positive_int(request.POST.get("open_sector_id"))
         name = (request.POST.get("category_name") or "").strip()
         description = (request.POST.get("category_description") or "").strip()
-        category = Category.objects.filter(id=category_id).first() if category_id else None
+        category = (
+            Category.objects.select_related("subsector", "subsector__sector")
+            .filter(id=category_id)
+            .first()
+            if category_id
+            else None
+        )
+
+        if category and not open_sector_id:
+            open_sector_id = category.subsector.sector_id
+
         if not category or not name:
             messages.error(request, "Debe seleccionar una categoria y definir el nombre.")
+        elif Category.objects.exclude(id=category.id).filter(subsector=category.subsector, name=name).exists():
+            messages.error(request, "Ya existe una categoria con ese nombre en el subsector.")
         else:
             category.name = name
             category.description = description
@@ -295,256 +564,463 @@ def manage_levels(request: HttpRequest) -> HttpResponse:
                 details="Categoria actualizada",
             )
             messages.success(request, "Categoria actualizada.")
-        return redirect("structure:manage_levels")
+        return _redirect_manage_levels(open_sector_id=open_sector_id)
 
-    if action == "deactivate_category":
-        category_id = request.POST.get("category_id")
-        category = Category.objects.filter(id=category_id).first() if category_id else None
+    if action == "delete_category":
+        category_id = _as_positive_int(request.POST.get("category_id"))
+        category = (
+            Category.objects.select_related("subsector", "subsector__sector")
+            .filter(id=category_id)
+            .first()
+            if category_id
+            else None
+        )
         if not category:
             messages.error(request, "Categoria no encontrada.")
-        else:
-            category.is_active = False
-            category.save(update_fields=["is_active", "updated_at"])
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"Categoria:{category}",
-                details="Categoria desactivada",
-            )
-            messages.success(request, "Categoria desactivada.")
-        return redirect("structure:manage_levels")
+            return _redirect_manage_levels()
 
-    if action == "set_current_category":
-        category_id = request.POST.get("category_id")
-        if not current_subsector:
-            messages.error(request, "Primero seleccione un subsector.")
-        else:
-            category = Category.objects.filter(
-                id=category_id,
-                is_active=True,
-                subsector=current_subsector,
-            ).first() if category_id else None
-            if not category:
-                messages.error(request, "Categoria no valida para el subsector actual.")
-            else:
-                _set_current_ids(request, category_id=category.id)
-                messages.info(request, f"Categoria activa: {category.name}")
-        return redirect("structure:manage_levels")
+        has_child_levels = Entity.objects.filter(category=category).exists()
+        impact = _get_category_operational_impact(category)
 
-    if action == "create_entity_type":
-        name = (request.POST.get("entity_type_name") or "").strip()
-        description = (request.POST.get("entity_type_description") or "").strip()
-        if not name:
-            messages.error(request, "Debe definir el nombre del tipo de entidad.")
-        else:
-            entity_type, created = EntityType.objects.get_or_create(
-                name=name,
-                defaults={"description": description},
-            )
-            if not created:
-                entity_type.description = description
-                entity_type.save(update_fields=["description", "updated_at"])
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"TipoEntidad:{entity_type.name}",
-                details="Tipo de entidad creado/actualizado",
-            )
-            messages.success(request, "Tipo de entidad guardado.")
-        return redirect("structure:manage_levels")
+        if has_child_levels:
+            messages.error(request, "No se puede eliminar: la categoria tiene entidades asociadas.")
+            return _redirect_manage_levels(open_sector_id=category.subsector.sector_id)
 
-    if action == "create_entity":
-        entity_type_id = request.POST.get("entity_type_id")
-        code = (request.POST.get("entity_code") or "").strip()
-        name = (request.POST.get("entity_name") or "").strip()
-        description = (request.POST.get("entity_description") or "").strip()
-        entity_type = EntityType.objects.filter(id=entity_type_id, is_active=True).first() if entity_type_id else None
-        if not current_category:
-            messages.error(request, "Primero debe crear una categoria.")
-        elif not entity_type:
-            messages.error(request, "Debe seleccionar un tipo de entidad.")
-        elif not name:
-            messages.error(request, "Debe definir el nombre de la entidad.")
-        else:
-            entity = Entity.objects.create(
-                category=current_category,
-                entity_type=entity_type,
-                code=code,
-                name=name,
-                description=description,
-                is_active=True,
+        if impact["has_blocking_data"]:
+            messages.error(
+                request,
+                f"No se puede eliminar: la categoria tiene datos asociados ({impact['summary']}).",
             )
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"Entidad:{entity.entity_type.name}:{entity.name}",
-                details=f"Entidad creada en categoria {current_category}",
-            )
-            messages.success(request, "Entidad creada.")
-        return redirect("structure:manage_levels")
+            return _redirect_manage_levels(open_sector_id=category.subsector.sector_id)
 
-    if action == "update_entity_type":
-        entity_type_id = request.POST.get("entity_type_id")
-        name = (request.POST.get("entity_type_name") or "").strip()
-        description = (request.POST.get("entity_type_description") or "").strip()
-        entity_type = EntityType.objects.filter(id=entity_type_id).first() if entity_type_id else None
-        if not entity_type or not name:
-            messages.error(request, "Debe seleccionar y nombrar el tipo de entidad.")
-        else:
-            entity_type.name = name
-            entity_type.description = description
-            entity_type.save(update_fields=["name", "description", "updated_at"])
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"TipoEntidad:{entity_type.name}",
-                details="Tipo de entidad actualizado",
-            )
-            messages.success(request, "Tipo de entidad actualizado.")
-        return redirect("structure:manage_levels")
-
-    if action == "deactivate_entity_type":
-        entity_type_id = request.POST.get("entity_type_id")
-        entity_type = EntityType.objects.filter(id=entity_type_id).first() if entity_type_id else None
-        if not entity_type:
-            messages.error(request, "Tipo de entidad no encontrado.")
-        else:
-            entity_type.is_active = False
-            entity_type.save(update_fields=["is_active", "updated_at"])
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"TipoEntidad:{entity_type.name}",
-                details="Tipo de entidad desactivado",
-            )
-            messages.success(request, "Tipo de entidad desactivado.")
-        return redirect("structure:manage_levels")
+        sector_id = category.subsector.sector_id
+        category_repr = str(category)
+        category.delete()
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Categoria:{category_repr}",
+            details="Categoria eliminada",
+        )
+        messages.success(request, "Categoria eliminada.")
+        return _redirect_manage_levels(open_sector_id=sector_id)
 
     if action == "update_entity":
-        entity_id = request.POST.get("entity_id")
-        entity_type_id = request.POST.get("entity_type_id")
-        category_id = request.POST.get("category_id")
+        entity_id = _as_positive_int(request.POST.get("entity_id"))
+        open_sector_id = _as_positive_int(request.POST.get("open_sector_id"))
+        category_id = _as_positive_int(request.POST.get("category_id"))
         code = (request.POST.get("entity_code") or "").strip()
         name = (request.POST.get("entity_name") or "").strip()
         description = (request.POST.get("entity_description") or "").strip()
-        entity = Entity.objects.select_related("entity_type").filter(id=entity_id).first() if entity_id else None
-        entity_type = EntityType.objects.filter(id=entity_type_id, is_active=True).first() if entity_type_id else None
-        category = Category.objects.filter(id=category_id, is_active=True).first() if category_id else None
-        if not entity or not entity_type or not category or not name:
-            messages.error(request, "Debe completar nombre, categoria y tipo de entidad.")
+
+        entity = (
+            Entity.objects.select_related("category", "category__subsector", "category__subsector__sector")
+            .filter(id=entity_id)
+            .first()
+            if entity_id
+            else None
+        )
+        category = (
+            Category.objects.select_related("subsector", "subsector__sector")
+            .filter(id=category_id)
+            .first()
+            if category_id
+            else None
+        )
+
+        if entity and not open_sector_id:
+            open_sector_id = entity.category.subsector.sector_id
+
+        if not entity or not category or not name:
+            messages.error(request, "Debe completar nombre y categoria para la entidad.")
+        elif Entity.objects.exclude(id=entity.id).filter(category=category, name=name).exists():
+            messages.error(request, "Ya existe una entidad con ese nombre en la categoria.")
         else:
-            entity.entity_type = entity_type
             entity.category = category
             entity.code = code
             entity.name = name
             entity.description = description
-            entity.save(update_fields=["entity_type", "category", "code", "name", "description", "updated_at"])
+            entity.save(update_fields=["category", "code", "name", "description", "updated_at"])
             record_action(
                 "OTHER",
                 request=request,
                 module="structure",
-                object_repr=f"Entidad:{entity.entity_type.name}:{entity.name}",
+                object_repr=f"Entidad:{entity.name}",
                 details="Entidad actualizada",
             )
             messages.success(request, "Entidad actualizada.")
-        return redirect("structure:manage_levels")
+        return _redirect_manage_levels(open_sector_id=open_sector_id)
 
-    if action == "deactivate_entity":
-        entity_id = request.POST.get("entity_id")
-        entity = Entity.objects.select_related("entity_type").filter(id=entity_id).first() if entity_id else None
+    if action == "delete_entity":
+        entity_id = _as_positive_int(request.POST.get("entity_id"))
+        entity = (
+            Entity.objects.select_related("category", "category__subsector", "category__subsector__sector")
+            .filter(id=entity_id)
+            .first()
+            if entity_id
+            else None
+        )
         if not entity:
             messages.error(request, "Entidad no encontrada.")
-        else:
-            entity.is_active = False
-            entity.save(update_fields=["is_active", "updated_at"])
-            record_action(
-                "OTHER",
-                request=request,
-                module="structure",
-                object_repr=f"Entidad:{entity.entity_type.name}:{entity.name}",
-                details="Entidad desactivada",
-            )
-            messages.success(request, "Entidad desactivada.")
-        return redirect("structure:manage_levels")
+            return _redirect_manage_levels()
 
-    sectors = Sector.objects.filter(is_active=True).order_by("name")
-    subsectors = Subsector.objects.filter(is_active=True, sector__is_active=True).select_related("sector").order_by("sector__name", "name")
-    categories = Category.objects.filter(is_active=True, subsector__is_active=True, subsector__sector__is_active=True).select_related("subsector", "subsector__sector").order_by(
-        "subsector__sector__name", "subsector__name", "name"
+        impact = _get_entity_operational_impact(entity)
+        if impact["has_blocking_data"]:
+            messages.error(
+                request,
+                f"No se puede eliminar: la entidad tiene datos asociados ({impact['summary']}).",
+            )
+            return _redirect_manage_levels(open_sector_id=entity.category.subsector.sector_id)
+
+        sector_id = entity.category.subsector.sector_id
+        entity_name = entity.name
+        entity.delete()
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Entidad:{entity_name}",
+            details="Entidad eliminada",
+        )
+        messages.success(request, "Entidad eliminada.")
+        return _redirect_manage_levels(open_sector_id=sector_id)
+
+    if action == "toggle_sector":
+        sector_id = _as_positive_int(request.POST.get("sector_id"))
+        sector = Sector.objects.filter(id=sector_id).first() if sector_id else None
+        if not sector:
+            messages.error(request, "Sector no encontrado.")
+            return _redirect_manage_levels()
+
+        if sector.is_active:
+            impact = _get_sector_operational_impact(sector)
+            if impact["has_blocking_data"]:
+                messages.error(
+                    request,
+                    f"No se puede desactivar: el sector tiene datos asociados ({impact['summary']}).",
+                )
+                return _redirect_manage_levels(open_sector_id=sector.id)
+
+        sector.is_active = not sector.is_active
+        sector.save(update_fields=["is_active", "updated_at"])
+        status_text = "activado" if sector.is_active else "desactivado"
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Sector:{sector.name}",
+            details=f"Sector {status_text}",
+        )
+        messages.success(request, f"Sector {status_text}.")
+        return _redirect_manage_levels(open_sector_id=sector.id)
+
+    if action == "toggle_subsector":
+        subsector_id = _as_positive_int(request.POST.get("subsector_id"))
+        subsector = Subsector.objects.select_related("sector").filter(id=subsector_id).first() if subsector_id else None
+        if not subsector:
+            messages.error(request, "Subsector no encontrado.")
+            return _redirect_manage_levels()
+
+        if subsector.is_active:
+            has_child_levels = Category.objects.filter(subsector=subsector).exists()
+            impact = _get_subsector_operational_impact(subsector)
+            if has_child_levels or impact["has_blocking_data"]:
+                reasons = []
+                if has_child_levels:
+                    reasons.append("tiene niveles asociados")
+                if impact["has_blocking_data"]:
+                    reasons.append(f"tiene datos asociados ({impact['summary']})")
+                messages.error(request, f"No se puede desactivar: el subsector {' y '.join(reasons)}.")
+                return _redirect_manage_levels(open_sector_id=subsector.sector_id)
+
+        subsector.is_active = not subsector.is_active
+        subsector.save(update_fields=["is_active", "updated_at"])
+        status_text = "activado" if subsector.is_active else "desactivado"
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Subsector:{subsector}",
+            details=f"Subsector {status_text}",
+        )
+        messages.success(request, f"Subsector {status_text}.")
+        return _redirect_manage_levels(open_sector_id=subsector.sector_id)
+
+    if action == "toggle_category":
+        category_id = _as_positive_int(request.POST.get("category_id"))
+        category = (
+            Category.objects.select_related("subsector", "subsector__sector")
+            .filter(id=category_id)
+            .first()
+            if category_id
+            else None
+        )
+        if not category:
+            messages.error(request, "Categoria no encontrada.")
+            return _redirect_manage_levels()
+
+        if category.is_active:
+            has_child_levels = Entity.objects.filter(category=category).exists()
+            impact = _get_category_operational_impact(category)
+            if has_child_levels or impact["has_blocking_data"]:
+                reasons = []
+                if has_child_levels:
+                    reasons.append("tiene entidades asociadas")
+                if impact["has_blocking_data"]:
+                    reasons.append(f"tiene datos asociados ({impact['summary']})")
+                messages.error(request, f"No se puede desactivar: la categoria {' y '.join(reasons)}.")
+                return _redirect_manage_levels(open_sector_id=category.subsector.sector_id)
+
+        category.is_active = not category.is_active
+        category.save(update_fields=["is_active", "updated_at"])
+        status_text = "activada" if category.is_active else "desactivada"
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Categoria:{category}",
+            details=f"Categoria {status_text}",
+        )
+        messages.success(request, f"Categoria {status_text}.")
+        return _redirect_manage_levels(open_sector_id=category.subsector.sector_id)
+
+    if action == "toggle_entity":
+        entity_id = _as_positive_int(request.POST.get("entity_id"))
+        entity = (
+            Entity.objects.select_related("category", "category__subsector", "category__subsector__sector")
+            .filter(id=entity_id)
+            .first()
+            if entity_id
+            else None
+        )
+        if not entity:
+            messages.error(request, "Entidad no encontrada.")
+            return _redirect_manage_levels()
+
+        if entity.is_active:
+            impact = _get_entity_operational_impact(entity)
+            if impact["has_blocking_data"]:
+                messages.error(
+                    request,
+                    f"No se puede desactivar: la entidad tiene datos asociados ({impact['summary']}).",
+                )
+                return _redirect_manage_levels(open_sector_id=entity.category.subsector.sector_id)
+
+        entity.is_active = not entity.is_active
+        entity.save(update_fields=["is_active", "updated_at"])
+        status_text = "activada" if entity.is_active else "desactivada"
+        record_action(
+            "OTHER",
+            request=request,
+            module="structure",
+            object_repr=f"Entidad:{entity.name}",
+            details=f"Entidad {status_text}",
+        )
+        messages.success(request, f"Entidad {status_text}.")
+        return _redirect_manage_levels(open_sector_id=entity.category.subsector.sector_id)
+
+    sectors = (
+        Sector.objects.prefetch_related(
+            Prefetch(
+                "subsectors",
+                queryset=Subsector.objects.prefetch_related(
+                    Prefetch(
+                        "categories",
+                        queryset=Category.objects.prefetch_related(
+                            Prefetch("entities", queryset=Entity.objects.order_by("name"))
+                        ).order_by("name"),
+                    )
+                ).order_by("name"),
+            )
+        )
+        .order_by("name")
     )
-    sectors_all = Sector.objects.order_by("name")
-    subsectors_all = Subsector.objects.select_related("sector").order_by("sector__name", "name")
-    categories_all = Category.objects.select_related("subsector", "subsector__sector").order_by(
-        "subsector__sector__name", "subsector__name", "name"
-    )
-    categories_active = Category.objects.filter(
-        is_active=True,
-        subsector__is_active=True,
-        subsector__sector__is_active=True,
-    ).select_related("subsector", "subsector__sector").order_by(
-        "subsector__sector__name", "subsector__name", "name"
-    )
-    has_subsector = (
-        Subsector.objects.filter(is_active=True, sector=current_sector).exists()
-        if current_sector
-        else False
-    )
-    has_category = (
-        Category.objects.filter(is_active=True, subsector=current_subsector).exists()
-        if current_subsector
-        else False
-    )
-    entity_types_all = EntityType.objects.order_by("name")
-    entity_types_active = EntityType.objects.filter(is_active=True).order_by("name")
-    entities_all = Entity.objects.select_related(
-        "entity_type",
-        "category",
-        "category__subsector",
-        "category__subsector__sector",
-    ).order_by("name")
-    latest_entity = (
-        Entity.objects.filter(category=current_category).select_related("entity_type").order_by("-created_at").first()
-        if current_category
-        else None
-    )
-    has_entity = (
-        Entity.objects.filter(category=current_category, is_active=True).exists()
-        if current_category
-        else False
-    )
+
+    sector_cards = []
+    sector_payload = {}
+
+    for sector in sectors:
+        subsector_items = list(sector.subsectors.all())
+        category_count = 0
+        entity_count = 0
+        category_labels = []
+        entity_labels = []
+
+        payload_subsectors = []
+        payload_categories = []
+
+        subsector_rows = []
+        category_rows = []
+        entity_rows = []
+
+        for subsector in subsector_items:
+            payload_subsectors.append(
+                {
+                    "id": subsector.id,
+                    "name": subsector.name,
+                    "is_active": subsector.is_active,
+                }
+            )
+
+            category_items = list(subsector.categories.all())
+            has_child_levels_subsector = len(category_items) > 0
+            subsector_impact = _get_subsector_operational_impact(subsector)
+            subsector_can_delete = not has_child_levels_subsector and not subsector_impact["has_blocking_data"]
+            subsector_can_deactivate = not has_child_levels_subsector and not subsector_impact["has_blocking_data"]
+
+            if has_child_levels_subsector:
+                subsector_delete_reason = "Tiene categorias o entidades asociadas."
+                subsector_deactivate_reason = "Tiene categorias o entidades asociadas."
+            elif subsector_impact["has_blocking_data"]:
+                subsector_delete_reason = f"Tiene datos asociados ({subsector_impact['summary']})."
+                subsector_deactivate_reason = f"Tiene datos asociados ({subsector_impact['summary']})."
+            else:
+                subsector_delete_reason = ""
+                subsector_deactivate_reason = ""
+
+            subsector_rows.append(
+                {
+                    "id": subsector.id,
+                    "name": subsector.name,
+                    "description": subsector.description,
+                    "is_active": subsector.is_active,
+                    "can_delete": subsector_can_delete,
+                    "can_deactivate": subsector_can_deactivate,
+                    "impact_summary": subsector_impact["summary"],
+                    "delete_block_reason": subsector_delete_reason,
+                    "deactivate_block_reason": subsector_deactivate_reason,
+                }
+            )
+
+            for category in category_items:
+                category_count += 1
+                category_labels.append(f"{subsector.name} / {category.name}")
+                payload_categories.append(
+                    {
+                        "id": category.id,
+                        "name": category.name,
+                        "is_active": category.is_active,
+                        "subsector_id": subsector.id,
+                        "subsector_name": subsector.name,
+                    }
+                )
+
+                entity_items = list(category.entities.all())
+                has_child_levels_category = len(entity_items) > 0
+                category_impact = _get_category_operational_impact(category)
+                category_can_delete = not has_child_levels_category and not category_impact["has_blocking_data"]
+                category_can_deactivate = not has_child_levels_category and not category_impact["has_blocking_data"]
+
+                if has_child_levels_category:
+                    category_delete_reason = "Tiene entidades asociadas."
+                    category_deactivate_reason = "Tiene entidades asociadas."
+                elif category_impact["has_blocking_data"]:
+                    category_delete_reason = f"Tiene datos asociados ({category_impact['summary']})."
+                    category_deactivate_reason = f"Tiene datos asociados ({category_impact['summary']})."
+                else:
+                    category_delete_reason = ""
+                    category_deactivate_reason = ""
+
+                category_rows.append(
+                    {
+                        "id": category.id,
+                        "name": category.name,
+                        "description": category.description,
+                        "is_active": category.is_active,
+                        "subsector_id": subsector.id,
+                        "subsector_name": subsector.name,
+                        "can_delete": category_can_delete,
+                        "can_deactivate": category_can_deactivate,
+                        "impact_summary": category_impact["summary"],
+                        "delete_block_reason": category_delete_reason,
+                        "deactivate_block_reason": category_deactivate_reason,
+                    }
+                )
+
+                for entity in entity_items:
+                    entity_count += 1
+                    entity_labels.append(entity.name)
+
+                    entity_impact = _get_entity_operational_impact(entity)
+                    entity_can_delete = not entity_impact["has_blocking_data"]
+                    entity_can_deactivate = not entity_impact["has_blocking_data"]
+                    entity_delete_reason = (
+                        f"Tiene datos asociados ({entity_impact['summary']})."
+                        if entity_impact["has_blocking_data"]
+                        else ""
+                    )
+                    entity_deactivate_reason = entity_delete_reason
+
+                    entity_rows.append(
+                        {
+                            "id": entity.id,
+                            "name": entity.name,
+                            "code": entity.code,
+                            "description": entity.description,
+                            "is_active": entity.is_active,
+                            "category_id": category.id,
+                            "category_name": category.name,
+                            "subsector_name": subsector.name,
+                            "can_delete": entity_can_delete,
+                            "can_deactivate": entity_can_deactivate,
+                            "impact_summary": entity_impact["summary"],
+                            "delete_block_reason": entity_delete_reason,
+                            "deactivate_block_reason": entity_deactivate_reason,
+                        }
+                    )
+
+        impact = _get_sector_operational_impact(sector)
+        has_child_levels = len(subsector_items) > 0
+        can_delete = not has_child_levels and not impact["has_blocking_data"]
+        can_deactivate = not impact["has_blocking_data"]
+
+        if has_child_levels:
+            delete_block_reason = "Tiene niveles asociados (subsectores/categorias/entidades)."
+        elif impact["has_blocking_data"]:
+            delete_block_reason = f"Tiene datos asociados ({impact['summary']})."
+        else:
+            delete_block_reason = ""
+
+        deactivate_block_reason = (
+            f"Tiene datos asociados ({impact['summary']})."
+            if impact["has_blocking_data"]
+            else ""
+        )
+
+        sector_cards.append(
+            {
+                "sector": sector,
+                "subsectors": subsector_items,
+                "subsector_count": len(subsector_items),
+                "category_count": category_count,
+                "entity_count": entity_count,
+                "subsector_names": [item.name for item in subsector_items[:6]],
+                "category_names": category_labels[:6],
+                "entity_names": entity_labels[:6],
+                "has_more_subsectors": len(subsector_items) > 6,
+                "has_more_categories": category_count > 6,
+                "has_more_entities": entity_count > 6,
+                "can_delete": can_delete,
+                "can_deactivate": can_deactivate,
+                "impact_summary": impact["summary"],
+                "delete_block_reason": delete_block_reason,
+                "deactivate_block_reason": deactivate_block_reason,
+                "subsector_rows": subsector_rows,
+                "category_rows": category_rows,
+                "entity_rows": entity_rows,
+            }
+        )
+
+        sector_payload[str(sector.id)] = {
+            "subsectors": payload_subsectors,
+            "categories": payload_categories,
+        }
+
     context = {
-        "sectors": sectors,
-        "subsectors": subsectors,
-        "categories": categories,
-        "sectors_all": sectors_all,
-        "subsectors_all": subsectors_all,
-        "categories_all": categories_all,
-        "categories_active": categories_active,
-        "entity_types_all": entity_types_all,
-        "entity_types_active": entity_types_active,
-        "entities_all": entities_all,
-        "can_create_subsector": bool(current_sector),
-        "can_create_category": bool(current_subsector),
-        "can_assign_entities": categories.exists(),
-        "can_create_entities": bool(current_category),
-        "current_sector": current_sector,
-        "current_subsector": current_subsector,
-        "current_category": current_category,
-        "latest_entity": latest_entity,
-        "has_sector": bool(current_sector),
-        "has_subsector": has_subsector,
-        "has_category": has_category,
-        "has_entity": has_entity,
-        "sector_subsectors": Subsector.objects.filter(
-            is_active=True, sector=current_sector
-        ).order_by("name") if current_sector else Subsector.objects.none(),
-        "subsector_categories": Category.objects.filter(
-            is_active=True, subsector=current_subsector
-        ).order_by("name") if current_subsector else Category.objects.none(),
+        "sector_cards": sector_cards,
+        "open_sector_id": _as_positive_int(request.GET.get("open")),
+        "sector_payload": sector_payload,
     }
     return render(request, "structure/manage_levels.html", context)
+

@@ -1,19 +1,19 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
-{% block title %}Validación - {{ instance.dataset_type.name }} - SICGAD{% endblock %}
+{% block title %}ValidaciÃ³n - {{ instance.dataset_type.name }} - SICGAD{% endblock %}
 
 {% block content %}
 <div class="space-y-6 fade-in">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
             <div class="flex items-center gap-3">
-                <h2 class="text-2xl font-header font-bold text-white tracking-tight">Módulo de Validación</h2>
+                <h2 class="text-2xl font-header font-bold text-white tracking-tight">MÃ³dulo de ValidaciÃ³n</h2>
                 <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase">Nivel {{ user_validation_level|default:"Auto" }}</span>
             </div>
-            <p class="text-slate-500 text-sm">Auditoría y certificación de integridad para el dataset propuesto.</p>
+            <p class="text-slate-500 text-sm">AuditorÃ­a y certificaciÃ³n de integridad para el dataset propuesto.</p>
         </div>
         <div class="flex items-center gap-2">
-            <a href="{% url 'validation:inbox' %}" class="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-colors">← Volver al buzón</a>
+            <a href="{% url 'validation:inbox' %}" class="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-widest transition-colors">â† Volver al buzÃ³n</a>
         </div>
     </div>
 
@@ -21,7 +21,7 @@
     <div class="grid lg:grid-cols-4 gap-4">
         <div class="lg:col-span-1 space-y-4">
             <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.01] space-y-4">
-                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Información de la Carga</h3>
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">InformaciÃ³n de la Carga</h3>
                 <div class="space-y-3">
                     <div>
                         <p class="text-[9px] font-bold text-slate-600 uppercase">Dataset</p>
@@ -29,7 +29,7 @@
                     </div>
                     <div>
                         <p class="text-[9px] font-bold text-slate-600 uppercase">Origen</p>
-                        <p class="text-sm font-bold text-sky-400">{{ instance.plant.name|default:instance.project.name }}</p>
+                        <p class="text-sm font-bold text-sky-400">{{ instance.entity.name }}</p>
                     </div>
                     <div class="flex justify-between">
                         <div>
@@ -51,7 +51,7 @@
 
             <!-- Validation Action Card -->
             <div class="glass-card rounded-3xl p-6 border-white/5 bg-emerald-500/5 ring-1 ring-emerald-500/20">
-                <h3 class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4">Registro de Decisión</h3>
+                <h3 class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4">Registro de DecisiÃ³n</h3>
                 <form method="post" class="space-y-4">
                     {% csrf_token %}
                     <div class="space-y-2">
@@ -74,7 +74,7 @@
             <!-- Monthly Certification Analysis -->
             <div class="glass-card rounded-3xl overflow-hidden border-white/5 shadow-2xl">
                 <div class="px-8 py-6 border-b border-white/5 bg-white/[0.02]">
-                    <h3 class="text-xs font-bold text-white uppercase tracking-widest">Análisis Consolidado Mensual</h3>
+                    <h3 class="text-xs font-bold text-white uppercase tracking-widest">AnÃ¡lisis Consolidado Mensual</h3>
                 </div>
                 
                 <div class="p-8 space-y-8">
@@ -120,7 +120,7 @@
 
                     <!-- Final Aggregation -->
                     <div class="space-y-3">
-                        <h4 class="text-[10px] font-black text-sky-500 uppercase tracking-[0.2em]">Cifras Oficiales para Certificación</h4>
+                        <h4 class="text-[10px] font-black text-sky-500 uppercase tracking-[0.2em]">Cifras Oficiales para CertificaciÃ³n</h4>
                         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                             {% for item in monthly_review.monthly_values %}
                             <div class="p-4 rounded-2xl bg-sky-500/5 border border-sky-500/10 text-center space-y-1">
@@ -147,7 +147,7 @@
                                 <span class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">{{ req.submitted_by.user.username|slice:":2"|upper }}</span>
                                 <div>
                                     <p class="text-[11px] font-bold text-white">{{ req.submitted_by.user.get_full_name|default:req.submitted_by.user.username }}</p>
-                                    <p class="text-[9px] text-slate-500 uppercase font-black tracking-widest">{{ req.created_at|date:"d M Y · H:i" }}</p>
+                                    <p class="text-[9px] text-slate-500 uppercase font-black tracking-widest">{{ req.created_at|date:"d M Y Â· H:i" }}</p>
                                 </div>
                             </div>
                             {% if req.target_period %}
@@ -174,7 +174,7 @@
 
             <!-- Audit Trail -->
             <div class="glass-card rounded-3xl p-8 border-white/5 bg-slate-900/10 space-y-4">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Histórico de Acciones</h3>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">HistÃ³rico de Acciones</h3>
                 <div class="space-y-4 relative">
                     <div class="absolute left-[15px] top-2 bottom-2 w-px bg-slate-800"></div>
                     {% for act in actions %}
@@ -184,8 +184,8 @@
                         </div>
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
                             <div>
-                                <p class="text-[11px] font-black text-slate-200 uppercase tracking-tight">Nivel {{ act.level }} · {{ act.get_decision_display }}</p>
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{{ act.user.username }} · {{ act.created_at|date:"d/m/Y H:i" }}</p>
+                                <p class="text-[11px] font-black text-slate-200 uppercase tracking-tight">Nivel {{ act.level }} Â· {{ act.get_decision_display }}</p>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{{ act.user.username }} Â· {{ act.created_at|date:"d/m/Y H:i" }}</p>
                             </div>
                             {% if act.comment %}
                             <div class="bg-black/20 p-3 rounded-2xl border border-white/5 max-w-sm">
@@ -195,7 +195,7 @@
                         </div>
                     </div>
                     {% empty %}
-                    <p class="text-xs text-slate-600 italic py-4">Aún no se han registrado acciones de validación en este flujo.</p>
+                    <p class="text-xs text-slate-600 italic py-4">AÃºn no se han registrado acciones de validaciÃ³n en este flujo.</p>
                     {% endfor %}
                 </div>
             </div>
@@ -203,3 +203,4 @@
     </div>
 </div>
 {% endblock %}
+

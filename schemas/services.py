@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from calendar import monthrange
 from datetime import date, timedelta
@@ -24,7 +24,7 @@ _last_checked_period: Optional[date] = None
 
 def previous_month_range(reference_date: Optional[date] = None) -> tuple[date, date]:
     """
-    Devuelve una tupla (primer_día, último_día) del mes anterior a la fecha de referencia.
+    Devuelve una tupla (primer_dÃ­a, Ãºltimo_dÃ­a) del mes anterior a la fecha de referencia.
     """
     if reference_date is None:
         reference_date = timezone.now().date()
@@ -41,7 +41,7 @@ def consolidate_latest_month(
     request=None,
 ) -> Optional[DatasetInstance]:
     """
-    Consolida automáticamente el mes anterior para un esquema de certificación específico.
+    Consolida automÃ¡ticamente el mes anterior para un esquema de certificaciÃ³n especÃ­fico.
     Retorna la instancia mensual creada/actualizada o None si no hay datos para consolidar.
     """
     if not schema.is_certification or not schema.source_dataset:
@@ -56,14 +56,14 @@ def consolidate_all_certifications(
     request=None,
 ) -> List[DatasetInstance]:
     """
-    Consolida el mes anterior para todos los esquemas de certificación configurados.
+    Consolida el mes anterior para todos los esquemas de certificaciÃ³n configurados.
     """
     results: List[DatasetInstance] = []
     for schema in DatasetType.objects.filter(
         is_certification=True,
         validation_frequency=DatasetType.MONTHLY,
         source_dataset__isnull=False,
-    ).select_related("source_dataset", "plant"):
+    ).select_related("source_dataset", "entity"):
         instance = consolidate_latest_month(schema, reference_date, request=request)
         if instance:
             results.append(instance)
@@ -72,8 +72,8 @@ def consolidate_all_certifications(
 
 def ensure_previous_month_consolidated(reference_date: Optional[date] = None) -> None:
     """
-    Asegura que el mes anterior esté consolidado al menos una vez por ciclo de aplicación.
-    Se usa para disparar consolidaciones automáticas al iniciar sesiones (lazy).
+    Asegura que el mes anterior estÃ© consolidado al menos una vez por ciclo de aplicaciÃ³n.
+    Se usa para disparar consolidaciones automÃ¡ticas al iniciar sesiones (lazy).
     """
     global _last_checked_period
 
@@ -87,7 +87,7 @@ def ensure_previous_month_consolidated(reference_date: Optional[date] = None) ->
 
 def collect_certification_status() -> List[dict]:
     """
-    Construye un resumen con el estado de consolidación y cobertura diaria por esquema de certificación.
+    Construye un resumen con el estado de consolidaciÃ³n y cobertura diaria por esquema de certificaciÃ³n.
     """
     status: List[dict] = []
     schemas = (
@@ -96,8 +96,8 @@ def collect_certification_status() -> List[dict]:
             validation_frequency=DatasetType.MONTHLY,
             source_dataset__isnull=False,
         )
-        .select_related("plant", "source_dataset")
-        .order_by("plant__code", "name")
+        .select_related("entity", "source_dataset")
+        .order_by("entity__name", "name")
     )
     for schema in schemas:
         source = schema.source_dataset
@@ -106,7 +106,7 @@ def collect_certification_status() -> List[dict]:
             latest_daily = (
                 DatasetInstance.objects.filter(
                     dataset_type=source,
-                    plant=schema.plant,
+                    entity=schema.entity,
                     state__in=PUBLISHED_STATES,
                 ).aggregate(max_period=Max("period"))["max_period"]
             )
@@ -132,7 +132,7 @@ def _consolidate_schema_for_period(
 
     daily_instances = DatasetInstance.objects.filter(
         dataset_type=source,
-        plant=schema.plant,
+        entity=schema.entity,
         state__in=PUBLISHED_STATES,
         period__gte=month_start,
         period__lte=month_end,
@@ -142,7 +142,7 @@ def _consolidate_schema_for_period(
 
     pending_daily = DatasetInstance.objects.filter(
         dataset_type=source,
-        plant=schema.plant,
+        entity=schema.entity,
         period__gte=month_start,
         period__lte=month_end,
     ).exclude(state__in=PUBLISHED_STATES)
@@ -150,7 +150,7 @@ def _consolidate_schema_for_period(
     if pending_daily.exists():
         existing = DatasetInstance.objects.filter(
             dataset_type=schema,
-            plant=schema.plant,
+            entity=schema.entity,
             period=month_end,
         ).first()
         if existing and existing.state != DatasetInstance.STATE_PUBLISHED:
@@ -174,7 +174,7 @@ def _consolidate_schema_for_period(
         Membership.objects.filter(
             role="LOADER",
             is_active=True,
-            plant=schema.plant,
+            entity=schema.entity,
         )
         .order_by("id")
         .first()
@@ -185,7 +185,7 @@ def _consolidate_schema_for_period(
     with transaction.atomic():
         instance, _ = DatasetInstance.objects.get_or_create(
             dataset_type=schema,
-            plant=schema.plant,
+            entity=schema.entity,
             period=month_end,
             defaults={
                 "state": initial_state,
@@ -215,7 +215,7 @@ def _consolidate_schema_for_period(
 
             column_points = PublishedDataPoint.objects.filter(
                 instance__dataset_type=source,
-                instance__plant=schema.plant,
+                instance__entity=schema.entity,
                 instance__period__gte=month_start,
                 instance__period__lte=month_end,
                 column=matching,
@@ -266,8 +266,9 @@ def _consolidate_schema_for_period(
             "SCHEMA",
             request=request,
             module="Schemas",
-            object_repr=f"Consolidación {schema.name} {month_start:%Y-%m}",
-            details=f"Instancia mensual generada para {schema.plant.code}",
+            object_repr=f"ConsolidaciÃ³n {schema.name} {month_start:%Y-%m}",
+            details=f"Instancia mensual generada para {schema.entity.name}",
         )
 
         return instance
+

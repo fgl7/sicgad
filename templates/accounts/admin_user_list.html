@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Usuarios - SICGAD{% endblock %}
 
@@ -6,20 +6,22 @@
 <div class="space-y-6 fade-in">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Gestión de Usuarios</h2>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">GestiÃ³n de Usuarios</h2>
             <p class="text-slate-500 text-sm">Administra los accesos y roles institucionales del sistema.</p>
         </div>
-        <a href="{% url 'accounts:admin_user_create' %}" class="btn-primary glow-emerald">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Nuevo Usuario
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'accounts:admin_user_create' %}" class="btn-primary glow-emerald">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Nuevo Usuario
+            </a>
+        </div>
     </div>
 
     <!-- Filters Section -->
     <div class="glass-card rounded-2xl p-6 border-white/5">
         <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rol</label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Rol</label>
                 <select name="role">
                     <option value="">Todos los Roles</option>
                     {% for value,label in roles %}
@@ -28,7 +30,7 @@
                 </select>
             </div>
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entidad</label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Entidad</label>
                 <select name="entity">
                     <option value="">Todas las Entidades</option>
                     {% for ent in entities %}
@@ -37,7 +39,7 @@
                 </select>
             </div>
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Institución</label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">InstituciÃ³n</label>
                 <select name="institution">
                     <option value="">Todas las Instituciones</option>
                     {% for inst in institutions %}
@@ -61,10 +63,10 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    <tr class="bg-white/[0.02] text-[11px] font-black text-slate-500 uppercase tracking-[0.16em]">
                         <th class="px-6 py-4">Usuario / Identidad</th>
-                        <th class="px-6 py-4">Alcance / Institución</th>
-                        <th class="px-6 py-4">Configuración de Rol</th>
+                        <th class="px-6 py-4">Alcance / InstituciÃ³n</th>
+                        <th class="px-6 py-4">ConfiguraciÃ³n de Rol</th>
                         <th class="px-6 py-4 text-right">Acciones</th>
                     </tr>
                 </thead>
@@ -78,7 +80,7 @@
                                 </div>
                                 <div class="flex flex-col">
                                     <span class="font-bold text-slate-200">{{ u.username }}</span>
-                                    <span class="text-[10px] text-slate-500">{{ u.get_full_name|default:u.email }}</span>
+                                    <span class="text-[11px] text-slate-500">{{ u.get_full_name|default:u.email }}</span>
                                 </div>
                             </div>
                         </td>
@@ -89,26 +91,26 @@
                                     <span class="text-slate-300 font-medium text-xs">
                                         {% if m.entity %}{{ m.entity.name }}{% else %}Alcance Global{% endif %}
                                     </span>
-                                    <span class="text-[10px] text-slate-500 uppercase font-bold">{{ m.institution.code|default:"Sin Institución" }}</span>
+                                    <span class="text-[11px] text-slate-500 uppercase font-bold">{{ m.institution.code|default:"Sin InstituciÃ³n" }}</span>
                                 </div>
                                 {% empty %}
-                                <span class="text-slate-600 italic text-xs">Sin membresías</span>
+                                <span class="text-slate-600 italic text-xs">Sin membresÃ­as</span>
                                 {% endfor %}
                             {% endwith %}
                         </td>
                         <td class="px-6 py-4">
                             {% for m in u.memberships.all %}
                             <div class="flex items-center gap-2 mb-2 last:mb-0">
-                                <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                                <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
                                     {{ m.get_role_display }}
                                 </span>
                                 {% if m.validation_level %}
-                                <span class="text-[10px] font-bold text-slate-500 uppercase">L{{ m.validation_level }}</span>
+                                <span class="text-[11px] font-bold text-slate-500 uppercase">L{{ m.validation_level }}</span>
                                 {% endif %}
-                                <div class="flex items-center gap-1">
-                                    {% if m.can_validate_daily %}<div class="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Diario"></div>{% endif %}
-                                    {% if m.can_validate_weekly %}<div class="w-1.5 h-1.5 rounded-full bg-sky-500" title="Semanal"></div>{% endif %}
-                                    {% if m.can_validate_monthly %}<div class="w-1.5 h-1.5 rounded-full bg-amber-500" title="Mensual"></div>{% endif %}
+                                <div class="flex items-center gap-1.5">
+                                    {% if m.can_validate_daily %}<div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]" title="Flujo diario"></div>{% endif %}
+                                    {% if m.can_validate_weekly %}<div class="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_0_2px_rgba(14,165,233,0.15)]" title="Flujo semanal"></div>{% endif %}
+                                    {% if m.can_validate_monthly %}<div class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.15)]" title="Flujo mensual/certificacion"></div>{% endif %}
                                 </div>
                             </div>
                             {% endfor %}
@@ -127,7 +129,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="4" class="px-6 py-12 text-center">
-                            <p class="text-slate-500 font-medium">No se encontraron usuarios con los criterios de búsqueda.</p>
+                            <p class="text-slate-500 font-medium">No se encontraron usuarios con los criterios de bÃºsqueda.</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -135,5 +137,25 @@
             </table>
         </div>
     </div>
+
+    <div class="glass-card rounded-2xl p-4 border-white/5">
+        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Referencia de Colores de Flujo</p>
+        <div class="flex flex-wrap items-center gap-5 text-xs text-slate-300">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]"></span>
+                <span>Diario</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_0_2px_rgba(14,165,233,0.15)]"></span>
+                <span>Semanal</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.15)]"></span>
+                <span>Mensual / Certificacion</span>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
+
+

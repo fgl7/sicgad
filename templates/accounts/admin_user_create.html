@@ -1,4 +1,5 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
+{% load static %}
 
 {% block title %}Nuevo usuario - SICGAD{% endblock %}
 
@@ -7,10 +8,10 @@
     <div class="flex items-center justify-between mb-2">
         <div>
             <h2 class="text-2xl font-header font-bold text-white tracking-tight">Crear Nuevo Usuario</h2>
-            <p class="text-slate-500 text-sm">Define las credenciales y el alcance institucional del nuevo miembro.</p>
+            <p class="text-slate-500 text-sm">Define credenciales y alcance por subsector/categoria/entidad.</p>
         </div>
         <a href="{% url 'accounts:admin_user_list' %}" class="text-xs font-bold text-slate-400 hover:text-emerald-400 uppercase tracking-widest transition-colors">
-            ← Volver al listado
+            <- Volver al listado
         </a>
     </div>
 
@@ -18,79 +19,125 @@
         {% csrf_token %}
         {{ form.non_field_errors }}
 
-        <!-- Datos Básicos -->
         <section class="glass-card rounded-3xl p-8 space-y-6">
             <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                Información Personal
+                Informacion Personal
             </h3>
-            
+
             <div class="grid md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nombre de Usuario</label>
                     {{ form.username }}
+                    {{ form.username.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Correo Electrónico</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Correo Electronico</label>
                     {{ form.email }}
+                    {{ form.email.errors }}
                 </div>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nombres</label>
                     {{ form.first_name }}
+                    {{ form.first_name.errors }}
                 </div>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Apellidos</label>
                     {{ form.last_name }}
+                    {{ form.last_name.errors }}
                 </div>
             </div>
 
             <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Contraseña Temporal</label>
-                    {{ form.password1 }}
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Contrasena Temporal</label>
+                    <div class="password-field-wrap">
+                        {{ form.password1 }}
+                        <button type="button" class="password-toggle" data-toggle-password="id_password1" aria-label="Mostrar contrasena" tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    {{ form.password1.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Confirmar Contraseña</label>
-                    {{ form.password2 }}
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Confirmar Contrasena</label>
+                    <div class="password-field-wrap">
+                        {{ form.password2 }}
+                        <button type="button" class="password-toggle" data-toggle-password="id_password2" aria-label="Mostrar contrasena" tabindex="-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    {{ form.password2.errors }}
                 </div>
             </div>
         </section>
 
-        <!-- Rol y Alcance -->
         <section class="glass-card rounded-3xl p-8 space-y-6">
             <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                Asignación de Roles e Institución
+                Rol y Alcance
             </h3>
 
-            <div class="grid md:grid-cols-3 gap-6">
+            <div class="grid md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Rol del Sistema</label>
                     {{ form.role }}
+                    {{ form.role.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Entidad Asociada</label>
-                    {{ form.entity }}
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Institucion</label>
+                    {{ form.institution }}
+                    {{ form.institution.errors }}
                 </div>
             </div>
 
             <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Institución</label>
-                    {{ form.institution }}
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Subsector</label>
+                    {{ form.subsector }}
+                    {{ form.subsector.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nivel de Validación</label>
-                    {{ form.validation_level }}
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Categoria</label>
+                    {{ form.category }}
+                    <p class="text-[10px] text-slate-500">Debe pertenecer al subsector seleccionado.</p>
+                    {{ form.category.errors }}
                 </div>
             </div>
+
+            <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Alcance</label>
+                    {{ form.scope_mode }}
+                    {{ form.scope_mode.errors }}
+                </div>
+                <div class="space-y-2" data-entity-container>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Entidad</label>
+                    {{ form.entity }}
+                    {{ form.entity.errors }}
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nivel de Validacion</label>
+                    {{ form.validation_level }}
+                    {{ form.validation_level.errors }}
+                </div>
+            </div>
+
+            <p class="text-[10px] text-slate-500">
+                Global en categoria aplica a todas las entidades activas de la categoria seleccionada.
+            </p>
         </section>
 
-        <!-- Permisos Específicos -->
         <section class="glass-card rounded-3xl p-8 space-y-6 uppercase">
             <h3 class="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2 mb-4">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
-                Permisos de Validación
+                Permisos de Validacion
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -108,7 +155,7 @@
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.05] transition-colors">
                     {{ form.can_validate_monthly }}
-                    <span class="text-[10px] font-bold text-slate-300">Mes / Certificación</span>
+                    <span class="text-[10px] font-bold text-slate-300">Mes / Certificacion</span>
                 </label>
             </div>
         </section>
@@ -121,3 +168,14 @@
     </form>
 </div>
 {% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/accounts_password.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/accounts_password_toggle.js' %}"></script>
+<script src="{% static 'js/accounts_user_scope.js' %}"></script>
+{% endblock %}
+
+

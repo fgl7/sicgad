@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date
@@ -17,7 +17,7 @@ UNKNOWN_INSTITUTION = "UNKNOWN"
 
 def _collect_monthly_requirements(instance: DatasetInstance) -> Dict[str, int]:
     """
-    Obtiene el nivel máximo requerido por institución para el dataset mensual indicado.
+    Obtiene el nivel mÃ¡ximo requerido por instituciÃ³n para el dataset mensual indicado.
     """
     freq = instance.dataset_type.validation_frequency
     if freq == DatasetType.WEEKLY:
@@ -34,16 +34,12 @@ def _collect_monthly_requirements(instance: DatasetInstance) -> Dict[str, int]:
         )
         .filter(freq_filter)
     )
-    if instance.plant_id:
+    if instance.entity_id:
         validators = validators.filter(
-            Q(plant=instance.plant) | Q(plant__isnull=True, project__isnull=True)
-        )
-    elif instance.project_id:
-        validators = validators.filter(
-            Q(project=instance.project) | Q(plant__isnull=True, project__isnull=True)
+            Q(entity=instance.entity) | Q(entity__isnull=True)
         )
     else:
-        validators = validators.filter(plant__isnull=True, project__isnull=True)
+        validators = validators.filter(entity__isnull=True)
 
     requirements: Dict[str, int] = {}
     for membership in validators:
@@ -97,7 +93,7 @@ def determine_monthly_state(instance: DatasetInstance) -> str:
 
 def determine_periodic_state(instance: DatasetInstance) -> str:
     """
-    Datasets semanales y mensuales usan la misma lógica multi-institución.
+    Datasets semanales y mensuales usan la misma lÃ³gica multi-instituciÃ³n.
     """
     return determine_monthly_state(instance)
 
@@ -115,8 +111,8 @@ def ensure_monthly_state(instance: DatasetInstance, *, save: bool = True) -> str
 
 def sync_previous_month_certifications(reference_date: date | None = None) -> None:
     """
-    Fuerza la sincronización del estado para las certificaciones del mes anterior.
-    Se ejecuta de forma lazy al iniciar sesión para mantener consistencia.
+    Fuerza la sincronizaciÃ³n del estado para las certificaciones del mes anterior.
+    Se ejecuta de forma lazy al iniciar sesiÃ³n para mantener consistencia.
     """
     _, prev_month_end = previous_month_range(reference_date)
     monthly_instances = DatasetInstance.objects.filter(
@@ -126,3 +122,5 @@ def sync_previous_month_certifications(reference_date: date | None = None) -> No
     )
     for instance in monthly_instances:
         ensure_monthly_state(instance, save=True)
+
+

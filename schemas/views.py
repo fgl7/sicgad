@@ -31,11 +31,25 @@ def _dataset_scope_filter(dataset: DatasetType) -> Q:
     return Q(entity=dataset.entity)
 
 
+
+def _entity_hierarchy(entity):
+    if not entity:
+        return None
+    category = getattr(entity, "category", None)
+    subsector = getattr(category, "subsector", None) if category else None
+    sector = getattr(subsector, "sector", None) if subsector else None
+    return {
+        "sector": sector,
+        "subsector": subsector,
+        "category": category,
+        "entity": entity,
+    }
+
 def schema_list(request):
     user = request.user
     is_admin = _is_admin_user(user)
 
-    datasets = DatasetType.objects.select_related("entity").order_by(
+    datasets = DatasetType.objects.select_related("entity__category__subsector__sector").order_by(
         "entity__name",
         "name",
         "-version",
@@ -80,7 +94,7 @@ def schema_list(request):
 
 
 def _get_dataset_by_slug_or_pk(slug: str) -> DatasetType:
-    qs = DatasetType.objects.select_related("entity")
+    qs = DatasetType.objects.select_related("entity__category__subsector__sector")
     try:
         return qs.get(slug=slug)
     except DatasetType.DoesNotExist:
@@ -123,16 +137,18 @@ def schema_edit(request, slug=None):
         return redirect("schemas:schema_detail", slug=dataset.slug)
 
     loader_entity = None
+    loader_scope_items = []
     allowed_entities_qs = None
     allowed_entity_ids: list[int] = []
     has_global_loader = False
+
     if not is_admin:
         if not request.user.is_authenticated:
             return redirect("login")
 
         loader_memberships = (
             Membership.objects.filter(user=request.user, role="LOADER", is_active=True)
-            .select_related("entity")
+            .select_related("entity__category__subsector__sector")
             .order_by("id")
         )
         if not loader_memberships.exists():
@@ -140,14 +156,28 @@ def schema_edit(request, slug=None):
 
         has_global_loader = any(m.entity_id is None for m in loader_memberships)
         allowed_entity_ids = [m.entity_id for m in loader_memberships if m.entity_id]
+
+        from structure.models import Entity
+
         if has_global_loader:
-            from structure.models import Entity
             allowed_entities_qs = Entity.objects.filter(is_active=True).order_by("name")
         else:
-            from structure.models import Entity
-            allowed_entities_qs = Entity.objects.filter(id__in=allowed_entity_ids, is_active=True).order_by("name")
+            allowed_entities_qs = Entity.objects.filter(
+                id__in=allowed_entity_ids,
+                is_active=True,
+            ).order_by("name")
 
         loader_entity = next((m.entity for m in loader_memberships if m.entity_id), None)
+
+        seen_entities = set()
+        for membership in loader_memberships:
+            if not membership.entity_id or membership.entity_id in seen_entities:
+                continue
+            seen_entities.add(membership.entity_id)
+            hierarchy = _entity_hierarchy(membership.entity)
+            if hierarchy:
+                loader_scope_items.append(hierarchy)
+
         if dataset and not has_global_loader and dataset.entity_id not in allowed_entity_ids:
             return redirect("schemas:schema_list")
 
@@ -167,20 +197,25 @@ def schema_edit(request, slug=None):
             allow_set_active=is_admin,
         )
         formset = DatasetColumnFormSet(request.POST, instance=dataset)
+
         if form.is_valid() and formset.is_valid():
             dataset = form.save(commit=False)
             if not is_admin:
                 dataset.is_certification = False
                 dataset.source_dataset = None
-                if not dataset.entity_id and loader_entity:
+                if not has_global_loader and loader_entity:
+                    dataset.entity = loader_entity
+                elif not dataset.entity_id and loader_entity:
                     dataset.entity = loader_entity
                 if not has_global_loader and dataset.entity_id not in allowed_entity_ids:
                     return redirect("schemas:schema_list")
                 dataset.status = DatasetType.STATUS_DRAFT
                 dataset.is_active = False
+
             dataset.save()
             formset.instance = dataset
             formset.save()
+
             verb = "creado" if slug is None else "editado"
             record_action(
                 "SCHEMA",
@@ -212,10 +247,12 @@ def schema_edit(request, slug=None):
             "formset": formset,
             "dataset": dataset,
             "loader_entity": loader_entity,
+            "loader_scope_items": loader_scope_items,
+            "dataset_scope": _entity_hierarchy(dataset.entity) if dataset and dataset.entity_id else None,
+            "has_global_loader": has_global_loader,
             "is_admin": is_admin,
         },
     )
-
 
 @login_required
 def schema_delete(request, slug):
@@ -454,3 +491,4 @@ def certification_schema_create(request):
             "form": form,
         },
     )
+

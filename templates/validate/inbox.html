@@ -1,20 +1,20 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
-{% block title %}Bandeja de validación - SICGAD{% endblock %}
+{% block title %}Bandeja de validaciÃ³n - SICGAD{% endblock %}
 
 {% block content %}
 <div class="space-y-8 fade-in">
     <div class="mb-2">
-        <h2 class="text-2xl font-header font-bold text-white tracking-tight">Centro de Validación</h2>
-        <p class="text-slate-500 text-sm">Gestiona la oficialización de datos operativos y certificaciones mensuales.</p>
+        <h2 class="text-2xl font-header font-bold text-white tracking-tight">Centro de ValidaciÃ³n</h2>
+        <p class="text-slate-500 text-sm">Gestiona la oficializaciÃ³n de datos operativos y certificaciones mensuales.</p>
     </div>
 
     {% if pending_historical_batches %}
-    <!-- Históricos Section -->
+    <!-- HistÃ³ricos Section -->
     <section class="space-y-4">
         <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Validación de Datos Históricos
+            ValidaciÃ³n de Datos HistÃ³ricos
         </h3>
         <div class="glass-card rounded-3xl overflow-hidden border-white/5 bg-sky-500/5">
             <table class="w-full text-left border-collapse">
@@ -24,7 +24,7 @@
                         <th class="px-6 py-4 text-center">Unidad</th>
                         <th class="px-6 py-4">Dataset / Rango</th>
                         <th class="px-6 py-4 text-center">Cargas</th>
-                        <th class="px-6 py-4 text-right">Acción</th>
+                        <th class="px-6 py-4 text-right">AcciÃ³n</th>
                     </tr>
                 </thead>
                 <tbody class="text-sm">
@@ -32,14 +32,14 @@
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors">
                         <td class="px-6 py-4 font-mono text-[10px] text-slate-400">{{ batch.created_at|date:"d/m/Y H:i" }}</td>
                         <td class="px-6 py-4 text-center">
-                            <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400">{{ batch.plant.code }}</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400">{{ batch.entity.code|default:batch.entity.name }}</span>
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex flex-col">
                                 <span class="font-bold text-slate-200">{{ batch.dataset_type.name }}</span>
                                 <span class="text-[10px] text-slate-500 uppercase">
                                     {% if batch.period_start and batch.period_end %}
-                                        {{ batch.period_start }} — {{ batch.period_end }}
+                                        {{ batch.period_start }} â€” {{ batch.period_end }}
                                     {% else %}-{% endif %}
                                 </span>
                             </div>
@@ -68,18 +68,18 @@
     <section class="space-y-4">
         <h3 class="text-xs font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.876c.54 0 .899-.596.63-1.026L13.03 4.062a1.012 1.012 0 00-1.817 0l-7.73 13.912c-.269.43-.269.946.063 1.026z"></path></svg>
-            Alertas de Certificación Mensual
+            Alertas de CertificaciÃ³n Mensual
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for alert in certification_alerts %}
             <div class="glass-card rounded-2xl p-4 border-amber-500/20 bg-amber-500/5 group hover:border-amber-500/40 transition-all">
                 <div class="flex justify-between items-start mb-3">
-                    <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-widest">{{ alert.plant.code }}</span>
+                    <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-widest">{{ alert.entity.code|default:alert.entity.name }}</span>
                     <span class="text-[10px] font-bold text-slate-500">{{ alert.period }}</span>
                 </div>
                 <h4 class="font-bold text-slate-200 mb-4 group-hover:text-amber-400 transition-colors">{{ alert.dataset_type.name }}</h4>
                 <a href="{% url 'validation:detail' alert.pk %}" class="flex items-center justify-center w-full py-2 rounded-xl bg-amber-500/10 text-amber-500 text-xs font-bold hover:bg-amber-500 hover:text-white transition-all">
-                    Analizar Certificación
+                    Analizar CertificaciÃ³n
                 </a>
             </div>
             {% endfor %}
@@ -109,7 +109,7 @@
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
                         <td class="px-6 py-4 font-mono text-[10px] text-slate-400">{{ inst.created_at|date:"d/m/Y H:i" }}</td>
                         <td class="px-6 py-4 text-center">
-                            <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400 group-hover:text-emerald-400 transition-colors">{{ inst.plant.code }}</span>
+                            <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400 group-hover:text-emerald-400 transition-colors">{{ inst.entity.code|default:inst.entity.name }}</span>
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex flex-col">
@@ -129,7 +129,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="5" class="px-6 py-12 text-center">
-                            <p class="text-slate-600 font-medium">Bandeja de entrada vacía.</p>
+                            <p class="text-slate-600 font-medium">Bandeja de entrada vacÃ­a.</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -150,7 +150,7 @@
                     <tr class="bg-white/[0.01] text-[10px] font-black text-slate-600 uppercase tracking-widest">
                         <th class="px-6 py-3">Fecha</th>
                         <th class="px-6 py-3">Dataset</th>
-                        <th class="px-6 py-3 text-center">Decisión</th>
+                        <th class="px-6 py-3 text-center">DecisiÃ³n</th>
                         <th class="px-6 py-3">Comentario</th>
                     </tr>
                 </thead>
@@ -161,7 +161,7 @@
                         <td class="px-6 py-3">
                             <div class="flex flex-col">
                                 <span class="font-bold text-slate-400 text-xs">{{ act.dataset_instance.dataset_type.name }}</span>
-                                <span class="text-[9px] uppercase">{{ act.dataset_instance.plant.code }} · {{ act.dataset_instance.period }}</span>
+                                <span class="text-[9px] uppercase">{{ act.dataset_instance.entity.code|default:act.dataset_instance.entity.name }} Â· {{ act.dataset_instance.period }}</span>
                             </div>
                         </td>
                         <td class="px-6 py-3 text-center">
@@ -170,7 +170,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-3 text-[10px] italic">
-                            {{ act.comment|default:"—"|truncatechars:100 }}
+                            {{ act.comment|default:"â€”"|truncatechars:100 }}
                         </td>
                     </tr>
                     {% empty %}
@@ -184,3 +184,4 @@
     </section>
 </div>
 {% endblock %}
+

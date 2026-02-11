@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+﻿from django.contrib.auth import get_user_model
 from django.contrib.auth.views import PasswordChangeView
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
@@ -33,7 +33,7 @@ def admin_user_list(request):
     entity_id = request.GET.get("entity") or ""
     institution = request.GET.get("institution") or ""
 
-    users_qs = User.objects.filter(is_superuser=False).prefetch_related(
+    users_qs = User.objects.filter(is_superuser=False).exclude(pk=request.user.pk).prefetch_related(
         "memberships__entity",
         "memberships__institution",
     )
@@ -72,9 +72,9 @@ def admin_user_create(request):
         form = AdminUserCreateForm(request.POST)
         if form.is_valid():
             user = form.save()
-            scope_label = "GLOBAL"
-            if form.cleaned_data.get("entity"):
-                scope_label = f"Entidad {form.cleaned_data.get('entity')}"
+            scope_label = getattr(form, "created_scope_label", "Sin alcance")
+
+
             record_action(
                 "USER",
                 request=request,
@@ -91,63 +91,93 @@ def admin_user_create(request):
 
 @admin_required
 def admin_user_edit(request, user_id):
+    if user_id == request.user.id:
+        return redirect("accounts:admin_user_list")
+
     user = get_object_or_404(User, pk=user_id, is_superuser=False)
-    membership = user.memberships.first()
+    memberships = list(
+        user.memberships.select_related("entity__category__subsector", "institution").order_by("entity__name")
+    )
 
     initial = {}
-    if membership:
+    if memberships:
+        primary = memberships[0]
         initial.update(
             {
-                "role": membership.role,
-                "entity": membership.entity,
-                "validation_level": membership.validation_level,
-                "can_validate_daily": membership.can_validate_daily,
-                "can_validate_monthly": membership.can_validate_monthly,
-                "can_validate_weekly": membership.can_validate_weekly,
-                "can_validate_projections": membership.can_validate_projections,
-                "institution": membership.institution,
+                "role": primary.role,
+                "validation_level": primary.validation_level,
+                "can_validate_daily": primary.can_validate_daily,
+                "can_validate_monthly": primary.can_validate_monthly,
+                "can_validate_weekly": primary.can_validate_weekly,
+                "can_validate_projections": primary.can_validate_projections,
+                "institution": primary.institution,
             }
         )
 
+        entities = [m.entity for m in memberships if m.entity_id]
+        if entities:
+            category_ids = {entity.category_id for entity in entities}
+            first_entity = entities[0]
+            first_category = first_entity.category
+            first_subsector = first_category.subsector
+
+            if len(category_ids) == 1:
+                total_active_in_category = Entity.objects.filter(category=first_category, is_active=True).count()
+                if len(entities) == total_active_in_category and total_active_in_category > 0:
+                    initial.update(
+                        {
+                            "subsector": first_subsector,
+                            "category": first_category,
+                            "scope_mode": AdminUserCreateForm.SCOPE_CATEGORY_GLOBAL,
+                            "entity": None,
+                        }
+                    )
+                else:
+                    initial.update(
+                        {
+                            "subsector": first_subsector,
+                            "category": first_category,
+                            "scope_mode": AdminUserCreateForm.SCOPE_ENTITY,
+                            "entity": first_entity,
+                        }
+                    )
+            else:
+                initial.update(
+                    {
+                        "subsector": first_subsector,
+                        "category": first_category,
+                        "scope_mode": AdminUserCreateForm.SCOPE_ENTITY,
+                        "entity": first_entity,
+                    }
+                )
+
     if request.method == "POST":
-        form = AdminUserCreateForm(request.POST, instance=user, initial=initial)
+        form = AdminUserCreateForm(request.POST, instance=user)
         if form.is_valid():
             data = form.cleaned_data
-            user.username = data["username"]
-            user.first_name = data["first_name"]
-            user.last_name = data["last_name"]
-            user.email = data["email"]
+            user_obj = form.save(commit=False)
+            user_obj.username = data["username"]
+            user_obj.first_name = data["first_name"]
+            user_obj.last_name = data["last_name"]
+            user_obj.email = data["email"]
+
             password = (data.get("password1") or "").strip()
             if password:
-                user.set_password(password)
-                profile, _ = AccountProfile.objects.get_or_create(user=user)
+                user_obj.set_password(password)
+                profile, _ = AccountProfile.objects.get_or_create(user=user_obj)
                 profile.must_change_password = True
                 profile.save(update_fields=["must_change_password"])
-            user.save()
 
-            if membership is None:
-                membership = Membership(user=user)
+            user_obj.save()
+            form.create_memberships_for_user(user_obj, replace=True)
 
-            membership.entity = data.get("entity")
-            membership.role = data["role"]
-            membership.validation_level = data.get("validation_level")
-            membership.can_validate_daily = data.get("can_validate_daily", False)
-            membership.can_validate_monthly = data.get("can_validate_monthly", False)
-            membership.can_validate_weekly = data.get("can_validate_weekly", False)
-            membership.can_validate_projections = data.get("can_validate_projections", False)
-            membership.institution = data.get("institution")
-            membership.is_active = True
-            membership.save()
-
-            scope_label = "GLOBAL"
-            if membership.entity:
-                scope_label = f"Entidad {membership.entity}"
+            scope_label = getattr(form, "created_scope_label", "Sin alcance")
             record_action(
                 "USER",
                 request=request,
                 module="Accounts",
-                object_repr=f"Usuario {user.username} editado",
-                details=f"Rol {membership.role} - {scope_label}",
+                object_repr=f"Usuario {user_obj.username} editado",
+                details=f"Rol {data.get('role')} - {scope_label}",
             )
             return redirect("accounts:admin_user_list")
     else:
@@ -163,8 +193,12 @@ def admin_user_edit(request, user_id):
     )
 
 
+
 @admin_required
 def admin_user_delete(request, user_id):
+    if user_id == request.user.id:
+        return redirect("accounts:admin_user_list")
+
     user = get_object_or_404(User, pk=user_id, is_superuser=False)
     if request.method == "POST":
         username = user.username
@@ -174,7 +208,7 @@ def admin_user_delete(request, user_id):
             request=request,
             module="Accounts",
             object_repr=f"Usuario {username} eliminado",
-            details="Usuario eliminado desde el panel de administración",
+            details="Usuario eliminado desde el panel de administraciÃ³n",
         )
         return redirect("accounts:admin_user_list")
 
@@ -251,3 +285,5 @@ def institution_delete(request, institution_id):
         "accounts/institution_confirm_delete.html",
         {"institution": institution},
     )
+
+

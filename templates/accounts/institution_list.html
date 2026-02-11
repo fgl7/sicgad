@@ -19,41 +19,47 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                    <tr class="bg-white/[0.02] text-[11px] font-black text-slate-500 uppercase tracking-[0.16em]">
                         <th class="px-8 py-4">Identificador</th>
                         <th class="px-8 py-4">Razón Social / Entidad</th>
                         <th class="px-8 py-4">Estado Operativo</th>
                         <th class="px-8 py-4 text-right">Acciones</th>
                     </tr>
                 </thead>
-                <tbody class="text-sm">
+                <tbody class="text-[14px]">
                     {% for institution in institutions %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-8 py-4 font-mono text-emerald-400 font-bold text-[11px] tracking-tight uppercase">{{ institution.code }}</td>
+                        <td class="px-8 py-4 font-mono text-emerald-400 font-bold text-[12px] tracking-tight uppercase">{{ institution.code }}</td>
                         <td class="px-8 py-4">
-                            <span class="text-slate-200 font-bold tracking-tight">{{ institution.name }}</span>
+                            <span class="text-slate-200 font-semibold text-[15px] tracking-tight">{{ institution.name }}</span>
                         </td>
                         <td class="px-8 py-4">
                             {% if institution.is_active %}
                                 <div class="flex items-center gap-2">
                                     <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 glow-emerald"></div>
-                                    <span class="text-[10px] font-black text-emerald-500/80 uppercase tracking-widest">Activa</span>
+                                    <span class="text-[11px] font-black text-emerald-400 uppercase tracking-wider">Activa</span>
                                 </div>
                             {% else %}
                                 <div class="flex items-center gap-2 opacity-50">
                                     <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
-                                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inactiva</span>
+                                    <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Inactiva</span>
                                 </div>
                             {% endif %}
                         </td>
-                        <td class="px-8 py-4 text-right space-x-4">
-                            <a href="{% url 'accounts:institution_edit' institution.pk %}" class="text-[10px] font-black text-sky-400 hover:text-sky-300 uppercase tracking-widest transition-colors">Configurar</a>
-                            <a href="{% url 'accounts:institution_delete' institution.pk %}" class="text-[10px] font-black text-slate-600 hover:text-red-500 uppercase tracking-widest transition-colors">Eliminar</a>
+                        <td class="px-8 py-4 text-right">
+                            <div class="flex justify-end gap-2">
+                                <a href="{% url 'accounts:institution_edit' institution.pk %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all" title="Editar instituci?n">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                </a>
+                                <a href="{% url 'accounts:institution_delete' institution.pk %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Eliminar instituci?n">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="px-8 py-16 text-center text-slate-600 italic">No se han registrado instituciones en la base de datos central.</td>
+                        <td colspan="4" class="px-8 py-16 text-center text-slate-500 text-sm">No se han registrado instituciones en la base de datos central.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -106,7 +106,7 @@ class HistoricalDatasetUploadForm(forms.Form):
         queryset=DatasetType.objects.select_related("entity").filter(
             is_active=True,
             is_certification=False,
-            validation_frequency=DatasetType.DAILY,
+            validation_frequency__in=[DatasetType.DAILY, DatasetType.WEEKLY, DatasetType.MONTHLY],
             status=DatasetType.STATUS_APPROVED,
         ),
         widget=forms.Select(
@@ -135,7 +135,7 @@ class HistoricalDatasetUploadForm(forms.Form):
             }
         ),
         label="Columna fecha (encabezado, opcional)",
-        help_text="Si lo dejas vacío, se usa la primera columna DATE del esquema (por name o label).",
+        help_text="Si lo dejas vacÃƒÂ­o, se usa la primera columna DATE del esquema (por name o label).",
     )
     raw_file = forms.FileField(
         widget=forms.ClearableFileInput(
@@ -162,7 +162,7 @@ class HistoricalDatasetUploadForm(forms.Form):
                     entity_id__in=loader_entities,
                     is_active=True,
                     is_certification=False,
-                    validation_frequency=DatasetType.DAILY,
+                    validation_frequency__in=[DatasetType.DAILY, DatasetType.WEEKLY, DatasetType.MONTHLY],
                     status=DatasetType.STATUS_APPROVED,
                 )
             )
@@ -333,12 +333,12 @@ def build_manual_row_form(dataset: DatasetType):
 
 class CertificationJustificationForm(forms.Form):
     justification = forms.CharField(
-        label="Justificación",
+        label="JustificaciÃƒÂ³n",
         widget=forms.Textarea(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
                 "rows": 4,
-                "placeholder": "Describe por qué se ajustan los valores consolidados.",
+                "placeholder": "Describe por quÃƒÂ© se ajustan los valores consolidados.",
             }
         ),
     )

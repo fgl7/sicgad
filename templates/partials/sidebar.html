@@ -1,4 +1,4 @@
-﻿{% load static %}
+{% load static %}
 <aside class='w-64 sidebar border-r border-white/10 hidden lg:flex flex-col h-screen sticky top-0 z-50'>
   <div class='p-6 flex items-center gap-3'>
     <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
@@ -40,6 +40,15 @@
       <span class="font-medium">Esquemas</span>
       {% if is_admin and pending_schema_requests %}
       <span class='ml-auto px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold'>{{ pending_schema_requests }}</span>
+      {% elif is_loader %}
+      <span class='ml-auto flex items-center gap-1'>
+        {% if loader_schema_approved %}
+        <span class='px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold'>+{{ loader_schema_approved }}</span>
+        {% endif %}
+        {% if loader_schema_rejected %}
+        <span class='px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[10px] font-bold'>-{{ loader_schema_rejected }}</span>
+        {% endif %}
+      </span>
       {% endif %}
     </a>
 
@@ -64,6 +73,18 @@
       <span class="font-medium">Validacion</span>
       {% if is_validator and pending_validation_items %}
       <span class='ml-auto px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold'>{{ pending_validation_items }}</span>
+      {% elif is_loader %}
+      <span class='ml-auto flex items-center gap-1'>
+        {% if loader_validation_approved %}
+        <span class='px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold'>+{{ loader_validation_approved }}</span>
+        {% endif %}
+        {% if loader_validation_rejected or loader_certification_rejected %}
+        <span class='px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[10px] font-bold'>-{{ loader_validation_rejected|add:loader_certification_rejected }}</span>
+        {% endif %}
+        {% if loader_pending_certification_alerts %}
+        <span class='px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold'>{{ loader_pending_certification_alerts }}</span>
+        {% endif %}
+      </span>
       {% endif %}
     </a>
     {% endif %}

@@ -68,17 +68,17 @@ class ColumnDefForm(forms.ModelForm):
         widgets = {
             "name": forms.TextInput(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-10 px-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "label": forms.TextInput(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-10 px-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "data_type": forms.Select(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-11 px-2.5 py-0 rounded-xl bg-slate-900/80 border border-white/10 text-sm leading-5 text-slate-100 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "required": forms.CheckboxInput(
@@ -88,38 +88,38 @@ class ColumnDefForm(forms.ModelForm):
             ),
             "min_value": forms.NumberInput(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-10 px-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "max_value": forms.NumberInput(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-10 px-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "regex": forms.TextInput(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-10 px-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "choices_raw": forms.Textarea(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-10 px-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                     "rows": 2,
                 }
             ),
             "unit": forms.TextInput(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-10 px-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "axis_role": forms.Select(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-11 px-2.5 py-0 rounded-xl bg-slate-900/80 border border-white/10 text-sm leading-5 text-slate-100 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "default_agg": forms.Select(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-11 px-2.5 py-0 rounded-xl bg-slate-900/80 border border-white/10 text-sm leading-5 text-slate-100 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "is_primary_kpi": forms.CheckboxInput(
@@ -129,7 +129,7 @@ class ColumnDefForm(forms.ModelForm):
             ),
             "display_order": forms.NumberInput(
                 attrs={
-                    "class": "w-full px-2 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-slate-100 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
+                    "class": "w-full h-11 px-2.5 py-0 rounded-xl bg-slate-900/80 border border-white/10 text-sm leading-5 text-slate-100 focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400/60",
                 }
             ),
             "is_active": forms.CheckboxInput(
@@ -208,4 +208,3 @@ class CertificationSchemaForm(forms.Form):
                 self.fields["name"].initial = f"{source.name} - Certificacion mensual"
         else:
             self.fields["columns"].queryset = ColumnDef.objects.none()
-

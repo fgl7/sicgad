@@ -25,6 +25,9 @@ env_file = BASE_DIR / ".env"
 if env_file.exists():
     environ.Env.read_env(env_file)
 
+# Request parsing limits (admin bulk actions, large forms)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = env.int("DATA_UPLOAD_MAX_NUMBER_FIELDS", default=10000)
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -75,6 +78,7 @@ MIDDLEWARE = [
     "django_otp.middleware.OTPMiddleware",
     "axes.middleware.AxesMiddleware",
     "accounts.middleware.PasswordChangeRequiredMiddleware",
+    "ingest.middleware.AutoIngestCleanupMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -151,6 +155,15 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Automatic ingest file cleanup policy
+AUTO_INGEST_CLEANUP_ENABLED = env.bool("AUTO_INGEST_CLEANUP_ENABLED", default=True)
+AUTO_INGEST_CLEANUP_INTERVAL_SECONDS = env.int("AUTO_INGEST_CLEANUP_INTERVAL_SECONDS", default=21600)
+AUTO_INGEST_CLEANUP_LOCK_TIMEOUT_SECONDS = env.int("AUTO_INGEST_CLEANUP_LOCK_TIMEOUT_SECONDS", default=600)
+AUTO_INGEST_INSTANCE_RETENTION_DAYS = env.int("AUTO_INGEST_INSTANCE_RETENTION_DAYS", default=90)
+AUTO_INGEST_BATCH_RETENTION_DAYS = env.int("AUTO_INGEST_BATCH_RETENTION_DAYS", default=180)
+AUTO_INGEST_ORPHAN_RETENTION_DAYS = env.int("AUTO_INGEST_ORPHAN_RETENTION_DAYS", default=7)
+AUTO_INGEST_SKIP_ORPHANS = env.bool("AUTO_INGEST_SKIP_ORPHANS", default=False)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -170,3 +183,6 @@ AXES_COOLOFF_TIME = env.int("AXES_COOLOFF_TIME", default=1)
 AXES_RESET_ON_SUCCESS = True
 
 OTP_TOTP_ISSUER = env("OTP_TOTP_ISSUER", default="SICGAD")
+
+
+

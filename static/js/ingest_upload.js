@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const btn = document.getElementById("download-template-btn");
   const select = document.getElementById("id_dataset_type");
   let datasetMeta = null;
+
   if (btn && select) {
     const url = btn.getAttribute("data-download-url");
     if (url) {
@@ -19,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   const hint = document.getElementById("dataset-validation-hint");
-  if (hint) {
+  if (hint && select) {
     const updateHint = function () {
       if (datasetMeta && datasetMeta.validation_frequency) {
         const freq = String(datasetMeta.validation_frequency || "").toUpperCase();
@@ -78,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
       );
 
       importLink.classList.remove("hidden");
-      importLink.textContent = "Importar histórico";
+      importLink.textContent = "Importar historico";
       importLink.classList.remove(
         "pointer-events-none",
         "opacity-60",
@@ -86,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "text-slate-300"
       );
       importLink.classList.add("bg-fuchsia-600", "hover:bg-fuchsia-500", "animate-pulse");
-      importLink.setAttribute("title", "Importa el histórico para habilitar la carga diaria");
+      importLink.setAttribute("title", "Importa el historico para habilitar la carga periodica");
       return;
     }
 
@@ -104,27 +105,17 @@ document.addEventListener("DOMContentLoaded", function () {
     importLink.setAttribute("title", "");
   }
 
-  function getPlantId() {
-    const hiddenPlant = document.querySelector('input[name="plant"]');
-    if (hiddenPlant && hiddenPlant.value) {
-      return hiddenPlant.value;
-    }
-    const plantSelect = document.getElementById("id_plant");
-    return plantSelect ? plantSelect.value : "";
-  }
-
   function refreshHistoricalGate() {
     if (!importLink || !select) {
       return;
     }
+
     const hasDataUrl = importLink.getAttribute("data-has-data-url");
     if (!hasDataUrl) {
       return;
     }
-    const datasetTypeId = select.value;
 
-    // Si aún no se eligió dataset, no bloqueamos la UI (el usuario necesita poder seleccionarlo),
-    // y mantenemos oculta la opción de importar histórico hasta que se seleccione un dataset.
+    const datasetTypeId = select.value;
     if (!datasetTypeId) {
       datasetMeta = null;
       if (hint) {
@@ -156,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function () {
         select.dispatchEvent(new Event("change"));
 
         const freq = String((data && data.validation_frequency) || "").toUpperCase();
-        const requiresHistorical = freq === "DAILY";
+        const requiresHistorical = ["DAILY", "WEEKLY", "MONTHLY"].includes(freq);
         setHistoricalRequired(requiresHistorical && !hasData);
       })
       .catch(() => {
@@ -169,9 +160,137 @@ document.addEventListener("DOMContentLoaded", function () {
   if (importLink && dailyWrapper && requiredBanner && select) {
     refreshHistoricalGate();
     select.addEventListener("change", refreshHistoricalGate);
-    const plantSelect = document.getElementById("id_plant");
-    if (plantSelect) {
-      plantSelect.addEventListener("change", refreshHistoricalGate);
-    }
+  }
+
+  const historicalForm = document.getElementById("historical-upload-form");
+  const historicalStatus = document.getElementById("historical-upload-status");
+  const historicalStatusText = document.getElementById("historical-upload-status-text");
+  const historicalPercent = document.getElementById("historical-upload-percent");
+  const historicalProgress = document.getElementById("historical-upload-progress");
+  const historicalSubmit = document.getElementById("historical-upload-submit");
+  const historicalBackendPhase = document.getElementById("historical-upload-backend-phase");
+  const historicalBackendText = document.getElementById("historical-upload-backend-text");
+
+  if (
+    historicalForm &&
+    historicalStatus &&
+    historicalStatusText &&
+    historicalPercent &&
+    historicalProgress &&
+    historicalSubmit &&
+    historicalBackendPhase &&
+    historicalBackendText
+  ) {
+    let inFlight = false;
+
+    const setProgress = function (percent, message) {
+      const safe = Math.max(0, Math.min(100, percent));
+      historicalPercent.textContent = safe + "%";
+      historicalProgress.style.width = safe + "%";
+      historicalStatusText.textContent = message;
+    };
+
+    const setBackendPhase = function (active, message) {
+      if (active) {
+        historicalBackendPhase.classList.remove("hidden");
+      } else {
+        historicalBackendPhase.classList.add("hidden");
+      }
+      historicalBackendText.textContent = message || "Procesando historico en servidor...";
+    };
+
+    const setFormDisabled = function (disabled) {
+      const controls = historicalForm.querySelectorAll("input, select, textarea, button");
+      controls.forEach((control) => {
+        control.disabled = disabled;
+      });
+    };
+
+    historicalForm.addEventListener("submit", function (event) {
+      if (inFlight) {
+        event.preventDefault();
+        return;
+      }
+
+      if (!historicalForm.checkValidity()) {
+        return;
+      }
+
+      if (!window.XMLHttpRequest) {
+        historicalStatus.classList.remove("hidden");
+        setProgress(5, "Iniciando carga...");
+        return;
+      }
+
+      event.preventDefault();
+      inFlight = true;
+
+      historicalStatus.classList.remove("hidden");
+      setProgress(0, "Preparando archivo...");
+      setBackendPhase(false, "");
+      setFormDisabled(true);
+
+      const xhr = new XMLHttpRequest();
+      const action = historicalForm.getAttribute("action") || window.location.href;
+      const method = (historicalForm.getAttribute("method") || "POST").toUpperCase();
+
+      xhr.open(method, action, true);
+      xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+
+      xhr.upload.addEventListener("progress", function (progressEvent) {
+        setBackendPhase(false, "");
+        if (progressEvent.lengthComputable && progressEvent.total > 0) {
+          const rawPercent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
+          const capped = Math.min(99, rawPercent);
+          setProgress(capped, "Subiendo archivo...");
+        } else {
+          setProgress(15, "Subiendo archivo...");
+        }
+      });
+
+      xhr.upload.addEventListener("loadend", function () {
+        if (inFlight) {
+          setProgress(99, "Archivo recibido. Procesando historico...");
+          setBackendPhase(true, "Procesando historico en servidor...");
+        }
+      });
+
+      xhr.addEventListener("load", function () {
+        if (xhr.status >= 200 && xhr.status < 400) {
+          setProgress(100, "Carga completada. Redirigiendo...");
+          setBackendPhase(true, "Proceso completado.");
+          window.location.href = xhr.responseURL || action;
+          return;
+        }
+
+        setProgress(0, "No se pudo completar la importacion. Revisa el formulario.");
+        setBackendPhase(false, "");
+        setFormDisabled(false);
+        inFlight = false;
+      });
+
+      xhr.addEventListener("error", function () {
+        setProgress(0, "Error de red durante la carga. Intenta nuevamente.");
+        setBackendPhase(false, "");
+        setFormDisabled(false);
+        inFlight = false;
+      });
+
+      xhr.addEventListener("abort", function () {
+        setProgress(0, "La carga fue cancelada.");
+        setBackendPhase(false, "");
+        setFormDisabled(false);
+        inFlight = false;
+      });
+
+      setTimeout(function () {
+        const currentProgress = Number.parseInt(historicalPercent.textContent || "0", 10);
+        if (inFlight && currentProgress >= 95) {
+          setBackendPhase(true, "Procesando historico en servidor...");
+        }
+      }, 1200);
+
+      xhr.send(new FormData(historicalForm));
+    });
   }
 });

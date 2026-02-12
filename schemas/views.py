@@ -5,6 +5,7 @@ from django.forms import inlineformset_factory
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.decorators import admin_required
 from accounts.models import Membership
@@ -81,6 +82,10 @@ def schema_list(request):
         if is_loader:
             can_edit_schemas = True
             can_create_schemas = True
+            profile = getattr(user, "profile", None)
+            if profile:
+                profile.last_seen_schema_status = timezone.now()
+                profile.save(update_fields=["last_seen_schema_status"])
 
     return render(
         request,
@@ -491,4 +496,3 @@ def certification_schema_create(request):
             "form": form,
         },
     )
-

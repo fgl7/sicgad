@@ -8,12 +8,14 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
+from django.db import close_old_connections
 from django.db.models import Q, Sum, Min, Max, Count
 from django.forms import formset_factory
 from django.core.files.base import ContentFile
 from io import BytesIO, TextIOWrapper, StringIO
 import csv
 import openpyxl
+import threading
 
 from accounts.models import Membership
 from plants.models import Plant
@@ -2252,3 +2254,390 @@ def delete_instance(request, pk):
     instance.delete()
     messages.success(request, "Dataset eliminado correctamente.")
     return redirect("ingest:upload")
+
+
+
+def _can_access_historical_batch(user, batch: HistoricalImportBatch) -> bool:
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+
+    if Membership.objects.filter(user=user, role="ADMIN", is_active=True).exists():
+        return True
+
+    loader_memberships = Membership.objects.filter(user=user, role="LOADER", is_active=True)
+    if not loader_memberships.exists():
+        return False
+
+    if loader_memberships.filter(entity__isnull=True).exists():
+        return True
+
+    return loader_memberships.filter(entity_id=batch.entity_id).exists()
+
+
+def _process_historical_batch(batch_id: int) -> None:
+    close_old_connections()
+    try:
+        batch = (
+            HistoricalImportBatch.objects.select_related("dataset_type", "entity", "created_by")
+            .filter(pk=batch_id)
+            .first()
+        )
+        if not batch:
+            return
+
+        dataset_type = batch.dataset_type
+        entity = batch.entity
+        membership = batch.created_by
+
+        if not batch.source_file:
+            raise ValueError("No se encontro el archivo fuente del historico.")
+
+        source_stream = batch.source_file
+        try:
+            source_stream.open("rb")
+        except Exception:
+            pass
+
+        header, rows = read_uploaded_file(source_stream)
+        batch.total_rows = len(rows)
+
+        header_norm = [(h or "").strip().lower() for h in (header or [])]
+        if not header_norm:
+            raise ValueError("El archivo no tiene encabezado.")
+
+        if not (batch.date_column_name or "").strip() or batch.date_column_name == "(auto)":
+            date_col = (
+                dataset_type.columns.filter(is_active=True, data_type="DATE")
+                .order_by("display_order", "name")
+                .first()
+            )
+            if not date_col:
+                raise ValueError(
+                    "Este esquema no tiene una columna de tipo DATE. Indica manualmente el encabezado de fecha."
+                )
+            candidates = [date_col.name, date_col.label]
+        else:
+            candidates = [batch.date_column_name]
+
+        candidates_norm = [(c or "").strip().lower() for c in candidates if (c or "").strip()]
+        date_idx = None
+        for cand in candidates_norm:
+            if cand in header_norm:
+                date_idx = header_norm.index(cand)
+                break
+
+        if date_idx is None:
+            raise ValueError(
+                "No se encontro la columna de fecha en el archivo. "
+                "Indica el encabezado exacto o asegurese de que exista la columna DATE del esquema (por name o label)."
+            )
+
+        batch.date_column_name = header[date_idx] or candidates[0] or "(auto)"
+
+        grouped: dict[date, list[list[object]]] = {}
+        for row in rows:
+            cell_value = row[date_idx] if date_idx < len(row) else None
+            period = parse_date_cell(cell_value)
+            if not period:
+                continue
+            grouped.setdefault(period, []).append(row)
+
+        if not grouped:
+            raise ValueError(
+                "No se encontraron filas con fecha valida. Revisa el formato de la columna de fecha."
+            )
+
+        ordered_groups = sorted(grouped.items(), key=lambda item: item[0])
+        batch.total_days = len(ordered_groups)
+        batch.period_start = ordered_groups[0][0]
+        batch.period_end = ordered_groups[-1][0]
+        batch.created_instances = 0
+        batch.updated_instances = 0
+        batch.skipped_instances = 0
+        batch.error_summary = ""
+        batch.status = HistoricalImportBatch.STATUS_RUNNING
+        batch.save(
+            update_fields=[
+                "status",
+                "error_summary",
+                "date_column_name",
+                "total_rows",
+                "total_days",
+                "period_start",
+                "period_end",
+                "created_instances",
+                "updated_instances",
+                "skipped_instances",
+            ]
+        )
+
+        for idx, (period, day_rows) in enumerate(ordered_groups, start=1):
+            batch.refresh_from_db(fields=["status", "error_summary"])
+            if batch.status != HistoricalImportBatch.STATUS_RUNNING:
+                raise RuntimeError(batch.error_summary or "Proceso cancelado por el usuario.")
+
+            instance = DatasetInstance.objects.filter(
+                dataset_type=dataset_type,
+                entity=entity,
+                period=period,
+            ).first()
+
+            if instance and instance.state != DatasetInstance.STATE_DRAFT:
+                batch.skipped_instances += 1
+            else:
+                if not instance:
+                    instance = DatasetInstance(
+                        dataset_type=dataset_type,
+                        entity=entity,
+                        period=period,
+                    )
+                    batch.created_instances += 1
+                else:
+                    batch.updated_instances += 1
+
+                instance.created_by = membership
+                instance.historical_batch = batch
+                instance.state = DatasetInstance.STATE_DRAFT
+                instance.row_count = len(day_rows)
+                instance.error_count = 0
+                instance.last_error_summary = ""
+                instance.submitted_at = None
+
+                csv_buffer = StringIO()
+                writer = csv.writer(csv_buffer)
+                writer.writerow(header)
+                for row in day_rows:
+                    normalized = ["" if v is None else str(v) for v in row]
+                    writer.writerow(normalized)
+
+                entity_code = slugify(entity.code or entity.name) or "entity"
+                file_name = (
+                    f"historico_{slugify(dataset_type.name) or 'dataset'}_{entity_code}_{period.isoformat()}.csv"
+                )
+                instance.raw_file.save(
+                    file_name,
+                    ContentFile(csv_buffer.getvalue().encode("utf-8")),
+                    save=False,
+                )
+                instance.save()
+
+            if idx == 1 or idx % 5 == 0 or idx == batch.total_days:
+                batch.save(
+                    update_fields=[
+                        "created_instances",
+                        "updated_instances",
+                        "skipped_instances",
+                    ]
+                )
+
+        batch.status = HistoricalImportBatch.STATUS_DONE
+        batch.finished_at = timezone.now()
+        batch.save(
+            update_fields=[
+                "status",
+                "finished_at",
+                "created_instances",
+                "updated_instances",
+                "skipped_instances",
+            ]
+        )
+
+        record_action(
+            "UPLOAD",
+            module="Ingest",
+            object_repr=f"Historico {dataset_type.name} ({entity.code or entity.name})",
+            details=f"Filas {batch.total_rows}, dias {batch.total_days}",
+        )
+    except Exception as exc:
+        failed_batch = HistoricalImportBatch.objects.filter(pk=batch_id).first()
+        if failed_batch:
+            failed_batch.status = HistoricalImportBatch.STATUS_FAILED
+            if not failed_batch.error_summary:
+                failed_batch.error_summary = str(exc)
+            failed_batch.finished_at = timezone.now()
+            failed_batch.save(update_fields=["status", "error_summary", "finished_at"])
+    finally:
+        close_old_connections()
+
+
+def _run_historical_batch_background(batch_id: int) -> None:
+    _process_historical_batch(batch_id)
+
+
+def upload_historical_progress(request, batch_id: int):
+    batch = (
+        HistoricalImportBatch.objects.select_related("dataset_type", "entity")
+        .filter(pk=batch_id)
+        .first()
+    )
+    if not batch or not _can_access_historical_batch(request.user, batch):
+        return JsonResponse({"ok": False, "error": "No autorizado."}, status=403)
+
+    total_days = batch.total_days or 0
+    processed_days = (batch.created_instances or 0) + (batch.updated_instances or 0) + (batch.skipped_instances or 0)
+
+    if batch.status == HistoricalImportBatch.STATUS_DONE:
+        percent = 100
+        message = "Carga completada."
+    elif batch.status == HistoricalImportBatch.STATUS_FAILED:
+        percent = 0
+        message = batch.error_summary or "El proceso historico fallo."
+    else:
+        if total_days > 0:
+            percent = max(1, min(99, int((processed_days * 100) / total_days)))
+        else:
+            percent = 1
+        message = "Procesando historico en servidor..."
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "status": batch.status,
+            "percent": percent,
+            "processed_days": processed_days,
+            "total_days": total_days,
+            "message": message,
+            "error": batch.error_summary,
+            "redirect_url": reverse("ingest:upload_history") if batch.status == HistoricalImportBatch.STATUS_DONE else "",
+        }
+    )
+
+
+def upload_historical_cancel(request, batch_id: int):
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "error": "Metodo no permitido."}, status=405)
+
+    batch = HistoricalImportBatch.objects.filter(pk=batch_id).first()
+    if not batch or not _can_access_historical_batch(request.user, batch):
+        return JsonResponse({"ok": False, "error": "No autorizado."}, status=403)
+
+    if batch.status == HistoricalImportBatch.STATUS_RUNNING:
+        batch.status = HistoricalImportBatch.STATUS_FAILED
+        batch.error_summary = "Proceso cancelado por el usuario."
+        batch.finished_at = timezone.now()
+        batch.save(update_fields=["status", "error_summary", "finished_at"])
+
+    return JsonResponse({"ok": True, "status": batch.status})
+
+
+def upload_historical(request):
+    user = request.user
+    if user.is_authenticated and (
+        user.is_superuser
+        or Membership.objects.filter(user=user, role="ADMIN", is_active=True).exists()
+    ):
+        messages.info(
+            request,
+            "Los administradores no realizan cargas directas; use el historial para revisar y gestionar cargas existentes.",
+        )
+        return redirect(reverse("ingest:upload_history"))
+
+    if not user.is_authenticated:
+        return redirect("login")
+
+    loader_memberships = (
+        Membership.objects.filter(user=user, role="LOADER", is_active=True)
+        .select_related("entity")
+    )
+    has_global_loader = loader_memberships.filter(entity__isnull=True).exists()
+    if has_global_loader:
+        loader_entities = list(Entity.objects.filter(is_active=True).values_list("id", flat=True))
+    else:
+        loader_entities = list(
+            loader_memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True)
+        )
+    default_entity = Entity.objects.filter(id=loader_entities[0]).first() if loader_entities else None
+
+    if request.method == "POST":
+        form = HistoricalDatasetUploadForm(
+            request.POST,
+            request.FILES,
+            loader_entities=loader_entities,
+        )
+        if form.is_valid():
+            dataset_type = form.cleaned_data["dataset_type"]
+            entity = form.cleaned_data["entity"]
+            date_column_name = (form.cleaned_data["date_column_name"] or "").strip()
+            uploaded = form.cleaned_data["raw_file"]
+
+            membership = Membership.objects.filter(
+                user=user,
+                role="LOADER",
+                is_active=True,
+                entity=entity,
+            ).first()
+            if not membership:
+                membership = Membership.objects.filter(
+                    user=user,
+                    role="LOADER",
+                    is_active=True,
+                    entity__isnull=True,
+                ).first()
+
+            batch = HistoricalImportBatch.objects.create(
+                dataset_type=dataset_type,
+                entity=entity,
+                created_by=membership,
+                date_column_name=date_column_name or "(auto)",
+                status=HistoricalImportBatch.STATUS_RUNNING,
+                total_rows=0,
+                total_days=0,
+                created_instances=0,
+                updated_instances=0,
+                skipped_instances=0,
+            )
+
+            uploaded.seek(0)
+            batch.source_file.save(
+                getattr(uploaded, "name", "historico") or "historico",
+                uploaded,
+                save=False,
+            )
+            batch.save(update_fields=["source_file"])
+
+            is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            if is_ajax:
+                worker = threading.Thread(
+                    target=_run_historical_batch_background,
+                    args=(batch.id,),
+                    daemon=True,
+                )
+                worker.start()
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "batch_id": batch.id,
+                        "batch_progress_url": reverse("ingest:upload_historical_progress", args=[batch.id]),
+                        "batch_cancel_url": reverse("ingest:upload_historical_cancel", args=[batch.id]),
+                        "redirect_url": reverse("ingest:upload_history"),
+                    }
+                )
+
+            _process_historical_batch(batch.id)
+            batch.refresh_from_db()
+            if batch.status == HistoricalImportBatch.STATUS_DONE:
+                messages.success(
+                    request,
+                    f"Historico importado: {batch.created_instances} creados, {batch.updated_instances} actualizados, {batch.skipped_instances} omitidos.",
+                )
+                return redirect(reverse("ingest:upload_history"))
+
+            messages.error(request, f"Error al importar historico: {batch.error_summary or 'Error desconocido.'}")
+    else:
+        initial = {}
+        dataset_initial = request.GET.get("dataset_type")
+        if dataset_initial:
+            initial["dataset_type"] = dataset_initial
+        form = HistoricalDatasetUploadForm(loader_entities=loader_entities, initial=initial or None)
+
+    return render(
+        request,
+        "ingest/upload_historical.html",
+        {
+            "form": form,
+            "loader_default_entity": default_entity,
+        },
+    )
+

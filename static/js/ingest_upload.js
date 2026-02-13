@@ -163,25 +163,41 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   const historicalForm = document.getElementById("historical-upload-form");
-  const historicalStatus = document.getElementById("historical-upload-status");
+  const historicalModal = document.getElementById("historical-upload-modal");
   const historicalStatusText = document.getElementById("historical-upload-status-text");
   const historicalPercent = document.getElementById("historical-upload-percent");
   const historicalProgress = document.getElementById("historical-upload-progress");
   const historicalSubmit = document.getElementById("historical-upload-submit");
   const historicalBackendPhase = document.getElementById("historical-upload-backend-phase");
   const historicalBackendText = document.getElementById("historical-upload-backend-text");
+  const historicalCancel = document.getElementById("historical-upload-cancel");
 
   if (
     historicalForm &&
-    historicalStatus &&
+    historicalModal &&
     historicalStatusText &&
     historicalPercent &&
     historicalProgress &&
     historicalSubmit &&
     historicalBackendPhase &&
-    historicalBackendText
+    historicalBackendText &&
+    historicalCancel
   ) {
     let inFlight = false;
+    let activeXhr = null;
+    let pollingTimer = null;
+    let currentBatchProgressUrl = "";
+    let currentBatchCancelUrl = "";
+
+    const openModal = function () {
+      historicalModal.classList.remove("hidden");
+      document.body.classList.add("overflow-hidden");
+    };
+
+    const closeModal = function () {
+      historicalModal.classList.add("hidden");
+      document.body.classList.remove("overflow-hidden");
+    };
 
     const setProgress = function (percent, message) {
       const safe = Math.max(0, Math.min(100, percent));
@@ -202,9 +218,107 @@ document.addEventListener("DOMContentLoaded", function () {
     const setFormDisabled = function (disabled) {
       const controls = historicalForm.querySelectorAll("input, select, textarea, button");
       controls.forEach((control) => {
+        if (control.name === "csrfmiddlewaretoken") {
+          return;
+        }
         control.disabled = disabled;
       });
     };
+
+    const stopPolling = function () {
+      if (pollingTimer) {
+        window.clearTimeout(pollingTimer);
+        pollingTimer = null;
+      }
+    };
+
+    const resetInFlight = function () {
+      inFlight = false;
+      activeXhr = null;
+      currentBatchProgressUrl = "";
+      currentBatchCancelUrl = "";
+      setFormDisabled(false);
+    };
+
+    const pollBatchProgress = function (fallbackRedirectUrl) {
+      if (!currentBatchProgressUrl || !inFlight) {
+        return;
+      }
+
+      fetch(currentBatchProgressUrl, {
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      })
+        .then((resp) => (resp.ok ? resp.json() : null))
+        .then((data) => {
+          if (!data) {
+            throw new Error("Sin respuesta de progreso");
+          }
+
+          if (typeof data.percent === "number") {
+            setProgress(data.percent, data.message || "Procesando historico en servidor...");
+          }
+
+          if (data.status === "DONE") {
+            setProgress(100, "Carga completada. Redirigiendo...");
+            setBackendPhase(true, "Proceso completado.");
+            historicalCancel.disabled = true;
+            stopPolling();
+            const target = data.redirect_url || fallbackRedirectUrl || window.location.href;
+            window.setTimeout(function () {
+              window.location.href = target;
+            }, 250);
+            return;
+          }
+
+          if (data.status === "FAILED") {
+            setProgress(0, data.error || data.message || "El proceso historico fallo.");
+            setBackendPhase(false, "");
+            stopPolling();
+            resetInFlight();
+            return;
+          }
+
+          setBackendPhase(true, "Procesando historico en servidor...");
+          pollingTimer = window.setTimeout(function () {
+            pollBatchProgress(fallbackRedirectUrl);
+          }, 1000);
+        })
+        .catch(function () {
+          pollingTimer = window.setTimeout(function () {
+            pollBatchProgress(fallbackRedirectUrl);
+          }, 1500);
+        });
+    };
+
+    historicalCancel.addEventListener("click", function () {
+      if (activeXhr && inFlight) {
+        activeXhr.abort();
+        return;
+      }
+
+      if (inFlight && currentBatchCancelUrl) {
+        const csrfInput = historicalForm.querySelector('input[name="csrfmiddlewaretoken"]');
+        const csrfToken = csrfInput ? csrfInput.value : "";
+        fetch(currentBatchCancelUrl, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": csrfToken,
+          },
+        }).finally(function () {
+          stopPolling();
+          setProgress(0, "Proceso cancelado por el usuario.");
+          setBackendPhase(false, "");
+          resetInFlight();
+          closeModal();
+        });
+        return;
+      }
+
+      closeModal();
+    });
 
     historicalForm.addEventListener("submit", function (event) {
       if (inFlight) {
@@ -217,80 +331,101 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (!window.XMLHttpRequest) {
-        historicalStatus.classList.remove("hidden");
+        openModal();
         setProgress(5, "Iniciando carga...");
         return;
       }
 
       event.preventDefault();
       inFlight = true;
+      stopPolling();
+      const formData = new FormData(historicalForm);
+      const csrfToken = (formData.get("csrfmiddlewaretoken") || "").toString();
 
-      historicalStatus.classList.remove("hidden");
+      openModal();
       setProgress(0, "Preparando archivo...");
       setBackendPhase(false, "");
       setFormDisabled(true);
+      historicalCancel.disabled = false;
 
       const xhr = new XMLHttpRequest();
+      activeXhr = xhr;
+
       const action = historicalForm.getAttribute("action") || window.location.href;
       const method = (historicalForm.getAttribute("method") || "POST").toUpperCase();
 
       xhr.open(method, action, true);
       xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+      if (csrfToken) {
+        xhr.setRequestHeader("X-CSRFToken", csrfToken);
+      }
 
       xhr.upload.addEventListener("progress", function (progressEvent) {
         setBackendPhase(false, "");
         if (progressEvent.lengthComputable && progressEvent.total > 0) {
           const rawPercent = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-          const capped = Math.min(99, rawPercent);
+          const capped = Math.min(90, rawPercent);
           setProgress(capped, "Subiendo archivo...");
         } else {
-          setProgress(15, "Subiendo archivo...");
+          setProgress(10, "Subiendo archivo...");
         }
       });
 
       xhr.upload.addEventListener("loadend", function () {
         if (inFlight) {
-          setProgress(99, "Archivo recibido. Procesando historico...");
+          setProgress(90, "Archivo recibido. Iniciando procesamiento...");
           setBackendPhase(true, "Procesando historico en servidor...");
         }
       });
 
       xhr.addEventListener("load", function () {
         if (xhr.status >= 200 && xhr.status < 400) {
+          let payload = null;
+          try {
+            payload = JSON.parse(xhr.responseText || "{}");
+          } catch (e) {
+            payload = null;
+          }
+
+          activeXhr = null;
+
+          if (payload && payload.ok && payload.batch_progress_url) {
+            currentBatchProgressUrl = payload.batch_progress_url;
+            currentBatchCancelUrl = payload.batch_cancel_url || "";
+            setProgress(91, "Procesamiento iniciado en servidor...");
+            setBackendPhase(true, "Procesando historico en servidor...");
+            pollBatchProgress(payload.redirect_url || action);
+            return;
+          }
+
           setProgress(100, "Carga completada. Redirigiendo...");
           setBackendPhase(true, "Proceso completado.");
+          historicalCancel.disabled = true;
           window.location.href = xhr.responseURL || action;
           return;
         }
 
-        setProgress(0, "No se pudo completar la importacion. Revisa el formulario.");
+        const csrfMessage = xhr.status === 403 ? "La sesion de seguridad expiro (CSRF). Recarga la pagina e intenta de nuevo." : "No se pudo completar la importacion. Revisa el formulario.";
+        setProgress(0, csrfMessage);
         setBackendPhase(false, "");
-        setFormDisabled(false);
-        inFlight = false;
+        resetInFlight();
       });
 
       xhr.addEventListener("error", function () {
         setProgress(0, "Error de red durante la carga. Intenta nuevamente.");
         setBackendPhase(false, "");
-        setFormDisabled(false);
-        inFlight = false;
+        resetInFlight();
       });
 
       xhr.addEventListener("abort", function () {
         setProgress(0, "La carga fue cancelada.");
         setBackendPhase(false, "");
-        setFormDisabled(false);
-        inFlight = false;
+        stopPolling();
+        resetInFlight();
+        closeModal();
       });
 
-      setTimeout(function () {
-        const currentProgress = Number.parseInt(historicalPercent.textContent || "0", 10);
-        if (inFlight && currentProgress >= 95) {
-          setBackendPhase(true, "Procesando historico en servidor...");
-        }
-      }, 1200);
-
-      xhr.send(new FormData(historicalForm));
+      xhr.send(formData);
     });
   }
 });

@@ -7,6 +7,8 @@ app_name = "ingest"
 urlpatterns = [
     path("upload/", views.upload, name="upload"),
     path("upload/historical/", views.upload_historical, name="upload_historical"),
+    path("upload/historical/<int:batch_id>/progress/", views.upload_historical_progress, name="upload_historical_progress"),
+    path("upload/historical/<int:batch_id>/cancel/", views.upload_historical_cancel, name="upload_historical_cancel"),
     path("upload/manual/", views.upload_manual, name="upload_manual"),
     path("dataset-has-data/", views.dataset_has_data, name="dataset_has_data"),
     path(
@@ -26,3 +28,5 @@ urlpatterns = [
     path("instance/<int:pk>/edit/", views.edit_instance, name="edit_instance"),
     path("instance/<int:pk>/delete/", views.delete_instance, name="delete_instance"),
 ]
+
+

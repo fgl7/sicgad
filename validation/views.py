@@ -486,42 +486,74 @@ def approve_historical_batch(request, batch_id: int):
     )
 
     instance_ids = list(target_qs.values_list("id", flat=True))
-    if not instance_ids:
+    rematerialize_ids = list(
+        DatasetInstance.objects.filter(
+            historical_batch=batch,
+            state__in=[DatasetInstance.STATE_PUBLISHED, DatasetInstance.STATE_LOCKED],
+        )
+        .annotate(points_count=Count("published_points"))
+        .filter(points_count=0)
+        .values_list("id", flat=True)
+    )
+    if not instance_ids and not rematerialize_ids:
         messages.info(request, "No hay instancias pendientes para aprobar en este histÃ³rico.")
         return redirect("validation:inbox")
 
     level = membership.validation_level if membership.validation_level else 1
     now = timezone.now()
 
-    actions = [
-        ValidationAction(
-            dataset_instance_id=instance_id,
-            validator=membership,
-            user=user,
-            level=level,
-            decision=ValidationAction.DECISION_APPROVE,
-            comment="AprobaciÃ³n masiva de histÃ³rico.",
+    if instance_ids:
+        actions = [
+            ValidationAction(
+                dataset_instance_id=instance_id,
+                validator=membership,
+                user=user,
+                level=level,
+                decision=ValidationAction.DECISION_APPROVE,
+                comment="AprobaciÃ³n masiva de histÃ³rico.",
+            )
+            for instance_id in instance_ids
+        ]
+        ValidationAction.objects.bulk_create(actions, batch_size=1000)
+
+        DatasetInstance.objects.filter(id__in=instance_ids).update(
+            state=DatasetInstance.STATE_PUBLISHED,
+            updated_at=now,
         )
-        for instance_id in instance_ids
-    ]
-    ValidationAction.objects.bulk_create(actions, batch_size=1000)
 
-    DatasetInstance.objects.filter(id__in=instance_ids).update(
-        state=DatasetInstance.STATE_PUBLISHED,
-        updated_at=now,
-    )
+    materialize_ids = list(dict.fromkeys(instance_ids + rematerialize_ids))
+    materialized_ok = 0
+    materialize_errors = 0
+    if materialize_ids:
+        # ContinÃºa aunque una instancia puntual falle para evitar dejar el lote a medias.
+        for instance in DatasetInstance.objects.filter(id__in=materialize_ids).select_related("dataset_type").iterator(chunk_size=50):
+            try:
+                materialize_instance(instance)
+                materialized_ok += 1
+            except Exception:
+                materialize_errors += 1
 
-    # MaterializaciÃ³n: crea PublishedDataPoint para cada instancia publicada.
-    for instance in DatasetInstance.objects.filter(id__in=instance_ids).select_related("dataset_type").iterator(chunk_size=50):
-        materialize_instance(instance)
-
-    messages.success(request, f"HistÃ³rico aprobado: {len(instance_ids)} dÃ­as.")
+    if instance_ids:
+        messages.success(request, f"HistÃ³rico aprobado: {len(instance_ids)} dÃ­as.")
+    if rematerialize_ids:
+        messages.info(
+            request,
+            f"Se reprocesaron {materialized_ok} instancias publicadas sin puntos materializados.",
+        )
+    if materialize_errors:
+        messages.warning(
+            request,
+            f"No se pudieron materializar {materialize_errors} instancias. Revise el lote.",
+        )
     record_action(
         "VALIDATION",
         request=request,
         module="Validation",
         object_repr=f"HistÃ³rico {batch.dataset_type.name} | {batch.entity.code or batch.entity.name}",
-        details=f"AprobaciÃ³n masiva ({len(instance_ids)} instancias)",
+        details=(
+            f"AprobaciÃ³n masiva ({len(instance_ids)} instancias), "
+            f"materializadas={materialized_ok}, errores={materialize_errors}"
+        ),
     )
     return redirect("validation:inbox")
 

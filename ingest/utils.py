@@ -314,7 +314,13 @@ def materialize_instance(instance: DatasetInstance) -> int:
 
 
 def _auto_compute_performance(instance: DatasetInstance) -> None:
-    if not instance.plant_id:
+    # Compatibilidad temporal: el dominio actual de ingest usa Entity.
+    # Si la instancia no expone Plant (modelo legacy), no se auto-calculan KPIs.
+    plant_id = getattr(instance, "plant_id", None)
+    if not plant_id:
+        return
+    plant = getattr(instance, "plant", None)
+    if plant is None:
         return
     dataset = instance.dataset_type
     if not dataset:
@@ -329,20 +335,20 @@ def _auto_compute_performance(instance: DatasetInstance) -> None:
     if dataset.validation_frequency == DatasetType.DAILY:
         target_day = instance.period
         compute_and_store_indicators(
-            instance.plant,
+            plant,
             MonthWindow(target_day, target_day),
             frequency=PerformanceIndicatorResult.FREQ_DAILY,
         )
         monthly_window = month_window(target_day.year, target_day.month)
         compute_and_store_indicators(
-            instance.plant,
+            plant,
             monthly_window,
             frequency=PerformanceIndicatorResult.FREQ_MONTHLY,
         )
     elif dataset.validation_frequency == DatasetType.MONTHLY:
         monthly_window = month_window(instance.period.year, instance.period.month)
         compute_and_store_indicators(
-            instance.plant,
+            plant,
             monthly_window,
             frequency=PerformanceIndicatorResult.FREQ_MONTHLY,
         )

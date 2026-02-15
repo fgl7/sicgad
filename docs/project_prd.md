@@ -97,6 +97,7 @@ Reglas de negocio activas:
 - Si el esquema requiere historico inicial (diario/semanal/mensual segun implementacion de gate), se redirige a historico.
 - Carga historica crea/actualiza multiples `DatasetInstance` desde un archivo.
 - Descarga de plantilla usa columnas del esquema.
+- En envios/aprobaciones historicas, el flujo operativo usa entity (no plant/project) en permisos y consultas.
 
 UX implementada recientemente:
 - En `upload_historical`, spinner y barra de progreso de subida.
@@ -113,6 +114,11 @@ Vistas:
 Comportamiento:
 - Validadores ven bandeja segun memberships y periodicidad.
 - Publicacion final materializa datos a `PublishedDataPoint`.
+- `approve_historical_batch` contempla re-materializacion de instancias historicas ya publicadas que no tengan puntos, para evitar lotes parciales.
+- Si falla la materializacion de una instancia puntual, el proceso masivo continua y reporta conteo de errores.
+
+Regla operativa importante:
+- `DatasetInstance` publicado sin `PublishedDataPoint` no aparece en KPIs/tablas analiticas, aunque su estado sea `PUBLISHED`.
 
 ## 7. Alertas en sidebar
 Context processor:
@@ -173,6 +179,13 @@ Principal foco:
 - `ingest/views.py` contiene secciones aun referenciando `Plant`/`Project` y `select_related("plant")`.
 - `structure/views.py` usa `Plant/Project` en conteos de impacto para bloqueos.
 - `config/settings.py` mantiene apps `plants` y `projects` instaladas.
+- `performance/*` sigue acoplado a `Plant` (modelos/servicios/formulas), por lo que su migracion a `Entity` esta pendiente.
+
+Avances recientes ya alineados a `entity`:
+- `ingest/views.py:submit_historical_batch` migrado a `entity`.
+- `ingest/views.py:instance_detail` migrado a `entity`.
+- `templates/ingest/instance_detail.html` migrado a `entity`.
+- `ingest/utils.py:_auto_compute_performance` protegido para no romper cuando la instancia no expone `plant`.
 
 Impacto:
 - Riesgo de `FieldError` en rutas que toquen ramas legacy.
@@ -188,8 +201,10 @@ Funciona y se usa activamente:
 - Creacion/aprobacion de esquemas.
 - Creacion de usuarios y memberships por entidad.
 - Carga historica con progreso visual.
+- Aprobacion historica con rematerializacion de puntos faltantes.
 - Sidebar con alertas operativas.
 - Limpieza automatica de archivos en media.
+- KPIs de dataset muestran por defecto ventana temporal reciente de 3 meses (si existe columna fecha).
 
 Requiere refactor planificado:
 - Remocion completa de legado `plant/project` en vistas/servicios restantes.
@@ -206,6 +221,7 @@ Requiere refactor planificado:
    - carga periodica
    - envio a validacion
    - acceso de admin y loader
+5. Si hay diferencias entre instancias publicadas y datos en KPIs, verificar `PublishedDataPoint` por dataset/periodo.
 
 ## 14. Archivos que primero hay que abrir para entender el sistema
 1. `structure/models.py`

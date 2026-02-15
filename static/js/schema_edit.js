@@ -16,6 +16,10 @@ document.addEventListener("DOMContentLoaded", function () {
       if (row.classList.contains("is-deleted")) {
         return;
       }
+      const indexCell = row.querySelector("[data-column-index]");
+      if (indexCell) {
+        indexCell.textContent = String(order);
+      }
       const orderField = row.querySelector("[name$='-display_order']");
       if (orderField) {
         orderField.value = order;

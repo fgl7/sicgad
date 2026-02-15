@@ -125,8 +125,9 @@
                 <table class="w-full table-fixed text-left border-collapse">
                     <thead>
                         <tr class="bg-white/[0.02] text-[9px] font-black text-slate-500 uppercase tracking-[0.16em]">
-                            <th class="px-2 py-3" style="width:14%">Nombre tecnico</th>
-                            <th class="px-2 py-3" style="width:14%">Etiqueta</th>
+                            <th class="px-2 py-3 text-center" style="width:4%">#</th>
+                            <th class="px-2 py-3" style="width:13%">Nombre tecnico</th>
+                            <th class="px-2 py-3" style="width:13%">Etiqueta</th>
                             <th class="px-2 py-3" style="width:10%">Tipo</th>
                             <th class="px-2 py-3 text-center" style="width:5%">Req.</th>
                             <th class="px-2 py-3" style="width:7%">Min</th>
@@ -141,6 +142,7 @@
                     <tbody id="columns-body" class="text-[10px]">
                         {% for form in formset.forms %}
                         <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors" data-column-row>
+                            <td class="px-2 py-2 align-middle text-center text-slate-400 font-semibold" data-column-index>{{ forloop.counter }}</td>
                             <td class="px-2 py-2 align-middle">{{ form.name }}</td>
                             <td class="px-2 py-2 align-middle">{{ form.label }}</td>
                             <td class="px-2 py-2 align-middle">{{ form.data_type }}</td>
@@ -173,6 +175,7 @@
             <template id="empty-column-row">
                 <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors" data-column-row>
                     {% with form=formset.empty_form %}
+                    <td class="px-2 py-2 align-middle text-center text-slate-400 font-semibold" data-column-index></td>
                     <td class="px-2 py-2 align-middle">{{ form.name }}</td>
                     <td class="px-2 py-2 align-middle">{{ form.label }}</td>
                     <td class="px-2 py-2 align-middle">{{ form.data_type }}</td>

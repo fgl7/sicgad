@@ -19,7 +19,7 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Unidad Operativa</p>
-            <p class="text-sm font-bold text-white">{{ instance.plant.code|default:instance.project.code }}</p>
+            <p class="text-sm font-bold text-white">{{ instance.entity.code|default:instance.entity.name }}</p>
         </div>
         <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Dataset</p>

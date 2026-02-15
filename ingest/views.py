@@ -1069,7 +1069,7 @@ def download_template(request):
 def instance_detail(request, pk):
     instance = (
         DatasetInstance.objects.select_related(
-            "dataset_type", "plant", "project", "created_by__user"
+            "dataset_type", "entity", "created_by__user"
         )
         .filter(pk=pk)
         .first()
@@ -1096,9 +1096,8 @@ def instance_detail(request, pk):
             is_active=True,
         )
         .filter(
-            Q(plant=instance.plant)
-            | Q(project=instance.project)
-            | Q(plant__isnull=True, project__isnull=True)
+            Q(entity=instance.entity)
+            | Q(entity__isnull=True)
         )
         .exists()
     )
@@ -1108,9 +1107,8 @@ def instance_detail(request, pk):
         role="LOADER",
         is_active=True,
     ).filter(
-        Q(plant=instance.plant)
-        | Q(project=instance.project)
-        | Q(plant__isnull=True, project__isnull=True)
+        Q(entity=instance.entity)
+        | Q(entity__isnull=True)
     ).exists()
 
     if not (is_admin or is_creator or is_validator):
@@ -2119,7 +2117,7 @@ def submit_historical_batch(request, batch_id: int):
         return redirect("login")
 
     batch = (
-        HistoricalImportBatch.objects.select_related("dataset_type", "plant")
+        HistoricalImportBatch.objects.select_related("dataset_type", "entity")
         .filter(pk=batch_id)
         .first()
     )
@@ -2130,13 +2128,13 @@ def submit_historical_batch(request, batch_id: int):
     if not is_loader:
         return redirect("ingest:upload_history")
 
-    can_access_plant = Membership.objects.filter(
+    can_access_entity = Membership.objects.filter(
         user=user, role="LOADER", is_active=True
     ).filter(
-        Q(plant=batch.plant)
-        | Q(plant__isnull=True, project__isnull=True)
+        Q(entity=batch.entity)
+        | Q(entity__isnull=True)
     ).exists()
-    if not can_access_plant:
+    if not can_access_entity:
         return redirect("ingest:upload_history")
 
     now = timezone.now()
@@ -2151,12 +2149,13 @@ def submit_historical_batch(request, batch_id: int):
     )
 
     if updated:
+        entity_label = batch.entity.code or batch.entity.name
         messages.success(request, f"Historico enviado a validacion: {updated} dias.")
         record_action(
             "SUBMIT",
             request=request,
             module="Ingest",
-            object_repr=f"Historico {batch.dataset_type.name} | {batch.plant.code}",
+            object_repr=f"Historico {batch.dataset_type.name} | {entity_label}",
             details=f"Envio masivo ({updated} instancias)",
         )
     else:

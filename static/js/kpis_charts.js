@@ -210,6 +210,14 @@ document.addEventListener("DOMContentLoaded", function () {
     return local.toISOString().slice(0, 10);
   }
 
+  function firstDayOfRecentThreeMonths(maxDate) {
+    const d = new Date(maxDate.getTime());
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 2);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
   function updateDateInputs(columns, rows) {
     if (!dateStartInput || !dateEndInput || !dateApplyButton) {
       return;
@@ -262,8 +270,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const minStr = formatInputDate(minDate);
     const maxStr = formatInputDate(maxDate);
     const defaultEnd = new Date(maxDate.getTime());
-    const defaultStart = new Date(maxDate.getTime());
-    defaultStart.setDate(defaultStart.getDate() - 29);
+    const defaultStart = firstDayOfRecentThreeMonths(maxDate);
     if (defaultStart < minDate) {
       defaultStart.setTime(minDate.getTime());
     }

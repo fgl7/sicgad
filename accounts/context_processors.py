@@ -1,7 +1,8 @@
 from django.db.models import Exists, OuterRef, Q
 from django.db.utils import OperationalError, ProgrammingError
 
-from .models import Membership
+from structure.models import Sector
+from .models import AccountProfile, Membership
 
 
 def _validator_pending_items_count(user, memberships):
@@ -74,6 +75,11 @@ def admin_flags(request):
     is_admin = False
     is_loader = False
     is_validator = False
+    is_viewer = False
+    viewer_profile_type = AccountProfile.VIEWER_STANDARD
+    is_authority_viewer = False
+    is_external_monthly_viewer = False
+    viewer_nav_sectors = []
     pending_schema_requests = 0
     pending_validation_items = 0
     pending_certification_alerts = 0
@@ -102,6 +108,38 @@ def admin_flags(request):
                 is_admin = memberships.filter(role="ADMIN").exists()
                 is_loader = memberships.filter(role="LOADER").exists()
                 is_validator = memberships.filter(role="VALIDATOR").exists()
+                is_viewer = memberships.filter(role="VIEWER").exists()
+                profile = getattr(user, "profile", None)
+                if profile:
+                    viewer_profile_type = profile.viewer_profile_type or AccountProfile.VIEWER_STANDARD
+                is_authority_viewer = (
+                    is_viewer
+                    and viewer_profile_type == AccountProfile.VIEWER_AUTHORITY_MHE
+                    and not is_admin
+                    and not is_loader
+                    and not is_validator
+                )
+                is_external_monthly_viewer = (
+                    is_viewer
+                    and viewer_profile_type == AccountProfile.VIEWER_EXTERNAL_MONTHLY
+                    and not is_admin
+                    and not is_loader
+                    and not is_validator
+                )
+                if is_authority_viewer:
+                    viewer_memberships = memberships.filter(role="VIEWER")
+                    has_global_viewer = viewer_memberships.filter(entity__isnull=True).exists()
+                    sector_qs = Sector.objects.filter(is_active=True)
+                    if not has_global_viewer:
+                        sector_ids = (
+                            viewer_memberships.exclude(entity__isnull=True)
+                            .values_list("entity__category__subsector__sector_id", flat=True)
+                            .distinct()
+                        )
+                        sector_qs = sector_qs.filter(id__in=sector_ids)
+                    viewer_nav_sectors = list(
+                        sector_qs.order_by("name").values("id", "name")
+                    )
 
                 loader_memberships = memberships.filter(role="LOADER")
                 loader_membership = loader_memberships.filter(entity__isnull=False).first()
@@ -201,6 +239,7 @@ def admin_flags(request):
             is_admin = False
             is_loader = False
             is_validator = False
+            is_viewer = False
 
     path = getattr(request, "path", "") or ""
     if path.startswith("/schemas/"):
@@ -226,6 +265,11 @@ def admin_flags(request):
         "is_admin": is_admin,
         "is_loader": is_loader,
         "is_validator": is_validator,
+        "is_viewer": is_viewer,
+        "viewer_profile_type": viewer_profile_type,
+        "is_authority_viewer": is_authority_viewer,
+        "is_external_monthly_viewer": is_external_monthly_viewer,
+        "viewer_nav_sectors": viewer_nav_sectors,
         "current_section": current_section,
         "pending_schema_requests": pending_schema_requests,
         "pending_validation_items": pending_validation_items,

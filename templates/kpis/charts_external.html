@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}KPIs Externos - SICGAD{% endblock %}
+{% block page_title %}KPIs externos (mensual){% endblock %}
+
+{% block content %}
+<section class="glass-effect mb-5 px-5 py-3">
+    <div class="grid gap-3 text-[13px] md:grid-cols-12">
+        <div class="md:col-span-2">
+            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Modo de datos</label>
+            <select id="kpi-mode-select" class="w-full h-10" disabled>
+                <option value="published">Datos oficiales</option>
+            </select>
+        </div>
+        <div class="md:col-span-4 lg:col-span-5">
+            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Dataset mensual</label>
+            <select id="kpi-instance-select" class="w-full h-10">
+                <option value="">Selecciona un dataset...</option>
+                {% for ds in datasets %}
+                <option value="{{ ds.id }}">
+                    [{{ ds.entity.code|default:ds.entity.name }}] {{ ds.name }} ({{ ds.get_validation_frequency_display }})
+                </option>
+                {% endfor %}
+            </select>
+            <p class="mt-1 text-[10px] text-slate-500 italic">Este perfil visualiza solamente datos mensuales publicados.</p>
+        </div>
+        <div class="md:col-span-6 lg:col-span-5">
+            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Rango de fechas</label>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div class="flex-1">
+                    <input type="date" id="kpi-date-start" class="w-full h-10" />
+                </div>
+                <div class="flex-1">
+                    <input type="date" id="kpi-date-end" class="w-full h-10" />
+                </div>
+                <button id="kpi-date-apply" class="btn-primary h-10 px-5" type="button">
+                    Filtrar
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="glass-effect mb-6 p-6">
+    <div class="grid gap-6 md:grid-cols-12">
+        <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
+            <div class="rounded-2xl border border-white/5 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+                <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
+            </div>
+        </div>
+        <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 space-y-6 text-sm">
+            <div>
+                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de grafico</label>
+                <select id="kpi-chart-type-select" class="w-full">
+                    <option value="line">Linea suave</option>
+                    <option value="bar">Barras modernas</option>
+                    <option value="stacked_bar">Barras apiladas</option>
+                </select>
+            </div>
+            <div>
+                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje X</label>
+                <select id="kpi-x-field-select" class="w-full"></select>
+            </div>
+            <div>
+                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores (Eje Y)</label>
+                <div id="kpi-y-field-box"
+                    class="rounded-xl border border-white/10 bg-black/20 p-3 grid gap-2.5 max-h-64 overflow-auto text-[11px]">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="glass-effect p-6 text-sm">
+    <div class="rounded-2xl border border-white/5 bg-black/20 p-5">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+            <h2 class="text-base font-bold text-white tracking-tight flex items-center gap-2 font-heading">
+                <span class="w-1.5 h-6 bg-amber-500 rounded-full"></span>
+                Detalle de Datos Publicados
+            </h2>
+            <div class="flex items-center gap-3">
+                <button id="kpi-export-csv" type="button"
+                    class="px-4 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled>
+                    CSV
+                </button>
+                <button id="kpi-export-excel" type="button"
+                    class="px-4 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px] hover:bg-emerald-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled>
+                    EXCEL
+                </button>
+            </div>
+        </div>
+        <div id="kpi-table-container"
+            class="max-h-96 overflow-auto border border-white/5 rounded-xl bg-transparent transition-all"></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="{% static 'js/kpis_charts.js' %}?v=16"></script>
+{% endblock %}

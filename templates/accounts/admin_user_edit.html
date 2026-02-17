@@ -85,7 +85,7 @@
                 Rol y Alcance
             </h3>
 
-            <div class="grid md:grid-cols-2 gap-6">
+            <div class="grid md:grid-cols-3 gap-6">
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Rol del Sistema</label>
                     {{ form.role }}
@@ -96,9 +96,15 @@
                     {{ form.institution }}
                     {{ form.institution.errors }}
                 </div>
+                <div class="space-y-2" data-viewer-profile-container>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Plantilla Visualizador</label>
+                    {{ form.viewer_profile_type }}
+                    <p class="text-[10px] text-slate-500">Aplica cuando el rol es Visualizador.</p>
+                    {{ form.viewer_profile_type.errors }}
+                </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+            <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5" data-standard-scope-container>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Subsector</label>
                     {{ form.subsector }}
@@ -112,7 +118,7 @@
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+            <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-white/5" data-standard-scope-container>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Alcance</label>
                     {{ form.scope_mode }}
@@ -133,6 +139,20 @@
             <p class="text-[10px] text-slate-500">
                 Global en categoria aplica a todas las entidades activas de la categoria seleccionada.
             </p>
+
+            <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5 hidden" data-authority-scope-container>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Alcance autoridad MHE</label>
+                    {{ form.authority_scope_mode }}
+                    {{ form.authority_scope_mode.errors }}
+                </div>
+                <div class="space-y-2" data-authority-sector-container>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Sector</label>
+                    {{ form.authority_sector }}
+                    <p class="text-[10px] text-slate-500">Si el alcance es "Todos los sectores", este campo se desactiva.</p>
+                    {{ form.authority_sector.errors }}
+                </div>
+            </div>
         </section>
 
         <section class="glass-card rounded-3xl p-8 space-y-6 uppercase">

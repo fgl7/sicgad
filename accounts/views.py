@@ -1,4 +1,4 @@
-﻿from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model
 from django.contrib.auth.views import PasswordChangeView
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
@@ -33,9 +33,14 @@ def admin_user_list(request):
     entity_id = request.GET.get("entity") or ""
     institution = request.GET.get("institution") or ""
 
-    users_qs = User.objects.filter(is_superuser=False).exclude(pk=request.user.pk).prefetch_related(
-        "memberships__entity",
-        "memberships__institution",
+    users_qs = (
+        User.objects.filter(is_superuser=False)
+        .exclude(pk=request.user.pk)
+        .select_related("profile")
+        .prefetch_related(
+            "memberships__entity",
+            "memberships__institution",
+        )
     )
 
     if role:
@@ -72,6 +77,7 @@ def admin_user_create(request):
         form = AdminUserCreateForm(request.POST)
         if form.is_valid():
             user = form.save()
+            form.save_profile_for_user(user)
             scope_label = getattr(form, "created_scope_label", "Sin alcance")
 
 
@@ -102,9 +108,14 @@ def admin_user_edit(request, user_id):
     initial = {}
     if memberships:
         primary = memberships[0]
+        profile = getattr(user, "profile", None)
+        viewer_profile_type = (
+            profile.viewer_profile_type if profile else AccountProfile.VIEWER_STANDARD
+        )
         initial.update(
             {
                 "role": primary.role,
+                "viewer_profile_type": viewer_profile_type,
                 "validation_level": primary.validation_level,
                 "can_validate_daily": primary.can_validate_daily,
                 "can_validate_monthly": primary.can_validate_monthly,
@@ -113,6 +124,41 @@ def admin_user_edit(request, user_id):
                 "institution": primary.institution,
             }
         )
+
+        if primary.role == "VIEWER" and viewer_profile_type == AccountProfile.VIEWER_AUTHORITY_MHE:
+            has_global_membership = any(m.entity_id is None for m in memberships)
+            if has_global_membership:
+                initial.update(
+                    {
+                        "authority_scope_mode": AdminUserCreateForm.AUTH_SCOPE_ALL,
+                        "authority_sector": None,
+                    }
+                )
+            else:
+                sector_ids = {
+                    m.entity.category.subsector.sector_id
+                    for m in memberships
+                    if m.entity_id and m.entity and m.entity.category_id
+                }
+                selected_sector = None
+                if len(sector_ids) == 1:
+                    sector_id = next(iter(sector_ids))
+                    selected_sector = memberships[0].entity.category.subsector.sector
+                    total_active_in_sector = Entity.objects.filter(
+                        category__subsector__sector_id=sector_id,
+                        is_active=True,
+                    ).count()
+                    memberships_in_sector = len(
+                        [m for m in memberships if m.entity_id and m.entity.category.subsector.sector_id == sector_id]
+                    )
+                    if total_active_in_sector > 0 and memberships_in_sector >= total_active_in_sector:
+                        initial["authority_scope_mode"] = AdminUserCreateForm.AUTH_SCOPE_SECTOR
+                    else:
+                        initial["authority_scope_mode"] = AdminUserCreateForm.AUTH_SCOPE_SECTOR
+                else:
+                    initial["authority_scope_mode"] = AdminUserCreateForm.AUTH_SCOPE_ALL
+                initial["authority_sector"] = selected_sector
+            initial.setdefault("scope_mode", AdminUserCreateForm.SCOPE_ENTITY)
 
         entities = [m.entity for m in memberships if m.entity_id]
         if entities:
@@ -170,6 +216,7 @@ def admin_user_edit(request, user_id):
 
             user_obj.save()
             form.create_memberships_for_user(user_obj, replace=True)
+            form.save_profile_for_user(user_obj)
 
             scope_label = getattr(form, "created_scope_label", "Sin alcance")
             record_action(

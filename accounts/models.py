@@ -100,6 +100,14 @@ class Membership(models.Model):
 
 
 class AccountProfile(models.Model):
+    VIEWER_STANDARD = "STANDARD"
+    VIEWER_EXTERNAL_MONTHLY = "EXTERNAL_MONTHLY"
+    VIEWER_AUTHORITY_MHE = "AUTHORITY_MHE"
+    VIEWER_PROFILE_CHOICES = [
+        (VIEWER_STANDARD, "Visualizador estandar"),
+        (VIEWER_EXTERNAL_MONTHLY, "Visualizador externo (mensual)"),
+        (VIEWER_AUTHORITY_MHE, "Visualizador autoridad MHE"),
+    ]
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -124,6 +132,13 @@ class AccountProfile(models.Model):
         blank=True,
         help_text="Fecha/hora en la que el usuario revisó las alertas de certificación mensual.",
     )
+    viewer_profile_type = models.CharField(
+        max_length=30,
+        choices=VIEWER_PROFILE_CHOICES,
+        default=VIEWER_STANDARD,
+        help_text="Define la experiencia de visualizacion para usuarios con rol VIEWER.",
+    )
+
 
     def __str__(self) -> str:
         return f"Perfil de {self.user.username}"
@@ -133,3 +148,4 @@ class AccountProfile(models.Model):
 def create_profile_for_new_user(sender, instance, created, **kwargs):
     if created:
         AccountProfile.objects.create(user=instance, must_change_password=True)
+

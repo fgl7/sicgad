@@ -104,6 +104,11 @@
                                 <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
                                     {{ m.get_role_display }}
                                 </span>
+                                {% if m.role == "VIEWER" and u.profile %}
+                                <span class="px-2 py-0.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-[10px] font-bold text-sky-300 uppercase tracking-wider">
+                                    {{ u.profile.get_viewer_profile_type_display }}
+                                </span>
+                                {% endif %}
                                 {% if m.validation_level %}
                                 <span class="text-[11px] font-bold text-slate-500 uppercase">L{{ m.validation_level }}</span>
                                 {% endif %}

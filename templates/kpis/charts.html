@@ -23,7 +23,7 @@
                 <option value="">Selecciona un dataset...</option>
                 {% for ds in datasets %}
                 <option value="{{ ds.id }}">
-                    [{{ ds.plant.code }}] {{ ds.name }} ({{ ds.get_validation_frequency_display }})
+                    [{{ ds.entity.code|default:ds.entity.name }}] {{ ds.name }} ({{ ds.get_validation_frequency_display }})
                 </option>
                 {% endfor %}
             </select>

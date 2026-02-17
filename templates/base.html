@@ -117,7 +117,11 @@
 
   <div class="app-shell">
     <div class="flex min-h-screen relative z-10">
+      {% if is_authority_viewer %}
+      {% include "partials/sidebar_authority_mhe.html" %}
+      {% else %}
       {% include "partials/sidebar.html" %}
+      {% endif %}
       <div class="flex-1 flex flex-col">
         {% include "partials/topbar.html" %}
         <main class="flex-1 p-4 lg:p-6 relative z-10">

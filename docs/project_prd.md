@@ -27,13 +27,19 @@ Archivos clave:
 
 Regla clave: las asociaciones operativas de usuarios, esquemas y cargas se hacen por `Entity`.
 
-## 3. Roles y permisos
-Modelo: `accounts/models.py` -> `Membership`.
+## 3. Roles, membresias y perfiles de visualizador
+Modelo principal: `accounts/models.py` -> `Membership`.
 Roles:
 - `ADMIN`
 - `LOADER`
 - `VALIDATOR`
 - `VIEWER`
+
+Perfil adicional en `AccountProfile`:
+- `viewer_profile_type` con tipos:
+  - `STANDARD`
+  - `EXTERNAL_MONTHLY`
+  - `AUTHORITY_MHE`
 
 Reglas importantes:
 - Un `LOADER` debe tener `entity` (no puede ser null).
@@ -42,13 +48,28 @@ Reglas importantes:
   - `can_validate_weekly`
   - `can_validate_monthly`
   - `can_validate_projections`
-- `ADMIN` operativo (membership role ADMIN) es distinto de `superuser` tecnico.
+- Roles no validadores (incluyendo `VIEWER`) no deben conservar flags de validacion activos.
+- `ADMIN` operativo (membership role `ADMIN`) es distinto de `superuser` tecnico.
 
 Seguridad:
 - `AccountProfile.must_change_password` forzado por middleware.
 - Middleware: `accounts/middleware.py`.
 
-## 4. Esquemas
+## 4. Alcance especial para "Visualizador autoridad MHE"
+Configurado desde UX de admin en:
+- `templates/accounts/admin_user_create.html`
+- `templates/accounts/admin_user_edit.html`
+- `accounts/forms.py`
+- `static/js/accounts_user_scope.js`
+
+Comportamiento:
+- Si `role=VIEWER` y `viewer_profile_type=AUTHORITY_MHE`, el admin define alcance:
+  - `SECTOR`: el usuario ve todos los datasets de entidades activas del sector seleccionado.
+  - `ALL`: el usuario ve todos los sectores.
+- Implementacion tecnica de alcance global: membership `VIEWER` con `entity=None`.
+- Para alcance por sector: se crean memberships por cada entidad activa dentro del sector.
+
+## 5. Esquemas
 Modelos en `schemas/models.py`:
 - `DatasetType` (por `entity`)
 - `ColumnDef`
@@ -72,7 +93,7 @@ Vistas clave:
 - `templates/schemas/schema_edit.html`
 - `templates/schemas/schema_detail.html`
 
-## 5. Carga de datos (ingest)
+## 6. Carga de datos (ingest)
 Modelos en `ingest/models.py`:
 - `DatasetInstance`
 - `PublishedDataPoint`
@@ -97,13 +118,14 @@ Reglas de negocio activas:
 - Si el esquema requiere historico inicial (diario/semanal/mensual segun implementacion de gate), se redirige a historico.
 - Carga historica crea/actualiza multiples `DatasetInstance` desde un archivo.
 - Descarga de plantilla usa columnas del esquema.
-- En envios/aprobaciones historicas, el flujo operativo usa entity (no plant/project) en permisos y consultas.
+- En envios/aprobaciones historicas, el flujo operativo usa `entity` (no `plant/project`) en permisos y consultas.
 
-UX implementada recientemente:
+UX:
 - En `upload_historical`, spinner y barra de progreso de subida.
 - Segunda fase visual: "procesando en servidor".
+- En validacion historica (`validate/inbox`), aprobacion con overlay de carga y progreso visual para evitar doble accion.
 
-## 6. Validacion
+## 7. Validacion
 Modelo:
 - `validation/models.py` -> `ValidationAction`
 
@@ -120,22 +142,50 @@ Comportamiento:
 Regla operativa importante:
 - `DatasetInstance` publicado sin `PublishedDataPoint` no aparece en KPIs/tablas analiticas, aunque su estado sea `PUBLISHED`.
 
-## 7. Alertas en sidebar
+## 8. KPIs, plantillas por perfil y visibilidad
+Vista principal:
+- `kpis/views.py:charts`
+
+Plantillas activas segun perfil:
+- `kpis/charts.html` -> flujo estandar.
+- `kpis/charts_external.html` -> visualizador externo mensual.
+- `kpis/charts_authority.html` -> visualizador autoridad MHE.
+
+Reglas en backend:
+- Scope por memberships se aplica siempre (excepto admin global).
+- Para `EXTERNAL_MONTHLY` (viewer puro, no admin/loader/validator):
+  - solo datasets `MONTHLY`.
+  - bloqueo de datasets no mensuales tambien en endpoint `dataset_data`.
+- Para `AUTHORITY_MHE` (viewer puro):
+  - UI con navegacion sector > subsector > categoria > entidad.
+  - soporte de filtros por query params `sector/subsector/category/entity`.
+
+Detalle de series:
+- Los datos publicados y validados convergen en la misma base logica (`PublishedDataPoint`) y se consumen desde alli para charts/tablas.
+
+## 9. Sidebar y contexto global
 Context processor:
 - `accounts/context_processors.py`
 
 Entrega a plantillas:
+- flags de rol: admin, loader, validator, viewer
+- `viewer_profile_type`
+- `is_authority_viewer`
+- `is_external_monthly_viewer`
+- `viewer_nav_sectors` para menu de autoridad
 - pendientes de esquemas
 - pendientes de validacion
 - alertas de certificacion
 - feedback loader (aprobado/rechazado)
 
 Sidebar:
-- `templates/partials/sidebar.html`
+- base: `templates/partials/sidebar.html`
+- autoridad MHE: `templates/partials/sidebar_authority_mhe.html`
+- switch en `templates/base.html` segun `is_authority_viewer`
 
-Nota: Auditoria esta visible para todos los usuarios autenticados.
+Nota: Auditoria esta visible para usuarios autenticados segun reglas actuales de navegacion.
 
-## 8. Gestion de niveles (admin operativo)
+## 10. Gestion de niveles (admin operativo)
 Vista principal:
 - `structure/views.py:manage_levels`
 
@@ -144,11 +194,11 @@ Capacidades:
 - Bloqueos de eliminacion/desactivacion si existen datos asociados.
 - Se registran acciones en auditoria.
 
-## 9. Politica de archivos y retencion
+## 11. Politica de archivos y retencion
 Objetivo: no crecer indefinidamente en `media/`.
 
 Implementado:
-- Señales de borrado automatico en reemplazo/delete:
+- Senales de borrado automatico en reemplazo/delete:
   - `ingest/signals.py`
 - Servicio de limpieza:
   - `ingest/file_cleanup.py`
@@ -161,7 +211,7 @@ Implementado:
   - `DATA_UPLOAD_MAX_NUMBER_FIELDS`
 - Guia: `docs/storage_retention.md`
 
-## 10. Rutas principales
+## 12. Rutas principales
 Definidas en `config/urls.py`:
 - `/accounts/`
 - `/schemas/`
@@ -172,66 +222,77 @@ Definidas en `config/urls.py`:
 - `/structure/`
 - `/kpis/`
 
-## 11. Deuda tecnica conocida (importante)
-Hay mezcla parcial de modelo nuevo (`entity`) con referencias legacy (`plant/project`) en algunos puntos.
+## 13. Deuda tecnica conocida (importante)
+Todavia existe mezcla parcial de modelo nuevo (`entity`) con referencias legacy (`plant/project`) en algunos modulos.
 
 Principal foco:
-- `ingest/views.py` contiene secciones aun referenciando `Plant`/`Project` y `select_related("plant")`.
-- `structure/views.py` usa `Plant/Project` en conteos de impacto para bloqueos.
-- `config/settings.py` mantiene apps `plants` y `projects` instaladas.
-- `performance/*` sigue acoplado a `Plant` (modelos/servicios/formulas), por lo que su migracion a `Entity` esta pendiente.
+- `ingest/views.py` y plantillas de detalle/historico: revisar continuamente que no reaparezcan `select_related("plant")` o campos legacy.
+- `structure/views.py` aun puede contener conteos de impacto con legado en ramas especificas.
+- `config/settings.py` mantiene apps legacy (`plants`, `projects`) instaladas por compatibilidad.
+- `performance/*` sigue acoplado a `Plant` (modelos/servicios/formulas), migracion a `Entity` pendiente.
 
-Avances recientes ya alineados a `entity`:
+Avances ya alineados a `entity`:
 - `ingest/views.py:submit_historical_batch` migrado a `entity`.
 - `ingest/views.py:instance_detail` migrado a `entity`.
 - `templates/ingest/instance_detail.html` migrado a `entity`.
 - `ingest/utils.py:_auto_compute_performance` protegido para no romper cuando la instancia no expone `plant`.
 
 Impacto:
-- Riesgo de `FieldError` en rutas que toquen ramas legacy.
+- Riesgo de `FieldError` si se reintroducen ramas legacy en consultas.
 - Riesgo de regresiones al tocar ingest/validation sin revisar referencias cruzadas.
 
 Regla para desarrollo futuro:
 - Priorizar siempre flujo por `entity`.
-- Si se toca `ingest/views.py`, validar que no queden consultas `plant/project` incompatibles con modelos actuales.
+- Si se toca `ingest/views.py`, validar explicitamente que no queden consultas `plant/project` incompatibles con modelos actuales.
 
-## 12. Estado funcional practico (resumen)
+## 14. Estado funcional practico (resumen)
 Funciona y se usa activamente:
 - Gestion de niveles por entidad.
 - Creacion/aprobacion de esquemas.
 - Creacion de usuarios y memberships por entidad.
+- Perfiles de visualizador diferenciados (`STANDARD`, `EXTERNAL_MONTHLY`, `AUTHORITY_MHE`).
+- Alcance de autoridad MHE por sector o todos los sectores desde UX de admin.
 - Carga historica con progreso visual.
+- Aprobacion historica con overlay de progreso para proceso largo.
 - Aprobacion historica con rematerializacion de puntos faltantes.
-- Sidebar con alertas operativas.
+- Sidebar especializado para autoridad MHE.
+- Restriccion mensual para visualizador externo en charts y dataset_data.
 - Limpieza automatica de archivos en media.
-- KPIs de dataset muestran por defecto ventana temporal reciente de 3 meses (si existe columna fecha).
+- KPIs de dataset con ventana temporal reciente (3 meses) cuando aplica columna fecha.
 
 Requiere refactor planificado:
 - Remocion completa de legado `plant/project` en vistas/servicios restantes.
-- Normalizacion de textos/encoding en plantillas antiguas.
-- Cobertura de tests.
+- Normalizacion de textos/encoding en plantillas antiguas (sin BOM en templates).
+- Cobertura de tests automatizados por flujo critico.
 
-## 13. Checklist rapido antes de tocar codigo
+## 15. Checklist rapido antes de tocar codigo
 1. Confirmar si el flujo es por `entity` (debe ser SI).
 2. Revisar si el archivo toca ramas legacy `plant/project`.
-3. Ejecutar:
+3. Revisar si el cambio afecta perfiles de visualizador (`viewer_profile_type`).
+4. Ejecutar:
    - `python manage.py check`
-4. Si se modifica ingest/validation, probar manualmente:
+5. Si se modifica ingest/validation, probar manualmente:
    - carga historica
    - carga periodica
    - envio a validacion
-   - acceso de admin y loader
-5. Si hay diferencias entre instancias publicadas y datos en KPIs, verificar `PublishedDataPoint` por dataset/periodo.
+   - aprobacion historica
+   - acceso de admin, loader, validator y viewer
+6. Si hay diferencias entre instancias publicadas y datos en KPIs, verificar `PublishedDataPoint` por dataset/periodo.
+7. Si se toca UX de cuentas, validar formulario crear/editar usuario y creacion de memberships esperados.
 
-## 14. Archivos que primero hay que abrir para entender el sistema
+## 16. Archivos que primero hay que abrir para entender el sistema
 1. `structure/models.py`
 2. `accounts/models.py`
-3. `schemas/models.py`
-4. `ingest/models.py`
-5. `accounts/context_processors.py`
-6. `templates/partials/sidebar.html`
-7. `ingest/views.py` (con foco en deuda tecnica legacy)
+3. `accounts/forms.py`
+4. `accounts/context_processors.py`
+5. `schemas/models.py`
+6. `ingest/models.py`
+7. `kpis/views.py`
+8. `templates/base.html`
+9. `templates/partials/sidebar.html`
+10. `templates/partials/sidebar_authority_mhe.html`
+11. `ingest/views.py` (con foco en deuda tecnica legacy)
 
 ---
 
-Este documento reemplaza versiones anteriores mas generales. Esta escrito para operar y evolucionar el estado real actual del proyecto, no el diseño ideal historico.
+Este documento reemplaza versiones anteriores mas generales. Esta escrito para operar y evolucionar el estado real actual del proyecto, no el diseno ideal historico.

@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.http import JsonResponse, Http404
 from django.shortcuts import get_object_or_404, render
 
-from accounts.models import Membership
+from accounts.models import AccountProfile, Membership
 from audit.models import AuditLog
 from ingest.models import DatasetInstance, PublishedDataPoint
 from performance.models import PerformanceIndicator, PerformanceIndicatorResult
@@ -71,21 +71,122 @@ def _get_role_flags(user):
     return is_admin, is_loader, is_validator, is_viewer
 
 
+def _get_viewer_profile_type(user):
+    profile = getattr(user, "profile", None)
+    if not profile:
+        return AccountProfile.VIEWER_STANDARD
+    return profile.viewer_profile_type or AccountProfile.VIEWER_STANDARD
+
+
+def _apply_membership_scope(user, is_admin, datasets):
+    if is_admin:
+        return datasets
+    memberships = Membership.objects.filter(user=user, is_active=True)
+    entity_ids = list(memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True))
+    has_global = memberships.filter(entity__isnull=True).exists()
+    if entity_ids and not has_global:
+        return datasets.filter(entity_id__in=entity_ids)
+    if not entity_ids and not has_global:
+        return datasets.none()
+    return datasets
+
+
+def _group_datasets_for_authority(datasets):
+    grouped = {}
+    for ds in datasets.select_related("entity__category__subsector__sector"):
+        entity = ds.entity
+        category = entity.category if entity else None
+        subsector = category.subsector if category else None
+        sector = subsector.sector if subsector else None
+        if not (entity and category and subsector and sector):
+            continue
+
+        sector_node = grouped.setdefault(
+            sector.id,
+            {"id": sector.id, "name": sector.name, "subsectors": {}},
+        )
+        subsector_node = sector_node["subsectors"].setdefault(
+            subsector.id,
+            {"id": subsector.id, "name": subsector.name, "categories": {}},
+        )
+        category_node = subsector_node["categories"].setdefault(
+            category.id,
+            {"id": category.id, "name": category.name, "entities": {}},
+        )
+        entity_node = category_node["entities"].setdefault(
+            entity.id,
+            {"id": entity.id, "name": entity.name, "code": entity.code, "datasets": []},
+        )
+        entity_node["datasets"].append(ds)
+
+    result = []
+    for sector_node in grouped.values():
+        subsectors = []
+        for subsector_node in sector_node["subsectors"].values():
+            categories = []
+            for category_node in subsector_node["categories"].values():
+                entities = list(category_node["entities"].values())
+                entities.sort(key=lambda e: (e["name"] or "").lower())
+                for entity_node in entities:
+                    entity_node["datasets"].sort(key=lambda d: (d.name or "").lower())
+                categories.append(
+                    {
+                        "id": category_node["id"],
+                        "name": category_node["name"],
+                        "entities": entities,
+                    }
+                )
+            categories.sort(key=lambda c: (c["name"] or "").lower())
+            subsectors.append(
+                {
+                    "id": subsector_node["id"],
+                    "name": subsector_node["name"],
+                    "categories": categories,
+                }
+            )
+        subsectors.sort(key=lambda s: (s["name"] or "").lower())
+        result.append({"id": sector_node["id"], "name": sector_node["name"], "subsectors": subsectors})
+    result.sort(key=lambda s: (s["name"] or "").lower())
+    return result
+
+
 @login_required
 def charts(request):
     user = request.user
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
+    viewer_profile_type = _get_viewer_profile_type(user)
+    is_external_monthly_viewer = (
+        is_viewer
+        and viewer_profile_type == AccountProfile.VIEWER_EXTERNAL_MONTHLY
+        and not is_admin
+        and not is_loader
+        and not is_validator
+    )
+    is_authority_mhe_viewer = (
+        is_viewer
+        and viewer_profile_type == AccountProfile.VIEWER_AUTHORITY_MHE
+        and not is_admin
+        and not is_loader
+        and not is_validator
+    )
 
     datasets = DatasetType.objects.select_related("entity")
+    datasets = _apply_membership_scope(user, is_admin, datasets)
+    if is_external_monthly_viewer:
+        datasets = datasets.filter(validation_frequency=DatasetType.MONTHLY)
 
-    if not is_admin:
-        memberships = Membership.objects.filter(user=user, is_active=True)
-        entity_ids = list(memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True))
-        has_global = memberships.filter(entity__isnull=True).exists()
-        if entity_ids and not has_global:
-            datasets = datasets.filter(entity_id__in=entity_ids)
-        elif not entity_ids and not has_global:
-            datasets = datasets.none()
+    sector_id = request.GET.get("sector")
+    subsector_id = request.GET.get("subsector")
+    category_id = request.GET.get("category")
+    entity_id = request.GET.get("entity")
+    if sector_id:
+        datasets = datasets.filter(entity__category__subsector__sector_id=sector_id)
+    if subsector_id:
+        datasets = datasets.filter(entity__category__subsector_id=subsector_id)
+    if category_id:
+        datasets = datasets.filter(entity__category_id=category_id)
+    if entity_id:
+        datasets = datasets.filter(entity_id=entity_id)
 
     datasets = (
         datasets.filter(instances__isnull=False)
@@ -93,7 +194,7 @@ def charts(request):
         .order_by("entity__name", "name", "-version")
     )
 
-    can_see_drafts = is_admin or is_loader or is_validator
+    can_see_drafts = (is_admin or is_loader or is_validator) and not is_viewer
 
     performance_indicators = PerformanceIndicator.objects.none()
     if is_admin:
@@ -104,13 +205,27 @@ def charts(request):
             .order_by("plant__code", "label", "key")
         )
 
+    template_name = "kpis/charts.html"
+    if is_external_monthly_viewer:
+        template_name = "kpis/charts_external.html"
+    elif is_authority_mhe_viewer:
+        template_name = "kpis/charts_authority.html"
+
     return render(
         request,
-        "kpis/charts.html",
+        template_name,
         {
             "datasets": datasets,
             "can_see_drafts": can_see_drafts,
             "performance_indicators": performance_indicators,
+            "is_external_monthly_viewer": is_external_monthly_viewer,
+            "is_authority_mhe_viewer": is_authority_mhe_viewer,
+            "viewer_profile_type": viewer_profile_type,
+            "authority_dataset_tree": _group_datasets_for_authority(datasets),
+            "selected_sector": sector_id or "",
+            "selected_subsector": subsector_id or "",
+            "selected_category": category_id or "",
+            "selected_entity": entity_id or "",
         },
     )
 
@@ -119,6 +234,14 @@ def charts(request):
 def dataset_data(request, dataset_id: int):
     user = request.user
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
+    viewer_profile_type = _get_viewer_profile_type(user)
+    is_external_monthly_viewer = (
+        is_viewer
+        and viewer_profile_type == AccountProfile.VIEWER_EXTERNAL_MONTHLY
+        and not is_admin
+        and not is_loader
+        and not is_validator
+    )
 
     dataset = get_object_or_404(
         DatasetType.objects.select_related("entity"),
@@ -132,7 +255,10 @@ def dataset_data(request, dataset_id: int):
         if not (has_global or (entity_ids and dataset.entity_id in entity_ids)):
             raise Http404
 
-    can_see_drafts = is_admin or is_loader or is_validator
+    if is_external_monthly_viewer and dataset.validation_frequency != DatasetType.MONTHLY:
+        raise Http404
+
+    can_see_drafts = (is_admin or is_loader or is_validator) and not is_viewer
     source = (request.GET.get("source") or "published").lower()
     if source not in ("published", "draft"):
         source = "published"

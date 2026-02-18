@@ -7,14 +7,14 @@ from django.db import transaction
 
 from performance.models import PerformanceIndicator, PerformanceIndicatorResult
 from performance.services import compute_indicator, month_window
-from plants.models import Plant
+from structure.models import Entity
 
 
 class Command(BaseCommand):
-    help = "Calcula indicadores de desempeno para una planta y mes, usando mapeos Admin y PublishedDataPoint."
+    help = "Calcula indicadores de desempeno para una entidad y mes, usando mapeos Admin y PublishedDataPoint."
 
     def add_arguments(self, parser):
-        parser.add_argument("--plant", required=True, help="Codigo de planta (PCS/PIKCL/PICL).")
+        parser.add_argument("--entity", help="Codigo de entidad.")
         parser.add_argument("--month", required=True, help="Mes en formato YYYY-MM.")
         parser.add_argument(
             "--frequency",
@@ -31,15 +31,17 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        plant_code: str = options["plant"]
+        entity_code: str = (options.get("entity") or "").strip()
         month_raw: str = options["month"]
         dry_run: bool = options["dry_run"]
         overwrite: bool = options["overwrite"]
         frequency: str = options["frequency"]
 
-        plant = Plant.objects.filter(code=plant_code).first()
-        if not plant:
-            raise CommandError(f"Planta no encontrada: {plant_code}")
+        if not entity_code:
+            raise CommandError("Debe indicar --entity CODIGO.")
+        entity = Entity.objects.filter(code=entity_code, is_active=True).first()
+        if not entity:
+            raise CommandError(f"Entidad no encontrada: {entity_code}")
 
         try:
             year_s, month_s = month_raw.split("-", 1)
@@ -53,12 +55,12 @@ class Command(BaseCommand):
         window = month_window(year, month)
 
         indicators = list(
-            PerformanceIndicator.objects.filter(plant=plant, is_active=True)
+            PerformanceIndicator.objects.filter(entity=entity, is_active=True)
             .prefetch_related("variables")
             .order_by("key")
         )
         if not indicators:
-            self.stdout.write(self.style.WARNING(f"No hay indicadores activos para {plant.code}."))
+            self.stdout.write(self.style.WARNING(f"No hay indicadores activos para {entity.code}."))
             return
 
         created = 0
@@ -71,7 +73,7 @@ class Command(BaseCommand):
 
             existing = PerformanceIndicatorResult.objects.filter(
                 indicator=indicator,
-                plant=plant,
+                entity=entity,
                 period_end=window.period_end,
                 frequency=frequency,
             ).first()
@@ -113,7 +115,7 @@ class Command(BaseCommand):
             else:
                 PerformanceIndicatorResult.objects.create(
                     indicator=indicator,
-                    plant=plant,
+                    entity=entity,
                     period_start=window.period_start,
                     period_end=window.period_end,
                     frequency=frequency,

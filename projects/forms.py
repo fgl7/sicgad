@@ -1,7 +1,6 @@
 from django import forms
 
-from plants.models import Plant
-from structure.models import Category
+from structure.models import Category, Entity
 from schemas.models import DatasetType
 from .models import Project, ProjectReportConfig
 
@@ -28,7 +27,7 @@ class ProjectForm(forms.ModelForm):
         "start_date",
         "end_date",
         "budget_mmbs",
-        "plants",
+        "entities",
         "category",
         "is_active",
     }
@@ -45,7 +44,7 @@ class ProjectForm(forms.ModelForm):
             "start_date",
             "end_date",
             "budget_mmbs",
-            "plants",
+            "entities",
             "is_active",
         ]
         widgets = {
@@ -97,7 +96,7 @@ class ProjectForm(forms.ModelForm):
                     "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
                 }
             ),
-            "plants": forms.SelectMultiple(
+            "entities": forms.SelectMultiple(
                 attrs={
                     "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
                     "size": 4,
@@ -112,7 +111,7 @@ class ProjectForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["plants"].queryset = Plant.objects.all().order_by("code")
+        self.fields["entities"].queryset = Entity.objects.filter(is_active=True).order_by("code", "name")
         self.fields["category"].required = True
         self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by(
             "subsector__sector__name",
@@ -200,12 +199,18 @@ class ProjectReportConfigForm(forms.ModelForm):
             project_id = self.instance.project_id
 
         dataset_qs = DatasetType.objects.filter(
-            project__isnull=False,
             status=DatasetType.STATUS_APPROVED,
-        ).order_by("name", "-version")
+            is_active=True,
+        ).select_related("entity").order_by("entity__name", "name", "-version")
 
         if project_id:
-            dataset_qs = dataset_qs.filter(project_id=project_id)
+            project = Project.objects.filter(pk=project_id).select_related("category").first()
+            if project and project.category_id:
+                dataset_qs = dataset_qs.filter(entity__category_id=project.category_id)
+            else:
+                dataset_qs = dataset_qs.none()
+        else:
+            dataset_qs = dataset_qs.none()
 
         self.fields["report_dataset"].queryset = dataset_qs
         self.fields["curve_program_dataset"].queryset = dataset_qs

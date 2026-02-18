@@ -199,10 +199,10 @@ def charts(request):
     performance_indicators = PerformanceIndicator.objects.none()
     if is_admin:
         performance_indicators = (
-            PerformanceIndicator.objects.select_related("plant")
+            PerformanceIndicator.objects.select_related("entity")
             .filter(is_active=True, results__isnull=False)
             .distinct()
-            .order_by("plant__code", "label", "key")
+            .order_by("entity__code", "label", "key")
         )
 
     template_name = "kpis/charts.html"
@@ -421,9 +421,6 @@ def dataset_data(request, dataset_id: int):
             "name": dataset.name,
             "entity_code": dataset.entity.code,
             "entity_name": dataset.entity.name,
-            # Compatibilidad temporal para JS legado.
-            "plant_code": dataset.entity.code,
-            "plant_name": dataset.entity.name,
             "validation_frequency": dataset.validation_frequency,
             "is_certification": dataset.is_certification,
         },
@@ -442,7 +439,7 @@ def performance_data(request, indicator_id: int):
     if not is_admin:
         raise Http404
 
-    indicator = get_object_or_404(PerformanceIndicator.objects.select_related("plant"), pk=indicator_id)
+    indicator = get_object_or_404(PerformanceIndicator.objects.select_related("entity"), pk=indicator_id)
 
     if not (is_admin or is_loader or is_validator or is_viewer):
         raise Http404
@@ -470,7 +467,7 @@ def performance_data(request, indicator_id: int):
     qs = (
         PerformanceIndicatorResult.objects.filter(
             indicator=indicator,
-            plant=indicator.plant,
+            entity=indicator.entity,
             frequency=frequency,
         )
         .order_by("period_end")
@@ -496,8 +493,8 @@ def performance_data(request, indicator_id: int):
             "key": indicator.key,
             "label": indicator.label,
             "unit": indicator.unit,
-            "plant_code": indicator.plant.code,
-            "plant_name": indicator.plant.name,
+            "entity_code": indicator.entity.code,
+            "entity_name": indicator.entity.name,
         },
         "frequency": frequency,
         "rows": rows,

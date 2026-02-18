@@ -5,17 +5,17 @@ from .models import Project, ProjectReportConfig
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ("name", "code", "plants_display", "executor", "is_active")
-    list_filter = ("is_active", "plants")
+    list_display = ("name", "code", "entities_display", "executor", "is_active")
+    list_filter = ("is_active", "entities")
     search_fields = ("name", "code", "executor", "location")
-    filter_horizontal = ("plants",)
+    filter_horizontal = ("entities",)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("plants")
+        return super().get_queryset(request).prefetch_related("entities")
 
-    @admin.display(description="Plantas")
-    def plants_display(self, obj):
-        return ", ".join(obj.plants.values_list("code", flat=True)) or "-"
+    @admin.display(description="Entidades")
+    def entities_display(self, obj):
+        return ", ".join(obj.entities.values_list("code", flat=True)) or "-"
 
 
 @admin.register(ProjectReportConfig)

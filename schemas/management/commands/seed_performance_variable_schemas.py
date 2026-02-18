@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from plants.models import Plant
+from structure.models import Entity
 from schemas.models import ColumnDef, DatasetType
 
 
@@ -23,7 +23,7 @@ class ColumnTemplate:
 
 @dataclass(frozen=True)
 class DatasetTemplate:
-    plant_code: str
+    entity_code: str
     name: str
     validation_frequency: str
     columns: list[ColumnTemplate]
@@ -31,12 +31,12 @@ class DatasetTemplate:
 
 def _upsert_dataset(template: DatasetTemplate, *, dry_run: bool) -> tuple[DatasetType | None, bool]:
     try:
-        plant = Plant.objects.get(code=template.plant_code)
-    except Plant.DoesNotExist:
+        entity = Entity.objects.get(code=template.entity_code, is_active=True)
+    except Entity.DoesNotExist:
         return None, False
 
     existing = (
-        DatasetType.objects.filter(plant=plant, name=template.name)
+        DatasetType.objects.filter(entity=entity, name=template.name)
         .order_by("-version")
         .first()
     )
@@ -47,7 +47,7 @@ def _upsert_dataset(template: DatasetTemplate, *, dry_run: bool) -> tuple[Datase
         return None, True
 
     created = DatasetType.objects.create(
-        plant=plant,
+        entity=entity,
         name=template.name,
         version=1,
         validation_frequency=template.validation_frequency,
@@ -94,29 +94,29 @@ class Command(BaseCommand):
             help="Muestra qué crearía, sin escribir en la BD.",
         )
         parser.add_argument(
-            "--plants",
+            "--entities",
             nargs="*",
             default=["PCS", "PIKCL", "PICL"],
-            help="Códigos de planta a incluir (default: PCS PIKCL PICL).",
+            help="Codigos de entidad a incluir (default: PCS PIKCL PICL).",
         )
 
     @transaction.atomic
     def handle(self, *args, **options):
         dry_run: bool = options["dry_run"]
-        selected_plants: set[str] = set(options["plants"] or [])
+        selected_entities: set[str] = set(options["entities"] or [])
 
         templates = _build_templates()
-        templates = [t for t in templates if t.plant_code in selected_plants]
+        templates = [t for t in templates if t.entity_code in selected_entities]
 
         if not templates:
             self.stdout.write(self.style.WARNING("No hay plantillas para ejecutar."))
             return
 
-        missing_plants = sorted({t.plant_code for t in templates} - set(Plant.objects.values_list("code", flat=True)))
-        if missing_plants:
+        missing_entities = sorted({t.entity_code for t in templates} - set(Entity.objects.values_list("code", flat=True)))
+        if missing_entities:
             self.stdout.write(
                 self.style.WARNING(
-                    "Plantas no encontradas (se omiten): " + ", ".join(missing_plants)
+                    "Entidades no encontradas (se omiten): " + ", ".join(missing_entities)
                 )
             )
 
@@ -127,12 +127,12 @@ class Command(BaseCommand):
             dataset, created = _upsert_dataset(tmpl, dry_run=dry_run)
             if created:
                 created_datasets += 1
-                self.stdout.write(f"[dataset] {'CREAR' if dry_run else 'CREADO'}: {tmpl.plant_code} / {tmpl.name}")
+                self.stdout.write(f"[dataset] {'CREAR' if dry_run else 'CREADO'}: {tmpl.entity_code} / {tmpl.name}")
             else:
                 if dataset:
-                    self.stdout.write(f"[dataset] OK: {tmpl.plant_code} / {tmpl.name} (v{dataset.version})")
+                    self.stdout.write(f"[dataset] OK: {tmpl.entity_code} / {tmpl.name} (v{dataset.version})")
                 else:
-                    self.stdout.write(f"[dataset] OMITIDO (planta no existe): {tmpl.plant_code} / {tmpl.name}")
+                    self.stdout.write(f"[dataset] OMITIDO (entidad no existe): {tmpl.entity_code} / {tmpl.name}")
                     continue
 
             if not dataset and dry_run:
@@ -161,7 +161,7 @@ def _build_templates() -> list[DatasetTemplate]:
     return [
         # PCS (Concentración de Sales)
         DatasetTemplate(
-            plant_code="PCS",
+            entity_code="PCS",
             name="Desempeño PCS - Extracción de salmuera (por pozo)",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -197,7 +197,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PCS",
+            entity_code="PCS",
             name="Desempeño PCS - Operación de piscinas (evaporación/cristales)",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -230,7 +230,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PCS",
+            entity_code="PCS",
             name="Desempeño PCS - Producción de sales (por tipo)",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -254,7 +254,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PCS",
+            entity_code="PCS",
             name="Desempeño PCS - Composición iónica mensual",
             validation_frequency=DatasetType.MONTHLY,
             columns=[
@@ -268,7 +268,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PCS",
+            entity_code="PCS",
             name="Desempeño PCS - Energía equivalente",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -282,7 +282,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PCS",
+            entity_code="PCS",
             name="Desempeño PCS - Evaporación teórica (modelo externo)",
             validation_frequency=DatasetType.MONTHLY,
             columns=[
@@ -296,7 +296,7 @@ def _build_templates() -> list[DatasetTemplate]:
         ),
         # PIKCL (Industrial KCl)
         DatasetTemplate(
-            plant_code="PIKCL",
+            entity_code="PIKCL",
             name="Desempeño KCl - Alimentación materia prima (por corriente)",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -337,7 +337,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PIKCL",
+            entity_code="PIKCL",
             name="Desempeño KCl - Producción (por tipo)",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -366,7 +366,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PIKCL",
+            entity_code="PIKCL",
             name="Desempeño KCl - Reactivos consumidos",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -387,7 +387,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PIKCL",
+            entity_code="PIKCL",
             name="Desempeño KCl - Agua y energía",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -413,7 +413,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PIKCL",
+            entity_code="PIKCL",
             name="Desempeño KCl - Colas y pérdidas",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -439,7 +439,7 @@ def _build_templates() -> list[DatasetTemplate]:
         ),
         # PICL (Industrial Li2CO3)
         DatasetTemplate(
-            plant_code="PICL",
+            entity_code="PICL",
             name="Desempeño Li2CO3 - Materia prima (Sulfato de Litio)",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -460,7 +460,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PICL",
+            entity_code="PICL",
             name="Desempeño Li2CO3 - Producción",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -481,7 +481,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PICL",
+            entity_code="PICL",
             name="Desempeño Li2CO3 - Reactivos consumidos",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -502,7 +502,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PICL",
+            entity_code="PICL",
             name="Desempeño Li2CO3 - Agua y energía",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -528,7 +528,7 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
         DatasetTemplate(
-            plant_code="PICL",
+            entity_code="PICL",
             name="Desempeño Li2CO3 - Residuos y pérdidas",
             validation_frequency=DatasetType.DAILY,
             columns=[
@@ -553,4 +553,6 @@ def _build_templates() -> list[DatasetTemplate]:
             ],
         ),
     ]
+
+
 

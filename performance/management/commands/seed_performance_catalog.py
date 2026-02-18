@@ -6,12 +6,12 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from performance.models import PerformanceIndicator, PerformanceVariable
-from plants.models import Plant
+from structure.models import Entity
 
 
 @dataclass(frozen=True)
 class VariableTemplate:
-    plant_code: str
+    entity_code: str
     key: str
     label: str
     unit: str = ""
@@ -21,7 +21,7 @@ class VariableTemplate:
 
 @dataclass(frozen=True)
 class IndicatorTemplate:
-    plant_code: str
+    entity_code: str
     key: str
     label: str
     unit: str = ""
@@ -44,9 +44,9 @@ class Command(BaseCommand):
         inds_created = 0
 
         for v in _variables():
-            plant = Plant.objects.filter(code=v.plant_code).first()
-            if not plant:
-                self.stdout.write(self.style.WARNING(f"[var] OMITIDA (planta no existe): {v.plant_code} / {v.key}"))
+            entity = Entity.objects.filter(code=v.entity_code, is_active=True).first()
+            if not entity:
+                self.stdout.write(self.style.WARNING(f"[var] OMITIDA (entidad no existe): {v.entity_code} / {v.key}"))
                 continue
 
             if PerformanceVariable.objects.filter(key=v.key).exists():
@@ -58,7 +58,7 @@ class Command(BaseCommand):
 
             PerformanceVariable.objects.create(
                 key=v.key,
-                plant=plant,
+                entity=entity,
                 label=v.label,
                 unit=v.unit,
                 value_type=v.value_type,
@@ -70,9 +70,9 @@ class Command(BaseCommand):
         # indicadores mínimos (placeholder) para que el Admin tenga catálogo.
         variables_by_key = {pv.key: pv for pv in PerformanceVariable.objects.all()}
         for ind in _indicators():
-            plant = Plant.objects.filter(code=ind.plant_code).first()
-            if not plant:
-                self.stdout.write(self.style.WARNING(f"[ind] OMITIDO (planta no existe): {ind.plant_code} / {ind.key}"))
+            entity = Entity.objects.filter(code=ind.entity_code, is_active=True).first()
+            if not entity:
+                self.stdout.write(self.style.WARNING(f"[ind] OMITIDO (entidad no existe): {ind.entity_code} / {ind.key}"))
                 continue
 
             if PerformanceIndicator.objects.filter(key=ind.key).exists():
@@ -84,7 +84,7 @@ class Command(BaseCommand):
 
             indicator = PerformanceIndicator.objects.create(
                 key=ind.key,
-                plant=plant,
+                entity=entity,
                 label=ind.label,
                 unit=ind.unit,
                 description=ind.description,
@@ -187,3 +187,5 @@ def _indicators() -> list[IndicatorTemplate]:
             variable_keys=["lic.product_mass_tm", "lic.feed_mass_tm"],
         ),
     ]
+
+

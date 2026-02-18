@@ -145,7 +145,7 @@ def resolve_variable_value(variable: PerformanceVariable, window: MonthWindow) -
 
     qs = (
         PublishedDataPoint.objects.filter(
-            instance__plant=variable.plant,
+            instance__entity=variable.entity,
             instance__dataset_type=mapping.dataset_type,
             instance__period__gte=shifted_start,
             instance__period__lte=shifted_end,
@@ -177,7 +177,7 @@ def resolve_variable_value(variable: PerformanceVariable, window: MonthWindow) -
         # LAST: último por fecha (period) y luego por id
         last = (
             PublishedDataPoint.objects.filter(
-                instance__plant=variable.plant,
+                instance__entity=variable.entity,
                 instance__dataset_type=mapping.dataset_type,
                 instance__period__gte=shifted_start,
                 instance__period__lte=shifted_end,
@@ -251,7 +251,7 @@ def resolve_input_value(
 
     qs = (
         PublishedDataPoint.objects.filter(
-            instance__plant=input_def.indicator.plant,
+            instance__entity=input_def.indicator.entity,
             instance__dataset_type=dataset_type,
             instance__period__gte=shifted_start,
             instance__period__lte=shifted_end,
@@ -289,7 +289,7 @@ def resolve_input_value(
     elif agg == "LAST":
         last = (
             PublishedDataPoint.objects.filter(
-                instance__plant=input_def.indicator.plant,
+                instance__entity=input_def.indicator.entity,
                 instance__dataset_type=dataset_type,
                 instance__period__gte=shifted_start,
                 instance__period__lte=shifted_end,
@@ -490,13 +490,13 @@ def compute_indicator_for_stage(
 
 
 def compute_and_store_indicators(
-    plant,
+    entity,
     window: MonthWindow,
     *,
     frequency: str,
 ) -> int:
     indicators = list(
-        PerformanceIndicator.objects.filter(plant=plant, is_active=True)
+        PerformanceIndicator.objects.filter(entity=entity, is_active=True)
         .prefetch_related("variables")
         .order_by("key")
     )
@@ -505,7 +505,7 @@ def compute_and_store_indicators(
         value, status, trace = compute_indicator(indicator, window, frequency=frequency)
         PerformanceIndicatorResult.objects.update_or_create(
             indicator=indicator,
-            plant=plant,
+            entity=entity,
             period_end=window.period_end,
             frequency=frequency,
             defaults={
@@ -541,7 +541,7 @@ def resolve_variable_value_for_stage(
 
     qs = (
         PublishedDataPoint.objects.filter(
-            instance__plant=variable.plant,
+            instance__entity=variable.entity,
             instance__dataset_type=mapping.dataset_type,
             instance__period__gte=shifted_start,
             instance__period__lte=shifted_end,
@@ -571,7 +571,7 @@ def resolve_variable_value_for_stage(
     elif agg == "LAST":
         last = (
             PublishedDataPoint.objects.filter(
-                instance__plant=variable.plant,
+                instance__entity=variable.entity,
                 instance__dataset_type=mapping.dataset_type,
                 instance__period__gte=shifted_start,
                 instance__period__lte=shifted_end,

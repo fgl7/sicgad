@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 
-from plants.models import Plant
+from structure.models import Entity
 
 
 class Project(models.Model):
@@ -21,11 +21,11 @@ class Project(models.Model):
         blank=True,
         related_name="projects",
     )
-    plants = models.ManyToManyField(
-        Plant,
+    entities = models.ManyToManyField(
+        Entity,
         related_name="projects",
         blank=True,
-        help_text="Plantas o unidades operativas asociadas al proyecto.",
+        help_text="Entidades operativas asociadas al proyecto.",
     )
     is_active = models.BooleanField(default=True)
 
@@ -85,8 +85,9 @@ class ProjectReportConfig(models.Model):
             "curve_executed_dataset",
         ):
             dataset = getattr(self, field_name, None)
-            if dataset and dataset.project_id != self.project_id:
-                errors[field_name] = "El esquema debe pertenecer al mismo proyecto."
+            if dataset and self.project and self.project.category_id:
+                if not dataset.entity_id or dataset.entity.category_id != self.project.category_id:
+                    errors[field_name] = "El esquema debe pertenecer a la misma categoria del proyecto."
 
         if self.curve_executed_dataset and self.curve_executed_dataset.validation_frequency not in (
             "WEEKLY",

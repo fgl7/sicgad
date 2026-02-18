@@ -22,7 +22,7 @@ class Command(BaseCommand):
 
         fields = [
             "variable_key",
-            "plant_code",
+            "entity_code",
             "dataset_slug",
             "column_name",
             "stage",  # DRAFT/CERTIFIED
@@ -34,7 +34,7 @@ class Command(BaseCommand):
             "is_active",
         ]
 
-        qs = PerformanceVariable.objects.select_related("plant").order_by("plant__code", "key")
+        qs = PerformanceVariable.objects.select_related("entity").order_by("entity__code", "key")
         with open(output_path, "w", newline="", encoding="utf-8") as fh:
             writer = csv.DictWriter(fh, fieldnames=fields)
             writer.writeheader()
@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 writer.writerow(
                     {
                         "variable_key": v.key,
-                        "plant_code": v.plant.code,
+                        "entity_code": v.entity.code,
                         "dataset_slug": "",
                         "column_name": "",
                         "stage": "DRAFT",

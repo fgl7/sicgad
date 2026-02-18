@@ -24,31 +24,17 @@
             {% endif %}
           </div>
           <div>
-            <label class="block font-semibold text-slate-200 mb-1">{{ dataset_form.plant.label }}</label>
-            {% if loader_default_plant %}
+            <label class="block font-semibold text-slate-200 mb-1">{{ dataset_form.entity.label }}</label>
+            {% if loader_default_entity %}
               <div class="text-slate-200 text-xs mb-1">
-                {{ loader_default_plant.code }} - {{ loader_default_plant.name }}
+                {{ loader_default_entity.code|default:loader_default_entity.name }} - {{ loader_default_entity.name }}
               </div>
-              <input type="hidden" name="{{ dataset_form.plant.name }}" value="{{ loader_default_plant.id }}" />
+              <input type="hidden" name="{{ dataset_form.entity.name }}" value="{{ loader_default_entity.id }}" />
             {% else %}
-              {{ dataset_form.plant }}
+              {{ dataset_form.entity }}
             {% endif %}
-            {% if dataset_form.plant.errors %}
-              <p class="text-red-400 mt-1">{{ dataset_form.plant.errors.0 }}</p>
-            {% endif %}
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-200 mb-1">{{ dataset_form.project.label }}</label>
-            {% if loader_default_project %}
-              <div class="text-slate-200 text-xs mb-1">
-                {{ loader_default_project.name }}
-              </div>
-              <input type="hidden" name="{{ dataset_form.project.name }}" value="{{ loader_default_project.id }}" />
-            {% else %}
-              {{ dataset_form.project }}
-            {% endif %}
-            {% if dataset_form.project.errors %}
-              <p class="text-red-400 mt-1">{{ dataset_form.project.errors.0 }}</p>
+            {% if dataset_form.entity.errors %}
+              <p class="text-red-400 mt-1">{{ dataset_form.entity.errors.0 }}</p>
             {% endif %}
           </div>
           <div>
@@ -162,13 +148,7 @@
               {{ inst.dataset_type.name }} — {{ inst.period }}
             </div>
             <div class="text-slate-400 text-[11px]">
-              {% if inst.plant %}
-                {{ inst.plant.code }}
-              {% elif inst.project %}
-                {{ inst.project.name }}
-              {% else %}
-                N/A
-              {% endif %}
+              {{ inst.entity.code|default:inst.entity.name|default:"N/A" }}
               • {{ inst.get_state_display }}
             </div>
           </div>
@@ -183,3 +163,6 @@
 {% block extra_js %}
   <script src="{% static 'js/ingest_manual.js' %}"></script>
 {% endblock %}
+
+
+

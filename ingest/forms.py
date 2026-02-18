@@ -41,8 +41,6 @@ class DatasetInstanceUploadForm(forms.ModelForm):
         self,
         *args,
         loader_entities: list[int] | None = None,
-        loader_plants: list[int] | None = None,
-        loader_projects: list[int] | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -150,7 +148,6 @@ class HistoricalDatasetUploadForm(forms.Form):
         self,
         *args,
         loader_entities: list[int] | None = None,
-        loader_plants: list[int] | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -241,8 +238,6 @@ class ManualDatasetForm(forms.ModelForm):
         self,
         *args,
         loader_entities: list[int] | None = None,
-        loader_plants: list[int] | None = None,
-        loader_projects: list[int] | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)

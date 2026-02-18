@@ -223,28 +223,20 @@ Definidas en `config/urls.py`:
 - `/kpis/`
 
 ## 13. Deuda tecnica conocida (importante)
-Todavia existe mezcla parcial de modelo nuevo (`entity`) con referencias legacy (`plant/project`) en algunos modulos.
+El legado de `plants` fue retirado y el flujo operativo ya esta alineado a `entity`.
 
-Principal foco:
-- `ingest/views.py` y plantillas de detalle/historico: revisar continuamente que no reaparezcan `select_related("plant")` o campos legacy.
-- `structure/views.py` aun puede contener conteos de impacto con legado en ramas especificas.
-- `config/settings.py` mantiene apps legacy (`plants`, `projects`) instaladas por compatibilidad.
-- `performance/*` sigue acoplado a `Plant` (modelos/servicios/formulas), migracion a `Entity` pendiente.
-
-Avances ya alineados a `entity`:
-- `ingest/views.py:submit_historical_batch` migrado a `entity`.
-- `ingest/views.py:instance_detail` migrado a `entity`.
-- `templates/ingest/instance_detail.html` migrado a `entity`.
-- `ingest/utils.py:_auto_compute_performance` protegido para no romper cuando la instancia no expone `plant`.
+Foco actual de deuda:
+- Consolidar cobertura de pruebas (ingest, validation, kpis, performance).
+- Normalizar textos/encoding en plantillas antiguas.
+- Revisar y limpiar documentacion tecnica vieja que todavia menciona `plant/project`.
 
 Impacto:
-- Riesgo de `FieldError` si se reintroducen ramas legacy en consultas.
-- Riesgo de regresiones al tocar ingest/validation sin revisar referencias cruzadas.
+- Menor riesgo de `FieldError` por referencias legacy eliminadas.
+- Riesgo principal restante: regresiones funcionales por refactor amplio sin suite completa de tests.
 
 Regla para desarrollo futuro:
-- Priorizar siempre flujo por `entity`.
-- Si se toca `ingest/views.py`, validar explicitamente que no queden consultas `plant/project` incompatibles con modelos actuales.
-
+- Priorizar siempre flujo por `entity` en modelos, consultas, formularios, templates y APIs.
+- No reintroducir aliases o nuevas dependencias al dominio eliminado (`plants`).
 ## 14. Estado funcional practico (resumen)
 Funciona y se usa activamente:
 - Gestion de niveles por entidad.
@@ -261,13 +253,13 @@ Funciona y se usa activamente:
 - KPIs de dataset con ventana temporal reciente (3 meses) cuando aplica columna fecha.
 
 Requiere refactor planificado:
-- Remocion completa de legado `plant/project` en vistas/servicios restantes.
+- Extender pruebas de regresion para cubrir flujos refactorizados a `entity`.
 - Normalizacion de textos/encoding en plantillas antiguas (sin BOM en templates).
 - Cobertura de tests automatizados por flujo critico.
 
 ## 15. Checklist rapido antes de tocar codigo
 1. Confirmar si el flujo es por `entity` (debe ser SI).
-2. Revisar si el archivo toca ramas legacy `plant/project`.
+2. Verificar consistencia del cambio con el dominio `entity` (modelos, consultas y templates).
 3. Revisar si el cambio afecta perfiles de visualizador (`viewer_profile_type`).
 4. Ejecutar:
    - `python manage.py check`
@@ -291,7 +283,7 @@ Requiere refactor planificado:
 8. `templates/base.html`
 9. `templates/partials/sidebar.html`
 10. `templates/partials/sidebar_authority_mhe.html`
-11. `ingest/views.py` (con foco en deuda tecnica legacy)
+11. `performance/views.py` (builder y calculo por entidad)
 
 ---
 

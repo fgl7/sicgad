@@ -32,7 +32,6 @@ def _redirect_manage_levels(open_sector_id: int | None = None):
 def _get_sector_operational_impact(sector: Sector) -> dict:
     from accounts.models import Membership
     from ingest.models import DatasetInstance, HistoricalImportBatch
-    from plants.models import Plant
     from projects.models import Project
     from schemas.models import DatasetType
     from validation.models import ValidationAction
@@ -50,7 +49,6 @@ def _get_sector_operational_impact(sector: Sector) -> dict:
             dataset_instance__entity__category__subsector__sector=sector
         ).count(),
         "projects": Project.objects.filter(category__subsector__sector=sector).count(),
-        "plants": Plant.objects.filter(category__subsector__sector=sector).count(),
     }
 
     labels = {
@@ -61,7 +59,6 @@ def _get_sector_operational_impact(sector: Sector) -> dict:
         "historical_imports": "cargas historicas",
         "validation_actions": "validaciones",
         "projects": "proyectos",
-        "plants": "plantas",
     }
 
     blocking_keys = (
@@ -71,7 +68,6 @@ def _get_sector_operational_impact(sector: Sector) -> dict:
         "historical_imports",
         "validation_actions",
         "projects",
-        "plants",
     )
     has_blocking_data = any(counts[key] > 0 for key in blocking_keys)
 
@@ -132,12 +128,10 @@ def _get_entity_operational_impact(entity: Entity) -> dict:
 
 
 def _get_category_operational_impact(category: Category) -> dict:
-    from plants.models import Plant
     from projects.models import Project
 
     entity_ids = list(Entity.objects.filter(category=category).values_list("id", flat=True))
     projects_count = Project.objects.filter(category=category).count()
-    plants_count = Plant.objects.filter(category=category).count()
 
     operational = {
         "memberships": 0,
@@ -170,13 +164,11 @@ def _get_category_operational_impact(category: Category) -> dict:
 
     counts = {
         "projects": projects_count,
-        "plants": plants_count,
         **operational,
     }
 
     labels = {
         "projects": "proyectos",
-        "plants": "plantas",
         "memberships": "usuarios",
         "dataset_types": "esquemas",
         "approved_dataset_types": "esquemas aprobados",
@@ -186,7 +178,6 @@ def _get_category_operational_impact(category: Category) -> dict:
     }
     blocking_keys = (
         "projects",
-        "plants",
         "memberships",
         "dataset_types",
         "dataset_instances",
@@ -204,12 +195,10 @@ def _get_category_operational_impact(category: Category) -> dict:
 
 
 def _get_subsector_operational_impact(subsector: Subsector) -> dict:
-    from plants.models import Plant
     from projects.models import Project
 
     entity_ids = list(Entity.objects.filter(category__subsector=subsector).values_list("id", flat=True))
     projects_count = Project.objects.filter(category__subsector=subsector).count()
-    plants_count = Plant.objects.filter(category__subsector=subsector).count()
 
     operational = {
         "memberships": 0,
@@ -242,13 +231,11 @@ def _get_subsector_operational_impact(subsector: Subsector) -> dict:
 
     counts = {
         "projects": projects_count,
-        "plants": plants_count,
         **operational,
     }
 
     labels = {
         "projects": "proyectos",
-        "plants": "plantas",
         "memberships": "usuarios",
         "dataset_types": "esquemas",
         "approved_dataset_types": "esquemas aprobados",
@@ -258,7 +245,6 @@ def _get_subsector_operational_impact(subsector: Subsector) -> dict:
     }
     blocking_keys = (
         "projects",
-        "plants",
         "memberships",
         "dataset_types",
         "dataset_instances",

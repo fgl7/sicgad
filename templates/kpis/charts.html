@@ -95,7 +95,7 @@
                     class="flex items-center gap-3 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer group">
                     <input type="checkbox" value="{{ ind.id }}"
                         class="size-4 rounded-md border-slate-600 bg-black/40 text-amber-500 focus:ring-amber-500/20" {% if forloop.first %}checked{% endif %} />
-                    <span class="font-medium">[{{ ind.plant.code }}] {{ ind.label }}</span>
+                    <span class="font-medium">[{{ ind.entity.code|default:ind.entity.name }}] {{ ind.label }}</span>
                 </label>
                 {% endfor %}
             </div>

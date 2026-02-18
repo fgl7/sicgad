@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('plants', '0001_initial'),
         ('schemas', '0001_initial'),
         ('structure', '0001_initial'),
     ]
@@ -32,7 +31,7 @@ class Migration(migrations.Migration):
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('category', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='projects', to='structure.category')),
-                ('plants', models.ManyToManyField(blank=True, help_text='Plantas o unidades operativas asociadas al proyecto.', related_name='projects', to='plants.plant')),
+                ('entities', models.ManyToManyField(blank=True, help_text='Entidades operativas asociadas al proyecto.', related_name='projects', to='structure.entity')),
             ],
             options={
                 'ordering': ['name'],

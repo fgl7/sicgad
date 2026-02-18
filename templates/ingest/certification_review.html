@@ -28,7 +28,7 @@
                 </div>
                 <div>
                     <p class="text-[9px] font-bold text-slate-600 uppercase">Origen</p>
-                    <p class="text-sm font-bold text-sky-400">{{ instance.plant.code|default:instance.project.code }}</p>
+                    <p class="text-sm font-bold text-sky-400">{{ instance.entity.code|default:instance.entity.name }}</p>
                 </div>
                 <div>
                     <p class="text-[9px] font-bold text-slate-600 uppercase">Mes Consolidado</p>
@@ -281,3 +281,4 @@
 {% block extra_js %}
   <script src="{% static 'js/certification_review.js' %}"></script>
 {% endblock %}
+

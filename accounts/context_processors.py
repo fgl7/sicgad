@@ -281,7 +281,4 @@ def admin_flags(request):
         "loader_schema_approved": loader_schema_approved,
         "loader_schema_rejected": loader_schema_rejected,
         "loader_default_entity": loader_default_entity,
-        # Compatibilidad temporal para plantillas antiguas.
-        "loader_default_plant": loader_default_entity,
-        "loader_default_project": None,
     }

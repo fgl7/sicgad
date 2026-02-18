@@ -103,8 +103,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function buildSeriesName(indicator, fallbackIndex) {
     const parts = [];
-    if (indicator && indicator.plant_code) {
-      parts.push('[' + indicator.plant_code + ']');
+    if (indicator && indicator.entity_code) {
+      parts.push('[' + indicator.entity_code + ']');
     }
     if (indicator && indicator.label) {
       parts.push(indicator.label);

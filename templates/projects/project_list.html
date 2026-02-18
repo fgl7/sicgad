@@ -22,7 +22,7 @@
                 <thead>
                     <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
                         <th class="px-6 py-4">Código / Proyecto</th>
-                        <th class="px-6 py-4">Unidades Vinculadas</th>
+                        <th class="px-6 py-4">Entidades Vinculadas</th>
                         <th class="px-6 py-4 text-center">Estado</th>
                         <th class="px-6 py-4 text-right">Acciones</th>
                     </tr>
@@ -38,10 +38,10 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            {% with project.plants.all as plant_list %}
+                            {% with project.entities.all as entity_list %}
                                 <div class="flex flex-wrap gap-1">
-                                    {% for plant in plant_list %}
-                                        <span class="px-2 py-0.5 rounded bg-slate-800 text-[9px] font-black text-slate-400 border border-white/5">{{ plant.code }}</span>
+                                    {% for entity in entity_list %}
+                                        <span class="px-2 py-0.5 rounded bg-slate-800 text-[9px] font-black text-slate-400 border border-white/5">{{ entity.code|default:entity.name }}</span>
                                     {% empty %}
                                         <span class="text-slate-600 italic text-[10px]">Sin vinculación</span>
                                     {% endfor %}
@@ -77,3 +77,4 @@
     </div>
 </div>
 {% endblock %}
+

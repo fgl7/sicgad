@@ -622,13 +622,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     const dataset = currentData.dataset || {};
     const name = sanitizeFileName(dataset.name);
-    const plant = sanitizeFileName(dataset.plant_code);
+    const entity = sanitizeFileName(dataset.entity_code);
     const mode = sanitizeFileName(modeSelect.value || "published");
     let range = "";
     if (filterBounds.start && filterBounds.end) {
       range = `${formatInputDate(filterBounds.start)}_a_${formatInputDate(filterBounds.end)}`;
     }
-    const pieces = ["sicgad", plant, name, mode, range].filter(Boolean);
+    const pieces = ["sicgad", entity, name, mode, range].filter(Boolean);
     return pieces.join("_");
   }
 

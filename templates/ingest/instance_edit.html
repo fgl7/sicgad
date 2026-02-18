@@ -7,15 +7,7 @@
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4 text-xs">
     <h2 class="text-sm font-semibold">Datos de la carga</h2>
     <p class="text-slate-300">
-      <strong>Planta/Proyecto:</strong>
-      {% if instance.plant %}
-        {{ instance.plant.code }}
-      {% elif instance.project %}
-        {{ instance.project.name }}
-      {% else %}
-        -
-      {% endif %}
-      <br />
+      <strong>Entidad:</strong> {{ instance.entity.code|default:instance.entity.name }}<br />
       <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
       <strong>Periodo:</strong> {{ instance.period }}<br />
       <strong>Estado actual:</strong> {{ instance.get_state_display }}
@@ -65,3 +57,4 @@
     </form>
   </section>
 {% endblock %}
+

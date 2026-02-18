@@ -18,8 +18,6 @@ import openpyxl
 import threading
 
 from accounts.models import Membership
-from plants.models import Plant
-from projects.models import Project
 from schemas.models import DatasetType
 from schemas.services import previous_month_range
 from structure.models import Entity
@@ -777,22 +775,14 @@ def upload_manual(request):
 
     loader_memberships = (
         Membership.objects.filter(user=user, role="LOADER", is_active=True)
-        .select_related("plant", "project")
+        .select_related("entity")
     )
-    has_global_loader = loader_memberships.filter(
-        plant__isnull=True, project__isnull=True
-    ).exists()
+    has_global_loader = loader_memberships.filter(entity__isnull=True).exists()
     if has_global_loader:
-        loader_plants = list(Plant.objects.values_list("id", flat=True))
-        loader_projects = list(Project.objects.values_list("id", flat=True))
+        loader_entities = list(Entity.objects.filter(is_active=True).values_list("id", flat=True))
     else:
-        loader_plants = list(
-            loader_memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
-        )
-        loader_projects = list(
-            loader_memberships.exclude(project__isnull=True).values_list(
-                "project_id", flat=True
-            )
+        loader_entities = list(
+            loader_memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True)
         )
 
     dataset_initial = request.GET.get("dataset_type")
@@ -804,8 +794,7 @@ def upload_manual(request):
 
     dataset_form = ManualDatasetForm(
         request.POST or None,
-        loader_plants=loader_plants,
-        loader_projects=loader_projects,
+        loader_entities=loader_entities,
         initial={"dataset_type": dataset_initial} if dataset_initial else None,
     )
 
@@ -915,8 +904,7 @@ def upload_manual(request):
 
         if valid:
             dataset_type = dataset_form.cleaned_data["dataset_type"]
-            plant = dataset_form.cleaned_data["plant"]
-            project = dataset_form.cleaned_data["project"]
+            entity = dataset_form.cleaned_data["entity"]
             period = dataset_form.cleaned_data["period"]
 
             buffer = StringIO()
@@ -939,8 +927,7 @@ def upload_manual(request):
 
             instance = DatasetInstance(
                 dataset_type=dataset_type,
-                plant=plant,
-                project=project,
+                entity=entity,
                 period=period,
                 state=DatasetInstance.STATE_DRAFT,
                 row_count=len(rows_data),
@@ -949,12 +936,8 @@ def upload_manual(request):
             )
             if user.is_authenticated:
                 membership = (
-                    Membership.objects.filter(user=user, is_active=True)
-                    .filter(
-                        Q(plant=plant)
-                        | Q(project=project)
-                        | Q(plant__isnull=True, project__isnull=True)
-                    )
+                    Membership.objects.filter(user=user, role="LOADER", is_active=True)
+                    .filter(Q(entity=entity) | Q(entity__isnull=True))
                     .order_by("role")
                     .first()
                 )
@@ -973,17 +956,13 @@ def upload_manual(request):
                 request=request,
                 module="Ingest",
                 object_repr=f"{instance.dataset_type.name} | {instance.period}",
-                details=(
-                    f"Captura manual en planta {instance.plant.code}"
-                    if instance.plant
-                    else f"Captura manual en proyecto {instance.project.name}"
-                ),
+                details=f"Captura manual en entidad {instance.entity.code or instance.entity.name}",
             )
             return redirect(reverse("ingest:upload"))
 
     if request.user.is_authenticated:
         instances = (
-            DatasetInstance.objects.select_related("dataset_type", "plant")
+            DatasetInstance.objects.select_related("dataset_type", "entity")
             .filter(created_by__user=request.user)
             .order_by("-created_at")[:10]
         )
@@ -995,8 +974,7 @@ def upload_manual(request):
     can_add_rows = rows_count < 20
     can_remove_rows = rows_count > 1
 
-    default_plant = Plant.objects.filter(id=loader_plants[0]).first() if loader_plants else None
-    default_project = Project.objects.filter(id=loader_projects[0]).first() if loader_projects else None
+    default_entity = Entity.objects.filter(id=loader_entities[0]).first() if loader_entities else None
 
     return render(
         request,
@@ -1012,8 +990,7 @@ def upload_manual(request):
             "can_add_rows": can_add_rows,
             "can_remove_rows": can_remove_rows,
             "selected_dataset": selected_dataset,
-            "loader_default_plant": default_plant,
-            "loader_default_project": default_project,
+            "loader_default_entity": default_entity,
             "month_lock_enabled": month_lock_enabled,
         },
     )
@@ -1326,7 +1303,7 @@ def _recalculate_monthly_totals(instance: DatasetInstance) -> dict:
     monthly_instances = list(
         DatasetInstance.objects.filter(
             dataset_type=source,
-            plant=instance.plant,
+            entity=instance.entity,
             state__in=[DatasetInstance.STATE_PUBLISHED, DatasetInstance.STATE_LOCKED],
             period__gte=month_start,
             period__lte=month_end,
@@ -1467,7 +1444,7 @@ def _submit_instance_to_validation(instance: DatasetInstance, request) -> None:
 def certification_review(request, pk):
     instance = (
         DatasetInstance.objects.select_related(
-            "dataset_type", "plant", "project", "created_by__user"
+            "dataset_type", "entity", "created_by__user"
         )
         .filter(pk=pk)
         .first()
@@ -1495,9 +1472,7 @@ def certification_review(request, pk):
             is_active=True,
         )
         .filter(
-            Q(plant=instance.plant)
-            | Q(project=instance.project)
-            | Q(plant__isnull=True, project__isnull=True)
+            Q(entity=instance.entity) | Q(entity__isnull=True)
         )
         .first()
     )
@@ -1680,7 +1655,7 @@ def certification_review(request, pk):
         monthly_instances = list(
             DatasetInstance.objects.filter(
                 dataset_type=dataset.source_dataset,
-                plant=instance.plant,
+                entity=instance.entity,
                 state__in=[DatasetInstance.STATE_PUBLISHED, DatasetInstance.STATE_LOCKED],
                 period__gte=month_start,
                 period__lte=month_end,
@@ -2069,7 +2044,7 @@ def submit_instance(request, pk):
 
     instance = (
         DatasetInstance.objects.select_related(
-            "dataset_type", "plant", "project", "created_by__user"
+            "dataset_type", "entity", "created_by__user"
         )
         .filter(pk=pk)
         .first()
@@ -2091,9 +2066,7 @@ def submit_instance(request, pk):
             is_active=True,
         )
         .filter(
-            Q(plant=instance.plant)
-            | Q(project=instance.project)
-            | Q(plant__isnull=True, project__isnull=True)
+            Q(entity=instance.entity) | Q(entity__isnull=True)
         )
         .exists()
     ):
@@ -2166,7 +2139,7 @@ def submit_historical_batch(request, batch_id: int):
 
 def edit_instance(request, pk):
     instance = (
-        DatasetInstance.objects.select_related("dataset_type", "plant", "created_by__user")
+        DatasetInstance.objects.select_related("dataset_type", "entity", "created_by__user")
         .filter(pk=pk)
         .first()
     )

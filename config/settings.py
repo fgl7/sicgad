@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_totp",
     # Project apps
     "accounts",
-    "plants",
     "structure",
     "schemas",
     "ingest",

@@ -133,12 +133,12 @@ def _can_access_project(user, project) -> bool:
         user=user, role="ADMIN", is_active=True
     ).exists():
         return True
-    scope_filter = Q(project=project)
-    plant_ids = list(project.plants.values_list("id", flat=True))
-    if plant_ids:
-        scope_filter |= Q(plant_id__in=plant_ids)
-    scope_filter |= Q(plant__isnull=True, project__isnull=True)
-    return Membership.objects.filter(user=user, is_active=True).filter(scope_filter).exists()
+    memberships = Membership.objects.filter(user=user, is_active=True)
+    if memberships.filter(entity__isnull=True).exists():
+        return True
+    allowed_entities = set(memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True))
+    project_entities = set(project.entities.values_list("id", flat=True))
+    return bool(allowed_entities.intersection(project_entities))
 
 
 def _to_float(value):
@@ -300,7 +300,7 @@ def _pick_year(request, fallback_year: int | None = None) -> int:
 
 @admin_role_required
 def project_list(request):
-    projects = Project.objects.prefetch_related("plants").order_by("name")
+    projects = Project.objects.prefetch_related("entities").order_by("name")
     return render(request, "projects/project_list.html", {"projects": projects})
 
 
@@ -464,27 +464,20 @@ def report_list(request):
         "project",
         "report_dataset",
         "curve_executed_dataset",
-    ).prefetch_related("project__plants").filter(is_active=True)
+    ).prefetch_related("project__entities").filter(is_active=True)
 
     is_admin = user.is_superuser or Membership.objects.filter(
         user=user, role="ADMIN", is_active=True
     ).exists()
     if not is_admin:
         memberships = Membership.objects.filter(user=user, is_active=True)
-        has_global = memberships.filter(
-            plant__isnull=True, project__isnull=True
-        ).exists()
+        has_global = memberships.filter(entity__isnull=True).exists()
         if not has_global:
-            project_ids = list(
-                memberships.exclude(project__isnull=True).values_list("project_id", flat=True)
+            entity_ids = list(
+                memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True)
             )
-            plant_ids = list(
-                memberships.exclude(plant__isnull=True).values_list("plant_id", flat=True)
-            )
-            if project_ids or plant_ids:
-                configs = configs.filter(
-                    Q(project_id__in=project_ids) | Q(project__plants__id__in=plant_ids)
-                ).distinct()
+            if entity_ids:
+                configs = configs.filter(project__entities__id__in=entity_ids).distinct()
             else:
                 configs = configs.none()
 
@@ -506,7 +499,7 @@ def report_detail(request, config_id: int):
             "report_dataset",
             "curve_program_dataset",
             "curve_executed_dataset",
-        ).prefetch_related("project__plants"),
+        ).prefetch_related("project__entities"),
         pk=config_id,
         is_active=True,
     )

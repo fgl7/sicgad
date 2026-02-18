@@ -31,20 +31,20 @@ class Command(BaseCommand):
         skipped = 0
 
         for tmpl in _templates():
-            variable = PerformanceVariable.objects.filter(key=tmpl.variable_key).select_related("plant").first()
+            variable = PerformanceVariable.objects.filter(key=tmpl.variable_key).select_related("entity").first()
             if not variable:
                 raise CommandError(f"Variable no encontrada: {tmpl.variable_key}")
 
             dataset = (
                 DatasetType.objects.filter(
-                    plant=variable.plant,
+                    entity=variable.entity,
                     name=tmpl.dataset_name,
                 )
                 .order_by("-version")
                 .first()
             )
             if not dataset:
-                raise CommandError(f"DatasetType no encontrado: {variable.plant.code} / {tmpl.dataset_name}")
+                raise CommandError(f"DatasetType no encontrado: {variable.entity.code} / {tmpl.dataset_name}")
 
             column = ColumnDef.objects.filter(dataset_type=dataset, name=tmpl.column_name).first()
             if not column:

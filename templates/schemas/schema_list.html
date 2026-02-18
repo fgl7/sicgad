@@ -47,7 +47,7 @@
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
                         <td class="px-6 py-4 text-center">
                             <span class="px-2 py-1 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400 group-hover:text-emerald-400 transition-colors">
-                            {% if ds.plant %}{{ ds.plant.code }}{% elif ds.project %}{{ ds.project.code|default:"PROY" }}{% else %}SYS{% endif %}
+                            {{ ds.entity.code|default:ds.entity.name|default:"SYS" }}
                             </span>
                         </td>
                         <td class="px-6 py-4">
@@ -105,7 +105,7 @@
                                   data-open-reject-modal
                                   data-reject-url="{% url 'schemas:schema_reject' ds.slug|default:ds.pk %}"
                                   data-dataset-name="{{ ds.name }}"
-                                  data-dataset-plant="{% if ds.plant %}{{ ds.plant.code }}{% elif ds.project %}{{ ds.project.name }}{% else %}N/A{% endif %}"
+                                  data-dataset-scope="{{ ds.entity.code|default:ds.entity.name|default:"N/A" }}"
                                 >
                                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                                 </button>
@@ -153,3 +153,6 @@
     </div>
 {% endif %}
 {% endblock %}
+
+
+

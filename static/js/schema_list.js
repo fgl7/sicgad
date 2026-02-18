@@ -8,11 +8,11 @@ document.addEventListener("DOMContentLoaded", function () {
     return;
   }
 
-  function openModal(rejectUrl, datasetName, datasetPlant) {
+  function openModal(rejectUrl, datasetName, datasetScope) {
     form.action = rejectUrl || "";
     commentField.value = "";
     datasetLabel.textContent = datasetName
-      ? `Estás rechazando el esquema "${datasetName}" de la planta ${datasetPlant}.`
+      ? `Estás rechazando el esquema "${datasetName}" de la entidad ${datasetScope}.`
       : "Estás rechazando este esquema.";
 
     modal.classList.remove("hidden");
@@ -30,8 +30,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if (openBtn) {
       const rejectUrl = openBtn.getAttribute("data-reject-url");
       const datasetName = openBtn.getAttribute("data-dataset-name") || "";
-      const datasetPlant = openBtn.getAttribute("data-dataset-plant") || "";
-      openModal(rejectUrl, datasetName, datasetPlant);
+      const datasetScope = openBtn.getAttribute("data-dataset-scope") || "";
+      openModal(rejectUrl, datasetName, datasetScope);
       return;
     }
 
@@ -47,4 +47,5 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 });
+
 

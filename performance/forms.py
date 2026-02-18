@@ -53,4 +53,4 @@ class VariableMappingForm(forms.Form):
         col_id = self.cleaned_data.get("column_id")
         if not col_id:
             return None
-        return ColumnDef.objects.filter(id=col_id).select_related("dataset_type", "dataset_type__plant").first()
+        return ColumnDef.objects.filter(id=col_id).select_related("dataset_type", "dataset_type__entity").first()

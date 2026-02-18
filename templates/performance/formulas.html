@@ -11,16 +11,16 @@
         <div>
             <p class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.4em] mb-1">M&Oacute;DULO DE PERFORMANCE</p>
             <h2 class="text-3xl font-header font-black text-white tracking-tighter leading-none">F&oacute;rmulas de Desempe&ntilde;o</h2>
-            <p class="text-slate-500 text-sm font-medium mt-1">Configura indicadores por planta, asigna variables y eval&uacute;a resultados con un constructor visual.</p>
+            <p class="text-slate-500 text-sm font-medium mt-1">Configura indicadores por entidad, asigna variables y eval&uacute;a resultados con un constructor visual.</p>
         </div>
 
         <div class="glass-card rounded-[2rem] p-5 border-white/5 bg-white/[0.01]">
             <form method="get" class="grid gap-4 md:grid-cols-2 xl:grid-cols-4 text-xs">
                 <div class="flex flex-col gap-1">
-                    <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Planta</label>
-                    <select name="plant_id" class="w-full px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
-                        {% for p in plants %}
-                        <option value="{{ p.id }}" {% if p.id == plant.id %}selected{% endif %}>{{ p.code }} - {{ p.name }}</option>
+                    <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Entidad</label>
+                    <select name="entity_id" class="w-full px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
+                        {% for e in entities %}
+                        <option value="{{ e.id }}" {% if e.id == entity.id %}selected{% endif %}>{{ e.code|default:e.name }} - {{ e.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -59,7 +59,7 @@
         <form method="post" class="grid gap-4 md:grid-cols-4 text-xs">
             {% csrf_token %}
             <input type="hidden" name="action" value="create_formula">
-            <input type="hidden" name="plant_id" value="{{ plant.id }}">
+            <input type="hidden" name="entity_id" value="{{ entity.id }}">
             <div class="md:col-span-2">
                 <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Nombre de la f&oacute;rmula</label>
                 <input type="text" name="label" class="w-full px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold" placeholder="Ej: Rendimiento mensual de producci&oacute;n">
@@ -94,7 +94,7 @@
                 <form method="post" class="space-y-4">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="update_formula">
-                    <input type="hidden" name="plant_id" value="{{ plant.id }}">
+                    <input type="hidden" name="entity_id" value="{{ entity.id }}">
                     <input type="hidden" name="formula_id" value="{{ indicator.id }}">
                     <div>
                         <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Nombre</label>
@@ -127,7 +127,7 @@
                     <form method="post" class="flex gap-2">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="add_input">
-                        <input type="hidden" name="plant_id" value="{{ plant.id }}">
+                        <input type="hidden" name="entity_id" value="{{ entity.id }}">
                         <input type="hidden" name="formula_id" value="{{ indicator.id }}">
                         <select name="column_id" class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
                             {% for col in column_options %}
@@ -143,7 +143,7 @@
                     <form method="post" class="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="save_input">
-                        <input type="hidden" name="plant_id" value="{{ plant.id }}">
+                        <input type="hidden" name="entity_id" value="{{ entity.id }}">
                         <input type="hidden" name="formula_id" value="{{ indicator.id }}">
                         <input type="hidden" name="input_id" value="{{ input.id }}">
                         <div class="flex items-center justify-between">
@@ -208,7 +208,7 @@
                 <form method="post" class="space-y-4" id="formula-builder-form">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="save_formula">
-                    <input type="hidden" name="plant_id" value="{{ plant.id }}">
+                    <input type="hidden" name="entity_id" value="{{ entity.id }}">
                     <input type="hidden" name="formula_id" value="{{ indicator.id }}">
                     <input type="hidden" name="expression_tokens" id="expression-tokens" value="{{ expression_tokens_json|escape }}">
                     <input type="hidden" name="expression_text" id="expression-text">
@@ -276,4 +276,5 @@
   <script src="{% static 'js/performance/formulas.js' %}?v=2"></script>
   <script src="{% static 'js/performance/formula_builder.js' %}?v=1"></script>
 {% endblock %}
+
 

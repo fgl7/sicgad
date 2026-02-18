@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from django.db import models
 
-from plants.models import Plant
 from schemas.models import ColumnDef, DatasetType
+from structure.models import Entity
 
 
 FREQ_DAILY = "DAILY"
@@ -39,8 +39,8 @@ class PerformanceVariable(models.Model):
         unique=True,
         help_text="Llave estable (ej: pcs.brine_volume_m3, kcl.feed_mass_tm).",
     )
-    plant = models.ForeignKey(
-        Plant,
+    entity = models.ForeignKey(
+        Entity,
         on_delete=models.CASCADE,
         related_name="performance_variables",
     )
@@ -58,10 +58,10 @@ class PerformanceVariable(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["plant__code", "key"]
+        ordering = ["entity__code", "key"]
 
     def __str__(self) -> str:
-        return f"{self.plant.code} - {self.key}"
+        return f"{self.entity.code} - {self.key}"
 
 
 class PerformanceVariableMapping(models.Model):
@@ -126,7 +126,7 @@ class PerformanceVariableMapping(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["variable__plant__code", "variable__key", "-is_active", "-updated_at"]
+        ordering = ["variable__entity__code", "variable__key", "-is_active", "-updated_at"]
         unique_together = ("variable", "dataset_type", "column", "offset_months", "stage")
 
     def __str__(self) -> str:
@@ -145,8 +145,8 @@ class PerformanceIndicator(models.Model):
         unique=True,
         help_text="Llave estable del indicador (ej: pcs.yield_monthly_pct).",
     )
-    plant = models.ForeignKey(
-        Plant,
+    entity = models.ForeignKey(
+        Entity,
         on_delete=models.CASCADE,
         related_name="performance_indicators",
     )
@@ -184,10 +184,10 @@ class PerformanceIndicator(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["plant__code", "key"]
+        ordering = ["entity__code", "key"]
 
     def __str__(self) -> str:
-        return f"{self.plant.code} - {self.key}"
+        return f"{self.entity.code} - {self.key}"
 
 
 
@@ -227,7 +227,7 @@ class PerformanceIndicatorInput(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["indicator__plant__code", "indicator__key", "token"]
+        ordering = ["indicator__entity__code", "indicator__key", "token"]
         unique_together = ("indicator", "token")
 
     def __str__(self) -> str:
@@ -261,8 +261,8 @@ class PerformanceIndicatorResult(models.Model):
         on_delete=models.CASCADE,
         related_name="results",
     )
-    plant = models.ForeignKey(
-        Plant,
+    entity = models.ForeignKey(
+        Entity,
         on_delete=models.CASCADE,
         related_name="performance_results",
     )
@@ -289,10 +289,10 @@ class PerformanceIndicatorResult(models.Model):
     computed_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-period_end", "plant__code", "indicator__key"]
-        unique_together = ("indicator", "plant", "period_end", "frequency")
+        ordering = ["-period_end", "entity__code", "indicator__key"]
+        unique_together = ("indicator", "entity", "period_end", "frequency")
 
     def __str__(self) -> str:
-        return f"{self.plant.code} {self.indicator.key} {self.period_end} {self.frequency} ({self.status})"
+        return f"{self.entity.code} {self.indicator.key} {self.period_end} {self.frequency} ({self.status})"
 
 # Create your models here.

@@ -24,8 +24,8 @@ from performance.models import (
     PerformanceVariableMapping,
 )
 from performance.services import MonthWindow, compute_indicator, evaluate_expression, month_window, shift_months
-from plants.models import Plant
 from schemas.models import ColumnDef, DatasetType
+from structure.models import Entity
 
 
 def _parse_month(raw: str | None) -> tuple[int, int] | None:
@@ -159,10 +159,10 @@ def _parse_expression_tokens(raw: str | None) -> list[str]:
     return tokens
 
 
-def _build_indicator_key(plant: Plant, label: str) -> str:
-    base = slugify(f"{plant.code}-{label}")[:70].strip("-")
+def _build_indicator_key(entity: Entity, label: str) -> str:
+    base = slugify(f"{entity.code}-{label}")[:70].strip("-")
     if not base:
-        base = slugify(plant.code)[:20] or "formula"
+        base = slugify(entity.code)[:20] or "formula"
     key = base
     counter = 1
     while PerformanceIndicator.objects.filter(key=key).exists():
@@ -186,7 +186,7 @@ def _daily_history_days(base_day: date, months: int = 6) -> list[date]:
 def _upsert_indicator_result(
     *,
     indicator: PerformanceIndicator,
-    plant: Plant,
+    entity: Entity,
     window,
     stage: str,
     frequency: str,
@@ -196,7 +196,7 @@ def _upsert_indicator_result(
 ) -> PerformanceIndicatorResult:
     result, _ = PerformanceIndicatorResult.objects.update_or_create(
         indicator=indicator,
-        plant=plant,
+        entity=entity,
         period_end=window.period_end,
         frequency=frequency,
         defaults={
@@ -218,16 +218,16 @@ def kcl_formula_9(request: HttpRequest) -> HttpResponse:
 
 @admin_required
 def formula_builder(request: HttpRequest) -> HttpResponse:
-    plants = Plant.objects.order_by("code")
-    if not plants.exists():
-        messages.error(request, "No existen plantas registradas.")
+    entities = Entity.objects.filter(is_active=True).order_by("code", "name")
+    if not entities.exists():
+        messages.error(request, "No existen entidades registradas.")
         return redirect("home")
-    plant_id = request.POST.get("plant_id") or request.GET.get("plant_id")
-    plant = Plant.objects.filter(id=plant_id).first() if plant_id else plants.first()
-    if not plant:
-        messages.error(request, "No existe la planta seleccionada.")
+    entity_id = request.POST.get("entity_id") or request.GET.get("entity_id")
+    entity = Entity.objects.filter(id=entity_id).first() if entity_id else entities.first()
+    if not entity:
+        messages.error(request, "No existe la entidad seleccionada.")
         return redirect("home")
-    formulas_qs = PerformanceIndicator.objects.filter(plant=plant).order_by("label")
+    formulas_qs = PerformanceIndicator.objects.filter(entity=entity).order_by("label")
     formula_id = request.POST.get("formula_id") or request.GET.get("formula_id")
     indicator = formulas_qs.filter(id=formula_id).first() if formula_id else formulas_qs.first()
     action = request.POST.get("action") if request.method == "POST" else None
@@ -240,10 +240,10 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         if not label:
             messages.error(request, "Debe ingresar un nombre para la formula.")
         else:
-            key = _build_indicator_key(plant, label)
+            key = _build_indicator_key(entity, label)
             indicator = PerformanceIndicator.objects.create(
                 key=key,
-                plant=plant,
+                entity=entity,
                 label=label,
                 unit=unit,
                 description=description,
@@ -255,11 +255,13 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
                 "OTHER",
                 request=request,
                 module="performance",
-                object_repr=f"{plant.code}:{indicator.key}",
+                object_repr=f"{entity.code}:{indicator.key}",
                 details="Formula creada desde UI",
             )
             messages.success(request, "Formula creada.")
-        return redirect(f"/performance/formulas/?plant_id={plant.id}&formula_id={indicator.id if indicator else ''}")
+        return redirect(
+            f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id if indicator else ''}"
+        )
     if not indicator:
         indicator = None
     if action == "update_formula" and indicator:
@@ -278,18 +280,18 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
             "OTHER",
             request=request,
             module="performance",
-            object_repr=f"{plant.code}:{indicator.key}",
+            object_repr=f"{entity.code}:{indicator.key}",
             details="Formula actualizada desde UI",
         )
         messages.success(request, "Formula actualizada.")
         return redirect(
-            f"/performance/formulas/?plant_id={plant.id}&formula_id={indicator.id}&recalculate=1"
+            f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
         )
     if action == "add_input" and indicator:
         column_id = request.POST.get("column_id")
         column = ColumnDef.objects.filter(
             id=column_id,
-            dataset_type__plant=plant,
+            dataset_type__entity=entity,
             dataset_type__status=DatasetType.STATUS_APPROVED,
             dataset_type__is_active=True,
             is_active=True,
@@ -315,13 +317,13 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
                 "OTHER",
                 request=request,
                 module="performance",
-                object_repr=f"{plant.code}:{indicator.key}",
+                object_repr=f"{entity.code}:{indicator.key}",
                 details=f"Variable agregada: {token} -> {column.name}",
             )
             messages.success(request, "Variable agregada.")
             recalculate = True
         return redirect(
-            f"/performance/formulas/?plant_id={plant.id}&formula_id={indicator.id}&recalculate=1"
+            f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
         )
     if action == "remove_input" and indicator:
         input_id = request.POST.get("input_id")
@@ -332,13 +334,13 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
                 "OTHER",
                 request=request,
                 module="performance",
-                object_repr=f"{plant.code}:{indicator.key}",
+                object_repr=f"{entity.code}:{indicator.key}",
                 details=f"Variable eliminada: {input_obj.token}",
             )
             messages.success(request, "Variable eliminada.")
             recalculate = True
         return redirect(
-            f"/performance/formulas/?plant_id={plant.id}&formula_id={indicator.id}&recalculate=1"
+            f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
         )
     if action == "save_input" and indicator:
         input_id = request.POST.get("input_id")
@@ -352,7 +354,7 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
             column = (
                 ColumnDef.objects.filter(
                     id=column_id,
-                    dataset_type__plant=plant,
+                    dataset_type__entity=entity,
                     dataset_type__status=DatasetType.STATUS_APPROVED,
                     dataset_type__is_active=True,
                     is_active=True,
@@ -374,12 +376,12 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
                 "OTHER",
                 request=request,
                 module="performance",
-                object_repr=f"{plant.code}:{indicator.key}",
+                object_repr=f"{entity.code}:{indicator.key}",
                 details=f"Variable actualizada: {inp.token}",
             )
             messages.success(request, "Variable actualizada.")
         return redirect(
-            f"/performance/formulas/?plant_id={plant.id}&formula_id={indicator.id}&recalculate=1"
+            f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
         )
     if action == "save_formula" and indicator:
         tokens = _parse_expression_tokens(request.POST.get("expression_tokens"))
@@ -411,13 +413,13 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
                     "OTHER",
                     request=request,
                     module="performance",
-                    object_repr=f"{plant.code}:{indicator.key}",
+                    object_repr=f"{entity.code}:{indicator.key}",
                     details="Formula actualizada (expresion)",
                 )
                 messages.success(request, "Formula guardada.")
                 recalculate = True
         return redirect(
-            f"/performance/formulas/?plant_id={plant.id}&formula_id={indicator.id}&recalculate=1"
+            f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
         )
     frequency = _parse_frequency(request.GET.get("frequency") or (indicator.frequency if indicator else None))
     start_date, end_date = _get_date_range(
@@ -433,7 +435,7 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         period_ends = [p[1] for p in periods]
         results_qs = PerformanceIndicatorResult.objects.filter(
             indicator=indicator,
-            plant=plant,
+            entity=entity,
             frequency=frequency,
             period_end__gte=period_ends[0],
             period_end__lte=period_ends[-1],
@@ -445,7 +447,7 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
                 value, status, trace = compute_indicator(indicator, w, frequency=frequency)
                 _upsert_indicator_result(
                     indicator=indicator,
-                    plant=plant,
+                    entity=entity,
                     window=w,
                     stage="DRAFT",
                     frequency=frequency,
@@ -455,7 +457,7 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
                 )
             results_qs = PerformanceIndicatorResult.objects.filter(
                 indicator=indicator,
-                plant=plant,
+                entity=entity,
                 frequency=frequency,
                 period_end__gte=period_ends[0],
                 period_end__lte=period_ends[-1],
@@ -466,7 +468,7 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
             chart_values.append(res.numeric_value if res else None)
     column_options = list(
         ColumnDef.objects.filter(
-            dataset_type__plant=plant,
+            dataset_type__entity=entity,
             dataset_type__status=DatasetType.STATUS_APPROVED,
             dataset_type__is_active=True,
             is_active=True,
@@ -484,8 +486,8 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         else []
     )
     context = {
-        "plant": plant,
-        "plants": list(plants),
+        "entity": entity,
+        "entities": list(entities),
         "formulas": list(formulas_qs),
         "indicator": indicator,
         "inputs": inputs,

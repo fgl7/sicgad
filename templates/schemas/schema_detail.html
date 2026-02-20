@@ -22,7 +22,7 @@
             {% if is_admin %}
             <form method="post" action="{% url 'schemas:schema_toggle_one_time' dataset.slug|default:dataset.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="px-4 py-2 rounded-xl border border-white/5 bg-white/[0.02] text-xs font-bold text-slate-400 hover:text-white transition-all">
+                <button type="submit" class="btn-secondary">
                     {% if dataset.is_one_time %}Quitar Carga Única{% else %}Marcar Carga Única{% endif %}
                 </button>
             </form>
@@ -134,10 +134,10 @@
     </div>
 
     <div class="pt-4">
-        <a href="{% url 'schemas:schema_list' %}" class="text-xs font-bold text-slate-500 hover:text-emerald-400 uppercase tracking-widest transition-colors">
-            ← Volver al inventario de esquemas
-        </a>
+        <a href="{% url 'schemas:schema_list' %}" class="page-back-link">Volver al inventario de esquemas</a>
     </div>
 </div>
 {% endblock %}
+
+
 

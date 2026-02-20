@@ -9,8 +9,8 @@
             <h2 class="text-2xl font-header font-bold text-white tracking-tight">{% if project %}Editar Proyecto{% else %}Nuevo Proyecto de Inversión{% endif %}</h2>
             <p class="text-slate-500 text-sm">Configuración de parámetros y seguimiento operativo del proyecto.</p>
         </div>
-        <a href="{% url 'projects:project_list' %}" class="text-xs font-bold text-slate-400 hover:text-emerald-400 uppercase tracking-widest transition-colors">
-            ← Volver al listado
+        <a href="{% url 'projects:project_list' %}" class="page-back-link">
+            Volver al listado
         </a>
     </div>
 
@@ -35,7 +35,7 @@
             </div>
 
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categoria</label>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categoría</label>
                 {{ form.category }}
             </div>
 
@@ -105,3 +105,4 @@
     </form>
 </div>
 {% endblock %}
+

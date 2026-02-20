@@ -142,6 +142,7 @@ def schema_edit(request, slug=None):
         return redirect("schemas:schema_detail", slug=dataset.slug)
 
     loader_entity = None
+    loader_has_multiple_entities = False
     loader_scope_items = []
     allowed_entities_qs = None
     allowed_entity_ids: list[int] = []
@@ -161,6 +162,8 @@ def schema_edit(request, slug=None):
 
         has_global_loader = any(m.entity_id is None for m in loader_memberships)
         allowed_entity_ids = [m.entity_id for m in loader_memberships if m.entity_id]
+        unique_allowed_entity_ids = sorted(set(allowed_entity_ids))
+        loader_has_multiple_entities = has_global_loader or len(unique_allowed_entity_ids) > 1
 
         from structure.models import Entity
 
@@ -208,39 +211,44 @@ def schema_edit(request, slug=None):
             if not is_admin:
                 dataset.is_certification = False
                 dataset.source_dataset = None
-                if not has_global_loader and loader_entity:
-                    dataset.entity = loader_entity
-                elif not dataset.entity_id and loader_entity:
-                    dataset.entity = loader_entity
-                if not has_global_loader and dataset.entity_id not in allowed_entity_ids:
-                    return redirect("schemas:schema_list")
+                unique_allowed_entity_ids = sorted(set(allowed_entity_ids))
+                if not has_global_loader:
+                    if len(unique_allowed_entity_ids) == 1:
+                        dataset.entity_id = unique_allowed_entity_ids[0]
+                    elif dataset.entity_id not in unique_allowed_entity_ids:
+                        form.add_error(
+                            "entity",
+                            "Selecciona una entidad permitida dentro de tu alcance.",
+                        )
+
                 dataset.status = DatasetType.STATUS_DRAFT
                 dataset.is_active = False
 
-            dataset.save()
-            formset.instance = dataset
-            formset.save()
+            if not form.errors:
+                dataset.save()
+                formset.instance = dataset
+                formset.save()
 
-            verb = "creado" if slug is None else "editado"
-            record_action(
-                "SCHEMA",
-                request=request,
-                module="Schemas",
-                object_repr=f"Esquema {dataset.name} v{dataset.version} ({_dataset_scope_label(dataset)}) {verb}",
-                details=(
-                    "Esquema de certificacion mensual"
-                    if dataset.is_certification
-                    else f"Esquema de datos ({dataset.get_validation_frequency_display()})"
-                ),
-            )
-            return redirect(reverse("schemas:schema_detail", args=[dataset.slug]))
+                verb = "creado" if slug is None else "editado"
+                record_action(
+                    "SCHEMA",
+                    request=request,
+                    module="Schemas",
+                    object_repr=f"Esquema {dataset.name} v{dataset.version} ({_dataset_scope_label(dataset)}) {verb}",
+                    details=(
+                        "Esquema de certificacion mensual"
+                        if dataset.is_certification
+                        else f"Esquema de datos ({dataset.get_validation_frequency_display()})"
+                    ),
+                )
+                return redirect(reverse("schemas:schema_detail", args=[dataset.slug]))
     else:
         form = DatasetTypeForm(
             instance=dataset,
             allowed_entities_qs=allowed_entities_qs,
             allow_set_active=is_admin,
         )
-        if not is_admin and not dataset and loader_entity:
+        if not is_admin and not dataset and loader_entity and not loader_has_multiple_entities:
             form.fields["entity"].initial = loader_entity
         formset = DatasetColumnFormSet(instance=dataset)
 
@@ -255,6 +263,7 @@ def schema_edit(request, slug=None):
             "loader_scope_items": loader_scope_items,
             "dataset_scope": _entity_hierarchy(dataset.entity) if dataset and dataset.entity_id else None,
             "has_global_loader": has_global_loader,
+            "loader_has_multiple_entities": loader_has_multiple_entities,
             "is_admin": is_admin,
         },
     )

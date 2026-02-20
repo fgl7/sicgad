@@ -6,7 +6,7 @@
 <div class="space-y-6 fade-in">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">GestiÃ³n de Usuarios</h2>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Gestión de Usuarios</h2>
             <p class="text-slate-500 text-sm">Administra los accesos y roles institucionales del sistema.</p>
         </div>
         <div class="flex items-center gap-2">
@@ -39,7 +39,7 @@
                 </select>
             </div>
             <div class="space-y-2">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">InstituciÃ³n</label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Institución</label>
                 <select name="institution">
                     <option value="">Todas las Instituciones</option>
                     {% for inst in institutions %}
@@ -65,8 +65,8 @@
                 <thead>
                     <tr class="bg-white/[0.02] text-[11px] font-black text-slate-500 uppercase tracking-[0.16em]">
                         <th class="px-6 py-4">Usuario / Identidad</th>
-                        <th class="px-6 py-4">Alcance / InstituciÃ³n</th>
-                        <th class="px-6 py-4">ConfiguraciÃ³n de Rol</th>
+                        <th class="px-6 py-4">Alcance / Institución</th>
+                        <th class="px-6 py-4">Configuración de Rol</th>
                         <th class="px-6 py-4 text-right">Acciones</th>
                     </tr>
                 </thead>
@@ -91,10 +91,10 @@
                                     <span class="text-slate-300 font-medium text-xs">
                                         {% if m.entity %}{{ m.entity.name }}{% else %}Alcance Global{% endif %}
                                     </span>
-                                    <span class="text-[11px] text-slate-500 uppercase font-bold">{{ m.institution.code|default:"Sin InstituciÃ³n" }}</span>
+                                    <span class="text-[11px] text-slate-500 uppercase font-bold">{{ m.institution.code|default:"Sin Institución" }}</span>
                                 </div>
                                 {% empty %}
-                                <span class="text-slate-600 italic text-xs">Sin membresÃ­as</span>
+                                <span class="text-slate-600 italic text-xs">Sin membresías</span>
                                 {% endfor %}
                             {% endwith %}
                         </td>
@@ -115,7 +115,7 @@
                                 <div class="flex items-center gap-1.5">
                                     {% if m.can_validate_daily %}<div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]" title="Flujo diario"></div>{% endif %}
                                     {% if m.can_validate_weekly %}<div class="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_0_2px_rgba(14,165,233,0.15)]" title="Flujo semanal"></div>{% endif %}
-                                    {% if m.can_validate_monthly %}<div class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.15)]" title="Flujo mensual/certificacion"></div>{% endif %}
+                                    {% if m.can_validate_monthly %}<div class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.15)]" title="Flujo mensual/certificación"></div>{% endif %}
                                 </div>
                             </div>
                             {% endfor %}
@@ -134,7 +134,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="4" class="px-6 py-12 text-center">
-                            <p class="text-slate-500 font-medium">No se encontraron usuarios con los criterios de bÃºsqueda.</p>
+                            <p class="text-slate-500 font-medium">No se encontraron usuarios con los criterios de búsqueda.</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -156,7 +156,7 @@
             </div>
             <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.15)]"></span>
-                <span>Mensual / Certificacion</span>
+                <span>Mensual / Certificación</span>
             </div>
         </div>
     </div>

@@ -1,31 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}Eliminar institucion - SICGAD{% endblock %}
-{% block page_title %}Eliminar institucion{% endblock %}
+{% block title %}Eliminar institución - SICGAD{% endblock %}
+{% block page_title %}Eliminar institución{% endblock %}
 
 {% block content %}
-  <section class="max-w-md bg-slate-950/60 border border-slate-800 rounded-xl p-5 text-xs mx-auto">
-    <h2 class="text-sm font-semibold mb-3">Confirmar eliminacion</h2>
+  <section class="glass-card max-w-md rounded-2xl p-6 text-xs mx-auto">
+    <h2 class="text-base font-semibold mb-3">Confirmar eliminación</h2>
     {% if error %}
       <div class="mb-3 text-[11px] text-red-300 bg-red-900/30 border border-red-800/60 rounded-md px-3 py-2">
         {{ error }}
       </div>
     {% endif %}
-    <p class="text-slate-300 mb-4">
-      Estas a punto de eliminar la institucion
+    <p class="text-slate-300 mb-6">
+      Estás a punto de eliminar la institución
       <span class="font-semibold">{{ institution.code }} - {{ institution.name }}</span>.
-      Esta accion puede afectar usuarios asociados.
+      Esta acción puede afectar usuarios asociados.
     </p>
-    <form method="post" class="flex items-center justify-between">
+    <form method="post" class="flex items-center justify-end gap-3">
       {% csrf_token %}
-      <a href="{% url 'accounts:institution_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+      <a href="{% url 'accounts:institution_list' %}" class="btn-secondary">
         Cancelar
       </a>
-      <button
-        type="submit"
-        class="inline-flex items-center px-4 py-1.5 rounded-md bg-red-600 text-xs font-semibold hover:bg-red-500"
-      >
-        Eliminar institucion
+      <button type="submit" class="btn-danger">
+        Eliminar institución
       </button>
     </form>
   </section>

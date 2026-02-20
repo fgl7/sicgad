@@ -9,8 +9,8 @@
             <h2 class="text-2xl font-header font-bold text-white tracking-tight">Nuevo Esquema de Certificación</h2>
             <p class="text-slate-500 text-sm">Deriva un dataset de validación mensual a partir de registros operativos diarios.</p>
         </div>
-        <a href="{% url 'schemas:schema_list' %}" class="text-xs font-bold text-slate-400 hover:text-emerald-400 uppercase tracking-widest transition-colors">
-            ← Volver al listado
+        <a href="{% url 'schemas:schema_list' %}" class="page-back-link">
+            Volver al listado
         </a>
     </div>
 
@@ -93,3 +93,4 @@
     });
 </script>
 {% endblock %}
+

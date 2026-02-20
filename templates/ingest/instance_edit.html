@@ -47,14 +47,15 @@
         </div>
       {% endif %}
       <div class="flex items-center justify-between">
-        <a href="{% url 'ingest:upload' %}" class="text-xs text-slate-300 hover:text-emerald-400">
-          ← Volver a carga de datos
+        <a href="{% url 'ingest:upload' %}" class="page-back-link">
+          Volver a carga de datos
         </a>
-        <button type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
+        <button type="submit" class="btn-primary inline-flex items-center">
           Guardar archivo corregido
         </button>
       </div>
     </form>
   </section>
 {% endblock %}
+
 

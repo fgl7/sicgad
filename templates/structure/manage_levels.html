@@ -34,7 +34,7 @@
 
                 <h3 class="text-xs font-black text-white uppercase tracking-widest">Niveles por sector</h3>
 
-                <p class="text-[11px] text-slate-400">Subsector, categoria y entidad se crean desde cada sector.</p>
+                <p class="text-[11px] text-slate-400">Subsector, categoría y entidad se crean desde cada sector.</p>
 
             </div>
 
@@ -93,7 +93,7 @@
                     <section class="rounded-xl border border-white/10 bg-slate-900/35 p-4">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <h5 class="text-[11px] font-black text-white uppercase tracking-widest">Subsectores:</h5>
-                            <span class="text-[10px] text-slate-400">Subsectores: {{ card.subsector_count }} | Categorias: {{ card.category_count }} | Entidades: {{ card.entity_count }}</span>
+                            <span class="text-[10px] text-slate-400">Subsectores: {{ card.subsector_count }} | Categorías: {{ card.category_count }} | Entidades: {{ card.entity_count }}</span>
                         </div>
 
                         {% if card.subsectors %}
@@ -176,7 +176,7 @@
                                                         data-category-name="{{ row.name|escape }}"
                                                         data-category-description="{{ row.description|default:''|escape }}"
                                                         data-category-path="{{ row.subsector_name|escape }} / {{ row.name|escape }}"
-                                                        title="Editar categoria">
+                                                        title="Editar categoría">
                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                                     </button>
                                                     <button
@@ -191,7 +191,7 @@
                                                         data-open-sector-id="{{ card.sector.id }}"
                                                         data-impact-summary="{{ row.impact_summary|escape }}"
                                                         data-delete-reason="{{ row.delete_block_reason|escape }}"
-                                                        title="{% if row.can_delete %}Eliminar categoria{% else %}{{ row.delete_block_reason }}{% endif %}"
+                                                        title="{% if row.can_delete %}Eliminar categoría{% else %}{{ row.delete_block_reason }}{% endif %}"
                                                         {% if not row.can_delete %}disabled{% endif %}>
                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"></path></svg>
                                                     </button>
@@ -202,7 +202,7 @@
                                                         <button
                                                             type="submit"
                                                             class="inline-flex items-center justify-center w-5 h-5 rounded text-[7px] font-black uppercase tracking-widest border {% if row.is_active and not row.can_deactivate %}border-slate-500/40 text-slate-400 bg-slate-700/20 cursor-not-allowed{% elif row.is_active %}border-rose-500/40 text-rose-200 bg-rose-500/10{% else %}border-emerald-500/40 text-emerald-200 bg-emerald-500/10{% endif %}"
-                                                            title="{% if row.is_active and not row.can_deactivate %}{{ row.deactivate_block_reason }}{% elif row.is_active %}Desactivar categoria{% else %}Activar categoria{% endif %}"
+                                                            title="{% if row.is_active and not row.can_deactivate %}{{ row.deactivate_block_reason }}{% elif row.is_active %}Desactivar categoría{% else %}Activar categoría{% endif %}"
                                                             {% if row.is_active and not row.can_deactivate %}disabled{% endif %}>
                                                             {% if row.is_active and not row.can_deactivate %}B{% elif row.is_active %}D{% else %}A{% endif %}
                                                         </button>
@@ -282,7 +282,7 @@
                                     </div>
                                     {% endfor %}
                                     {% else %}
-                                    <p class="text-[11px] text-slate-500">Sin categorias.</p>
+                                    <p class="text-[11px] text-slate-500">Sin categorías.</p>
                                     {% endif %}
                                     {% endwith %}
                                 </div>
@@ -296,7 +296,7 @@
 
                     <div class="flex flex-wrap items-center justify-between gap-2.5">
 
-                        <p class="text-[11px] text-slate-400">Crea nuevos niveles desde el boton <span class="text-sky-300 font-semibold">Crear nivel</span>.</p>
+                        <p class="text-[11px] text-slate-400">Crea nuevos niveles desde el botón <span class="text-sky-300 font-semibold">Crear nivel</span>.</p>
 
                         <div class="shrink-0 flex flex-wrap items-center gap-2">
 
@@ -463,7 +463,7 @@
 
                 <h3 class="text-sm font-black text-white uppercase tracking-widest">Eliminar sector</h3>
 
-                <p class="text-[11px] text-slate-400" id="sector-delete-message">Esta accion eliminara el sector seleccionado.</p>
+                <p class="text-[11px] text-slate-400" id="sector-delete-message">Esta acción eliminará el sector seleccionado.</p>
 
             </div>
 
@@ -478,8 +478,8 @@
             <input type="hidden" name="action" value="delete_sector">
             <input type="hidden" name="sector_id" value="">
 
-            <button type="button" id="cancel-sector-delete" class="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border border-white/20 text-slate-300">Cancelar</button>
-            <button class="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border border-rose-500/40 text-rose-200 bg-rose-500/10">Eliminar</button>
+            <button type="button" id="cancel-sector-delete" class="btn-secondary">Cancelar</button>
+            <button class="btn-danger">Eliminar</button>
 
         </form>
 
@@ -541,7 +541,7 @@
 
             <div>
 
-                <h3 class="text-sm font-black text-white uppercase tracking-widest">Editar categoria</h3>
+                <h3 class="text-sm font-black text-white uppercase tracking-widest">Editar categoría</h3>
 
                 <p class="text-[11px] text-slate-400" id="category-edit-path">Actualiza nombre y descripcion.</p>
 
@@ -559,7 +559,7 @@
             <input type="hidden" name="category_id" value="">
             <input type="hidden" name="open_sector_id" value="">
 
-            <input type="text" name="category_name" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm" placeholder="Nombre de la categoria">
+            <input type="text" name="category_name" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm" placeholder="Nombre de la categoría">
 
             <textarea name="category_description" rows="3" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm" placeholder="Descripcion (opcional)"></textarea>
 
@@ -587,7 +587,7 @@
 
                 <h3 class="text-sm font-black text-white uppercase tracking-widest">Editar entidad</h3>
 
-                <p class="text-[11px] text-slate-400">Actualiza categoria, nombre, codigo y descripcion.</p>
+                <p class="text-[11px] text-slate-400">Actualiza categoría, nombre, código y descripción.</p>
 
             </div>
 
@@ -603,11 +603,11 @@
             <input type="hidden" name="entity_id" value="">
             <input type="hidden" name="open_sector_id" value="">
 
-            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400">Categoria destino</label>
+            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400">Categoría destino</label>
             <select name="category_id" required class="entity-edit-category-select w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm">
-                <option value="">Selecciona categoria</option>
+                <option value="">Selecciona categoría</option>
             </select>
-            <p class="entity-edit-category-help text-[11px] text-slate-500 hidden">No hay categorias disponibles en este sector.</p>
+            <p class="entity-edit-category-help text-[11px] text-slate-500 hidden">No hay categorías disponibles en este sector.</p>
 
             <input type="text" name="entity_name" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm" placeholder="Nombre de la entidad">
 
@@ -639,7 +639,7 @@
 
                 <h3 class="text-sm font-black text-white uppercase tracking-widest" id="level-delete-title">Eliminar nivel</h3>
 
-                <p class="text-[11px] text-slate-400" id="level-delete-message">Esta accion eliminara el nivel seleccionado.</p>
+                <p class="text-[11px] text-slate-400" id="level-delete-message">Esta acción eliminará el nivel seleccionado.</p>
 
             </div>
 
@@ -657,8 +657,8 @@
             <input type="hidden" name="category_id" value="">
             <input type="hidden" name="entity_id" value="">
 
-            <button type="button" id="cancel-level-delete" class="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border border-white/20 text-slate-300">Cancelar</button>
-            <button class="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border border-rose-500/40 text-rose-200 bg-rose-500/10">Eliminar</button>
+            <button type="button" id="cancel-level-delete" class="btn-secondary">Cancelar</button>
+            <button class="btn-danger">Eliminar</button>
 
         </form>
 
@@ -692,7 +692,7 @@
 
             <button type="button" class="level-switch-btn rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border" data-level-target="subsector">Subsector</button>
 
-            <button type="button" class="level-switch-btn rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border" data-level-target="categoria">Categoria</button>
+            <button type="button" class="level-switch-btn rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border" data-level-target="categoria">Categoría</button>
 
             <button type="button" class="level-switch-btn rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest border" data-level-target="entidad">Entidad</button>
 
@@ -746,7 +746,7 @@
 
                 <p class="category-subsector-help text-[11px] text-slate-500">Primero crea al menos un subsector en este sector.</p>
 
-                <input type="text" name="category_name" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm" placeholder="Nombre de la categoria">
+                <input type="text" name="category_name" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm" placeholder="Nombre de la categoría">
 
                 <textarea name="category_description" rows="2" class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm" placeholder="Descripcion (opcional)"></textarea>
 
@@ -768,15 +768,15 @@
 
                 <input type="hidden" name="open_sector_id" value="">
 
-                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400">Categoria destino</label>
+                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400">Categoría destino</label>
 
                 <select name="category_id" required class="entity-category-select w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm">
 
-                    <option value="">Selecciona categoria</option>
+                    <option value="">Selecciona categoría</option>
 
                 </select>
 
-                <p class="entity-category-help text-[11px] text-slate-500">Primero crea al menos una categoria en este sector.</p>
+                <p class="entity-category-help text-[11px] text-slate-500">Primero crea al menos una categoría en este sector.</p>
 
                 <input type="text" name="entity_name" required class="w-full px-3 py-2 rounded-lg bg-slate-900 border border-white/10 text-white text-sm" placeholder="Nombre de la entidad">
 
@@ -810,3 +810,4 @@
 {% block extra_js %}
 <script src="{% static 'js/structure_manage_levels.js' %}"></script>
 {% endblock %}
+

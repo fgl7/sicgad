@@ -28,7 +28,7 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <th class="px-6 py-4">Fecha ImportaciÃ³n</th>
+                        <th class="px-6 py-4">Fecha Importación</th>
                         <th class="px-6 py-4">Origen / Dataset</th>
                         <th class="px-6 py-4 text-center">Rango Temporal</th>
                         <th class="px-6 py-4 text-center">Progreso (D/S/P)</th>
@@ -46,7 +46,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <span class="text-[10px] font-bold text-slate-500 uppercase">{{ row.period_start }} â†’ {{ row.period_end }}</span>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">{{ row.period_start }} -> {{ row.period_end }}</span>
                         </td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex justify-center gap-2">
@@ -100,7 +100,7 @@
                         <td class="px-6 py-4">
                             <div class="flex flex-col">
                                 <span class="font-bold text-slate-200">{{ inst.dataset_type.name }}</span>
-                                <span class="text-[9px] font-black text-slate-600 uppercase tracking-tighter">ENT: {{ inst.entity.code|default:inst.entity.name }} Â· POR: {{ inst.created_by.user.username|default:"Sistema" }}</span>
+                                <span class="text-[9px] font-black text-slate-600 uppercase tracking-tighter">ENT: {{ inst.entity.code|default:inst.entity.name }} · POR: {{ inst.created_by.user.username|default:"Sistema" }}</span>
                             </div>
                         </td>
                         <td class="px-6 py-4 text-center">

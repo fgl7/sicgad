@@ -163,37 +163,32 @@ def admin_user_edit(request, user_id):
         entities = [m.entity for m in memberships if m.entity_id]
         if entities:
             category_ids = {entity.category_id for entity in entities}
+            subsector_ids = {entity.category.subsector_id for entity in entities}
             first_entity = entities[0]
-            first_category = first_entity.category
-            first_subsector = first_category.subsector
+            first_subsector = first_entity.category.subsector
+            role_allows_category_global = primary.role != "LOADER"
 
-            if len(category_ids) == 1:
-                total_active_in_category = Entity.objects.filter(category=first_category, is_active=True).count()
-                if len(entities) == total_active_in_category and total_active_in_category > 0:
-                    initial.update(
-                        {
-                            "subsector": first_subsector,
-                            "category": first_category,
-                            "scope_mode": AdminUserCreateForm.SCOPE_CATEGORY_GLOBAL,
-                            "entity": None,
-                        }
-                    )
-                else:
-                    initial.update(
-                        {
-                            "subsector": first_subsector,
-                            "category": first_category,
-                            "scope_mode": AdminUserCreateForm.SCOPE_ENTITY,
-                            "entity": first_entity,
-                        }
-                    )
+            total_active_in_categories = Entity.objects.filter(
+                category_id__in=category_ids,
+                is_active=True,
+            ).count()
+
+            if role_allows_category_global and total_active_in_categories > 0 and len(entities) >= total_active_in_categories:
+                initial.update(
+                    {
+                        "subsector": first_subsector if len(subsector_ids) == 1 else None,
+                        "category": list(category_ids),
+                        "scope_mode": AdminUserCreateForm.SCOPE_CATEGORY_GLOBAL,
+                        "entity": [],
+                    }
+                )
             else:
                 initial.update(
                     {
-                        "subsector": first_subsector,
-                        "category": first_category,
+                        "subsector": first_subsector if len(subsector_ids) == 1 else None,
+                        "category": list(category_ids),
                         "scope_mode": AdminUserCreateForm.SCOPE_ENTITY,
-                        "entity": first_entity,
+                        "entity": [entity.pk for entity in entities],
                     }
                 )
 

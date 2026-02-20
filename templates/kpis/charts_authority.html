@@ -5,7 +5,8 @@
 {% block page_title %}KPIs autoridad MHE{% endblock %}
 
 {% block content %}
-<section class="glass-effect mb-5 px-5 py-3">
+<section class="glass-effect mb-5 px-5 py-3 relative overflow-hidden">
+    <div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-cyan-400/10 blur-3xl"></div>
     <div class="grid gap-3 text-[13px] md:grid-cols-12">
         <div class="md:col-span-2">
             <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Modo de datos</label>
@@ -42,54 +43,38 @@
     </div>
 </section>
 
-<section class="grid gap-6 lg:grid-cols-12 mb-6">
-    <aside class="glass-effect lg:col-span-3 p-4 rounded-2xl border border-white/5">
-        <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest mb-4">Navegacion jerarquica</h3>
-        <div class="space-y-3 max-h-[560px] overflow-auto pr-1">
-            <a href="{% url 'kpis_charts' %}" class="block text-[11px] text-slate-300 hover:text-sky-300 transition-colors">
-                Ver todos los datasets
-            </a>
-            {% for sector in authority_dataset_tree %}
-            <div class="rounded-lg border border-white/5 bg-black/20 p-2">
-                <a href="{% url 'kpis_charts' %}?sector={{ sector.id }}" class="block text-[11px] font-bold text-sky-300 hover:text-sky-200">
-                    {{ sector.name }}
-                </a>
-                <div class="mt-2 space-y-2 pl-2 border-l border-white/10">
-                    {% for subsector in sector.subsectors %}
-                    <div>
-                        <a href="{% url 'kpis_charts' %}?sector={{ sector.id }}&subsector={{ subsector.id }}" class="block text-[10px] text-slate-300 hover:text-white">
-                            {{ subsector.name }}
-                        </a>
-                        <div class="mt-1 space-y-1 pl-2 border-l border-white/10">
-                            {% for category in subsector.categories %}
-                            <a href="{% url 'kpis_charts' %}?sector={{ sector.id }}&subsector={{ subsector.id }}&category={{ category.id }}" class="block text-[10px] text-slate-400 hover:text-slate-200">
-                                {{ category.name }}
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% empty %}
-            <p class="text-[11px] text-slate-500 italic">Sin datasets disponibles para la jerarquia actual.</p>
-            {% endfor %}
-        </div>
-    </aside>
+<section id="authority-kpi-cards" class="authority-kpi-grid mb-6">
+    <article class="authority-kpi-card authority-kpi-card-empty">
+        <div class="authority-kpi-label">Métrica 1</div>
+        <div class="authority-kpi-value">--</div>
+        <div class="authority-kpi-trend">Selecciona un dataset</div>
+    </article>
+    <article class="authority-kpi-card authority-kpi-card-empty">
+        <div class="authority-kpi-label">Métrica 2</div>
+        <div class="authority-kpi-value">--</div>
+        <div class="authority-kpi-trend">Selecciona un dataset</div>
+    </article>
+    <article class="authority-kpi-card authority-kpi-card-empty">
+        <div class="authority-kpi-label">Métrica 3</div>
+        <div class="authority-kpi-value">--</div>
+        <div class="authority-kpi-trend">Selecciona un dataset</div>
+    </article>
+</section>
 
-    <div class="lg:col-span-9 space-y-6">
-        <section class="glass-effect p-6 rounded-2xl border border-white/5">
+<section class="mb-6">
+    <div class="space-y-6">
+        <section class="glass-effect p-6 rounded-2xl border border-white/5 relative overflow-hidden authority-chart-shell">
             <div class="grid gap-6 md:grid-cols-12">
                 <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
-                    <div class="rounded-2xl border border-white/5 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+                    <div class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative authority-chart-stage">
                         <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
                     </div>
                 </div>
-                <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 space-y-6 text-sm">
+                <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 space-y-6 text-sm authority-chart-controls">
                     <div>
-                        <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de grafico</label>
+                        <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de gráfico</label>
                         <select id="kpi-chart-type-select" class="w-full">
-                            <option value="line">Linea suave</option>
+                            <option value="line">Línea suave</option>
                             <option value="bar">Barras modernas</option>
                             <option value="stacked_bar">Barras apiladas</option>
                         </select>
@@ -137,5 +122,5 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="{% static 'js/kpis_charts.js' %}?v=16"></script>
+<script src="{% static 'js/kpis_charts.js' %}?v=18"></script>
 {% endblock %}

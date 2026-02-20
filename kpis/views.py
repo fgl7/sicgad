@@ -174,6 +174,7 @@ def charts(request):
     datasets = _apply_membership_scope(user, is_admin, datasets)
     if is_external_monthly_viewer:
         datasets = datasets.filter(validation_frequency=DatasetType.MONTHLY)
+    authority_tree_datasets = datasets
 
     sector_id = request.GET.get("sector")
     subsector_id = request.GET.get("subsector")
@@ -190,6 +191,11 @@ def charts(request):
 
     datasets = (
         datasets.filter(instances__isnull=False)
+        .distinct()
+        .order_by("entity__name", "name", "-version")
+    )
+    authority_tree_datasets = (
+        authority_tree_datasets.filter(instances__isnull=False)
         .distinct()
         .order_by("entity__name", "name", "-version")
     )
@@ -221,7 +227,7 @@ def charts(request):
             "is_external_monthly_viewer": is_external_monthly_viewer,
             "is_authority_mhe_viewer": is_authority_mhe_viewer,
             "viewer_profile_type": viewer_profile_type,
-            "authority_dataset_tree": _group_datasets_for_authority(datasets),
+            "authority_dataset_tree": _group_datasets_for_authority(authority_tree_datasets),
             "selected_sector": sector_id or "",
             "selected_subsector": subsector_id or "",
             "selected_category": category_id or "",

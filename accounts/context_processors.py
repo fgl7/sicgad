@@ -1,7 +1,7 @@
 from django.db.models import Exists, OuterRef, Q
 from django.db.utils import OperationalError, ProgrammingError
 
-from structure.models import Sector
+from structure.models import Category, Sector
 from .models import AccountProfile, Membership
 
 
@@ -79,7 +79,9 @@ def admin_flags(request):
     viewer_profile_type = AccountProfile.VIEWER_STANDARD
     is_authority_viewer = False
     is_external_monthly_viewer = False
+    authority_viewer_has_global_scope = False
     viewer_nav_sectors = []
+    authority_nav_tree = []
     pending_schema_requests = 0
     pending_validation_items = 0
     pending_certification_alerts = 0
@@ -129,6 +131,7 @@ def admin_flags(request):
                 if is_authority_viewer:
                     viewer_memberships = memberships.filter(role="VIEWER")
                     has_global_viewer = viewer_memberships.filter(entity__isnull=True).exists()
+                    authority_viewer_has_global_scope = has_global_viewer
                     sector_qs = Sector.objects.filter(is_active=True)
                     if not has_global_viewer:
                         sector_ids = (
@@ -140,6 +143,80 @@ def admin_flags(request):
                     viewer_nav_sectors = list(
                         sector_qs.order_by("name").values("id", "name")
                     )
+                    if has_global_viewer:
+                        category_qs = (
+                            Category.objects.filter(
+                                is_active=True,
+                                subsector__is_active=True,
+                                subsector__sector__is_active=True,
+                            )
+                            .select_related("subsector__sector")
+                            .order_by(
+                                "subsector__sector__name",
+                                "subsector__name",
+                                "name",
+                            )
+                        )
+                    else:
+                        viewer_entity_ids = list(
+                            viewer_memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True)
+                        )
+                        category_qs = (
+                            Category.objects.filter(
+                                is_active=True,
+                                subsector__is_active=True,
+                                subsector__sector__is_active=True,
+                                entities__is_active=True,
+                                entities__id__in=viewer_entity_ids,
+                            )
+                            .select_related("subsector__sector")
+                            .distinct()
+                            .order_by(
+                                "subsector__sector__name",
+                                "subsector__name",
+                                "name",
+                            )
+                        )
+
+                    tree_map = {}
+                    for category in category_qs:
+                        subsector = category.subsector
+                        sector = subsector.sector
+                        sector_node = tree_map.setdefault(
+                            sector.id,
+                            {"id": sector.id, "name": sector.name, "subsectors": {}},
+                        )
+                        subsector_node = sector_node["subsectors"].setdefault(
+                            subsector.id,
+                            {"id": subsector.id, "name": subsector.name, "categories": []},
+                        )
+                        subsector_node["categories"].append(
+                            {"id": category.id, "name": category.name}
+                        )
+
+                    authority_nav_tree = []
+                    for sector_node in tree_map.values():
+                        subsectors = []
+                        for subsector_node in sector_node["subsectors"].values():
+                            subsector_node["categories"].sort(
+                                key=lambda c: (c["name"] or "").lower()
+                            )
+                            subsectors.append(
+                                {
+                                    "id": subsector_node["id"],
+                                    "name": subsector_node["name"],
+                                    "categories": subsector_node["categories"],
+                                }
+                            )
+                        subsectors.sort(key=lambda s: (s["name"] or "").lower())
+                        authority_nav_tree.append(
+                            {
+                                "id": sector_node["id"],
+                                "name": sector_node["name"],
+                                "subsectors": subsectors,
+                            }
+                        )
+                    authority_nav_tree.sort(key=lambda s: (s["name"] or "").lower())
 
                 loader_memberships = memberships.filter(role="LOADER")
                 loader_membership = loader_memberships.filter(entity__isnull=False).first()
@@ -269,7 +346,9 @@ def admin_flags(request):
         "viewer_profile_type": viewer_profile_type,
         "is_authority_viewer": is_authority_viewer,
         "is_external_monthly_viewer": is_external_monthly_viewer,
+        "authority_viewer_has_global_scope": authority_viewer_has_global_scope,
         "viewer_nav_sectors": viewer_nav_sectors,
+        "authority_nav_tree": authority_nav_tree,
         "current_section": current_section,
         "pending_schema_requests": pending_schema_requests,
         "pending_validation_items": pending_validation_items,

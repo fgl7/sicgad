@@ -59,7 +59,7 @@
                     </div>
                     <h3 class="font-header font-bold text-white text-lg">Auditoría Reciente</h3>
                 </div>
-                <a href="{% url 'audit:log_list' %}" class="text-xs font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-widest">Ver todo</a>
+                <a href="{% url 'audit:log_list' %}" class="text-xs font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-widest">Ver auditoría</a>
             </div>
             <div class="flex-1 overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -98,7 +98,7 @@
                     </div>
                     <h3 class="font-header font-bold text-white text-lg">Últimas Cargas</h3>
                 </div>
-                <a href="{% url 'ingest:upload_history' %}" class="text-xs font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-widest">Ver todo</a>
+                <a href="{% url 'ingest:upload_history' %}" class="text-xs font-bold text-emerald-400 hover:text-emerald-300 uppercase tracking-widest">Ver cargas</a>
             </div>
             <div class="flex-1 overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -142,7 +142,7 @@
                 <svg class="w-12 h-12 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
             </div>
             <h4 class="text-xl font-header font-extrabold text-white mb-2">Clasificación y Entidades</h4>
-            <p class="text-slate-400 mb-6 text-sm">Define el arbol Sector/Subsector/Categoria y crea entidades dinamicas desde un flujo unificado.</p>
+            <p class="text-slate-400 mb-6 text-sm">Define el árbol Sector/Subsector/Categoría y crea entidades dinámicas desde un flujo unificado.</p>
             <a href="{% url 'structure:manage_levels' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold transition-all hover:bg-emerald-500 hover:text-slate-950">
                 Abrir Crear Niveles
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>

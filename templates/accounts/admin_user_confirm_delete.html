@@ -4,21 +4,18 @@
 {% block page_title %}Eliminar usuario{% endblock %}
 
 {% block content %}
-  <section class="max-w-md bg-slate-950/60 border border-slate-800 rounded-xl p-5 text-xs mx-auto">
-    <h2 class="text-sm font-semibold mb-3">Confirmar eliminacion</h2>
-    <p class="text-slate-300 mb-4">
-      Estas a punto de eliminar al usuario <span class="font-semibold">{{ user_obj.username }}</span>.
-      Esta accion borrara tambien sus roles y no se podra deshacer facilmente.
+  <section class="glass-card max-w-md rounded-2xl p-6 text-xs mx-auto">
+    <h2 class="text-base font-semibold mb-3">Confirmar eliminación</h2>
+    <p class="text-slate-300 mb-6">
+      Estás a punto de eliminar al usuario <span class="font-semibold">{{ user_obj.username }}</span>.
+      Esta acción borrará también sus roles y no se podrá deshacer fácilmente.
     </p>
-    <form method="post" class="flex items-center justify-between">
+    <form method="post" class="flex items-center justify-end gap-3">
       {% csrf_token %}
-      <a href="{% url 'accounts:admin_user_list' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+      <a href="{% url 'accounts:admin_user_list' %}" class="btn-secondary">
         Cancelar
       </a>
-      <button
-        type="submit"
-        class="inline-flex items-center px-4 py-1.5 rounded-md bg-red-600 text-xs font-semibold hover:bg-red-500"
-      >
+      <button type="submit" class="btn-danger">
         Eliminar usuario
       </button>
     </form>

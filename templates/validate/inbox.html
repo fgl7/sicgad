@@ -10,11 +10,11 @@
     </div>
 
     {% if pending_historical_batches %}
-    <!-- HistÃ³ricos Section -->
+    <!-- Históricos Section -->
     <section class="space-y-4">
         <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            ValidaciÃ³n de Datos Históricos
+            Validación de Datos Históricos
         </h3>
         <div class="glass-card rounded-3xl overflow-hidden border-white/5 bg-sky-500/5">
             <table class="w-full text-left border-collapse">
@@ -39,7 +39,7 @@
                                 <span class="font-bold text-slate-200">{{ batch.dataset_type.name }}</span>
                                 <span class="text-[10px] text-slate-500 uppercase">
                                     {% if batch.period_start and batch.period_end %}
-                                        {{ batch.period_start }} â€” {{ batch.period_end }}
+                                        {{ batch.period_start }} - {{ batch.period_end }}
                                     {% else %}-{% endif %}
                                 </span>
                             </div>
@@ -129,7 +129,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="5" class="px-6 py-12 text-center">
-                            <p class="text-slate-600 font-medium">Bandeja de entrada vacÃ­a.</p>
+                            <p class="text-slate-600 font-medium">Bandeja de entrada vacía.</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -150,7 +150,7 @@
                     <tr class="bg-white/[0.01] text-[10px] font-black text-slate-600 uppercase tracking-widest">
                         <th class="px-6 py-3">Fecha</th>
                         <th class="px-6 py-3">Dataset</th>
-                        <th class="px-6 py-3 text-center">DecisiÃ³n</th>
+                        <th class="px-6 py-3 text-center">Decisión</th>
                         <th class="px-6 py-3">Comentario</th>
                     </tr>
                 </thead>
@@ -161,7 +161,7 @@
                         <td class="px-6 py-3">
                             <div class="flex flex-col">
                                 <span class="font-bold text-slate-400 text-xs">{{ act.dataset_instance.dataset_type.name }}</span>
-                                <span class="text-[9px] uppercase">{{ act.dataset_instance.entity.code|default:act.dataset_instance.entity.name }} Â· {{ act.dataset_instance.period }}</span>
+                                <span class="text-[9px] uppercase">{{ act.dataset_instance.entity.code|default:act.dataset_instance.entity.name }} · {{ act.dataset_instance.period }}</span>
                             </div>
                         </td>
                         <td class="px-6 py-3 text-center">
@@ -170,7 +170,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-3 text-[10px] italic">
-                            {{ act.comment|default:"â€”"|truncatechars:100 }}
+                            {{ act.comment|default:"-"|truncatechars:100 }}
                         </td>
                     </tr>
                     {% empty %}

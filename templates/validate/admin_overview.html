@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block title %}Resumen de validaciones - SICGAD{% endblock %}
-{% block page_title %}ValidaciÃ³n - AdministraciÃ³n{% endblock %}
+{% block page_title %}Validación - Administración{% endblock %}
 
 {% block content %}
   <div class="grid gap-4 md:grid-cols-2">
     <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
       <h2 class="text-sm font-semibold mb-2">Validaciones diarias</h2>
       <p class="text-[11px] text-slate-400 mb-2">
-        Incluye datasets de frecuencia <strong>diaria</strong> (operaciÃ³n diaria).
+        Incluye datasets de frecuencia <strong>diaria</strong> (operación diaria).
       </p>
 
       <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
@@ -34,7 +34,7 @@
             {% empty %}
               <tr>
                 <td colspan="5" class="px-3 py-4 text-center text-slate-400">
-                  No hay registros de validaciÃ³n diaria.
+                  No hay registros de validación diaria.
                 </td>
               </tr>
             {% endfor %}
@@ -46,7 +46,7 @@
     <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
       <h2 class="text-sm font-semibold mb-2">Validaciones semanales y mensuales</h2>
       <p class="text-[11px] text-slate-400 mb-2">
-        Incluye datasets de frecuencia <strong>semanal</strong> y <strong>mensual</strong>, por ejemplo esquemas de certificaciÃ³n.
+        Incluye datasets de frecuencia <strong>semanal</strong> y <strong>mensual</strong>, por ejemplo esquemas de certificación.
       </p>
 
       <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
@@ -72,7 +72,7 @@
             {% empty %}
               <tr>
                 <td colspan="5" class="px-3 py-4 text-center text-slate-400">
-                  No hay registros de validaciÃ³n semanal/mensual.
+                  No hay registros de validación semanal/mensual.
                 </td>
               </tr>
             {% endfor %}
@@ -84,9 +84,9 @@
 
   {% if certification_status %}
     <section class="mt-6 bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-      <h2 class="text-sm font-semibold mb-2">Cobertura de esquemas de certificaciÃ³n</h2>
+      <h2 class="text-sm font-semibold mb-2">Cobertura de esquemas de certificación</h2>
       <p class="text-[11px] text-slate-400 mb-3">
-        Muestra la Ãºltima fecha diaria disponible en el dataset base y la Ãºltima consolidaciÃ³n mensual generada.
+        Muestra la última fecha diaria disponible en el dataset base y la última consolidación mensual generada.
       </p>
       <div class="bg-slate-950/80 border border-slate-800 rounded-lg overflow-hidden">
         <table class="min-w-full text-[11px]">
@@ -94,8 +94,8 @@
             <tr>
               <th class="px-3 py-2 text-left font-semibold">Entidad</th>
               <th class="px-3 py-2 text-left font-semibold">Esquema</th>
-              <th class="px-3 py-2 text-left font-semibold">Ãšltimo diario publicado</th>
-              <th class="px-3 py-2 text-left font-semibold">Ãšltimo mes consolidado</th>
+              <th class="px-3 py-2 text-left font-semibold">Último diario publicado</th>
+              <th class="px-3 py-2 text-left font-semibold">Último mes consolidado</th>
             </tr>
           </thead>
           <tbody>
@@ -114,7 +114,7 @@
                   {% if status.last_consolidated_period %}
                     {{ status.last_consolidated_period }}
                   {% else %}
-                    <span class="text-slate-500">Sin consolidaciÃ³n</span>
+                    <span class="text-slate-500">Sin consolidación</span>
                   {% endif %}
                 </td>
               </tr>

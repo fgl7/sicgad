@@ -25,25 +25,83 @@
       <span class="font-medium">Inicio</span>
     </a>
 
-    <div class="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-6 mb-2">Analisis MHE</div>
-    <a href='{{ kpis_url }}'
-      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path|slice:":6" == "/kpis/" %}active{% endif %}'>
-      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-      </svg>
-      <span class="font-medium">Charts y KPIs</span>
-    </a>
-
-    <div class="text-xs font-bold uppercase tracking-widest text-slate-500 px-3 mt-6 mb-2">Navegacion por sector</div>
-    <div class="space-y-1 px-2">
-      <a href="{{ kpis_url }}" class="block text-xs px-2 py-1 rounded text-slate-300 hover:bg-white/5">Todos los sectores</a>
-      {% for sector in viewer_nav_sectors %}
-      <a href="{{ kpis_url }}?sector={{ sector.id }}" class="block text-xs px-2 py-1 rounded text-slate-400 hover:text-white hover:bg-white/5">
-        {{ sector.name }}
+    <div class="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-6 mb-2">Navegación jerárquica</div>
+    <div class="space-y-1.5">
+      {% if authority_viewer_has_global_scope %}
+      <a href="{{ kpis_url }}"
+        class="sidebar-link flex items-center gap-2 px-3 py-2 transition-all group {% if not request.GET.sector %}active{% endif %}">
+        <span class="font-semibold text-[14px] {% if not request.GET.sector %}text-white{% else %}text-slate-300{% endif %}">Todos los sectores</span>
       </a>
-      {% empty %}
-      <p class="text-[10px] px-2 text-slate-500 italic">No hay sectores activos.</p>
-      {% endfor %}
+      {% endif %}
+
+      {% if authority_nav_tree %}
+        {% for sector in authority_nav_tree %}
+        <a href="{{ kpis_url }}?sector={{ sector.id }}"
+          class="sidebar-link flex items-center gap-2 px-3 py-2 transition-all group {% if request.GET.sector == sector.id|stringformat:'s' and not request.GET.subsector %}active{% endif %}">
+          <span class="font-semibold text-[14px] {% if request.GET.sector == sector.id|stringformat:'s' and not request.GET.subsector %}text-white{% else %}text-slate-300{% endif %}">{{ sector.name }}</span>
+        </a>
+
+        {% if sector.subsectors %}
+        <div class="ml-3 pl-3 border-l border-white/10 space-y-1">
+          {% for subsector in sector.subsectors %}
+          <a href="{{ kpis_url }}?sector={{ sector.id }}&subsector={{ subsector.id }}"
+            class="sidebar-link flex items-center gap-2 px-3 py-2 transition-all group {% if request.GET.subsector == subsector.id|stringformat:'s' and not request.GET.category %}active{% endif %}">
+            <span class="font-semibold text-[13px] {% if request.GET.subsector == subsector.id|stringformat:'s' and not request.GET.category %}text-white{% else %}text-slate-300{% endif %}">{{ subsector.name }}</span>
+          </a>
+
+          {% if subsector.categories %}
+          <div class="ml-3 pl-3 border-l border-white/10 space-y-1">
+            {% for category in subsector.categories %}
+            <a href="{{ kpis_url }}?sector={{ sector.id }}&subsector={{ subsector.id }}&category={{ category.id }}"
+              class="sidebar-link flex items-center gap-2 px-3 py-2 transition-all group {% if request.GET.category == category.id|stringformat:'s' %}active{% endif %}">
+              <span class="font-medium text-[12px] {% if request.GET.category == category.id|stringformat:'s' %}text-white{% else %}text-slate-300{% endif %}">{{ category.name }}</span>
+            </a>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endfor %}
+      {% elif authority_dataset_tree %}
+        {% for sector in authority_dataset_tree %}
+        <a href="{{ kpis_url }}?sector={{ sector.id }}"
+          class="sidebar-link flex items-center gap-2 px-3 py-2 transition-all group {% if request.GET.sector == sector.id|stringformat:'s' and not request.GET.subsector %}active{% endif %}">
+          <span class="font-semibold text-[14px] {% if request.GET.sector == sector.id|stringformat:'s' and not request.GET.subsector %}text-white{% else %}text-slate-300{% endif %}">{{ sector.name }}</span>
+        </a>
+
+        {% if sector.subsectors %}
+        <div class="ml-3 pl-3 border-l border-white/10 space-y-1">
+          {% for subsector in sector.subsectors %}
+          <a href="{{ kpis_url }}?sector={{ sector.id }}&subsector={{ subsector.id }}"
+            class="sidebar-link flex items-center gap-2 px-3 py-2 transition-all group {% if request.GET.subsector == subsector.id|stringformat:'s' and not request.GET.category %}active{% endif %}">
+            <span class="font-semibold text-[13px] {% if request.GET.subsector == subsector.id|stringformat:'s' and not request.GET.category %}text-white{% else %}text-slate-300{% endif %}">{{ subsector.name }}</span>
+          </a>
+
+          {% if subsector.categories %}
+          <div class="ml-3 pl-3 border-l border-white/10 space-y-1">
+            {% for category in subsector.categories %}
+            <a href="{{ kpis_url }}?sector={{ sector.id }}&subsector={{ subsector.id }}&category={{ category.id }}"
+              class="sidebar-link flex items-center gap-2 px-3 py-2 transition-all group {% if request.GET.category == category.id|stringformat:'s' %}active{% endif %}">
+              <span class="font-medium text-[12px] {% if request.GET.category == category.id|stringformat:'s' %}text-white{% else %}text-slate-300{% endif %}">{{ category.name }}</span>
+            </a>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% endfor %}
+      {% else %}
+        {% for sector in viewer_nav_sectors %}
+        <a href="{{ kpis_url }}?sector={{ sector.id }}"
+          class="sidebar-link flex items-center gap-2 px-3 py-2 transition-all group {% if request.GET.sector == sector.id|stringformat:'s' %}active{% endif %}">
+          <span class="font-semibold text-[14px] {% if request.GET.sector == sector.id|stringformat:'s' %}text-white{% else %}text-slate-300{% endif %}">{{ sector.name }}</span>
+        </a>
+        {% empty %}
+        <p class="text-[10px] px-3 text-slate-500 italic">No hay sectores activos.</p>
+        {% endfor %}
+      {% endif %}
     </div>
 
     <a href='{{ audit_url }}'
@@ -51,7 +109,7 @@
       <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
       </svg>
-      <span class="font-medium">Auditoria</span>
+      <span class="font-medium">Auditoría</span>
     </a>
   </nav>
 
@@ -72,7 +130,7 @@
         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H3m0 0l3-3m-3 3l3 3m6-9V5a2 2 0 012-2h3a2 2 0 012 2v14a2 2 0 01-2 2h-3a2 2 0 01-2-2v-1" />
         </svg>
-        Cerrar sesion
+        Cerrar sesión
       </button>
     </form>
   </div>

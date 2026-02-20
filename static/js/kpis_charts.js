@@ -8,9 +8,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const dateEndInput = document.getElementById("kpi-date-end");
   const dateApplyButton = document.getElementById("kpi-date-apply");
   const chartContainer = document.getElementById("kpi-chart");
+  const authorityCards = document.getElementById("authority-kpi-cards");
   const tableContainer = document.getElementById("kpi-table-container");
   const exportCsvButton = document.getElementById("kpi-export-csv");
   const exportExcelButton = document.getElementById("kpi-export-excel");
+  const isAuthorityView = Boolean(authorityCards);
 
   if (
     !modeSelect ||
@@ -34,6 +36,11 @@ document.addEventListener("DOMContentLoaded", function () {
   const numberFormatter = new Intl.NumberFormat("es-CL", {
     maximumFractionDigits: 2,
   });
+  const compactFormatter = new Intl.NumberFormat("es-CL", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+  const authorityPalette = ["#f5b14f", "#33b6ff", "#23d3a6", "#8b7dff"];
 
   function parseDateValue(raw) {
     if (!raw && raw !== 0) {
@@ -66,6 +73,31 @@ document.addEventListener("DOMContentLoaded", function () {
   let currentColumns = [];
   let availableDateColumn = null;
   const filterBounds = { start: null, end: null };
+  const url = new URL(window.location.href);
+
+  function setDatasetInUrl(datasetId) {
+    if (!datasetId) {
+      url.searchParams.delete("dataset");
+    } else {
+      url.searchParams.set("dataset", String(datasetId));
+    }
+    window.history.replaceState({}, "", `${url.pathname}?${url.searchParams.toString()}`);
+  }
+
+  function applyDatasetFromUrl() {
+    const datasetFromUrl = url.searchParams.get("dataset");
+    if (!datasetFromUrl) {
+      return false;
+    }
+    const optionExists = Array.from(instanceSelect.options || []).some(
+      (opt) => opt.value === datasetFromUrl
+    );
+    if (!optionExists) {
+      return false;
+    }
+    instanceSelect.value = datasetFromUrl;
+    return true;
+  }
 
   function getSelectedYFields() {
     if (!yFieldBox) {
@@ -208,6 +240,130 @@ document.addEventListener("DOMContentLoaded", function () {
   function formatInputDate(date) {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return local.toISOString().slice(0, 10);
+  }
+
+  function formatMetricValue(raw) {
+    if (raw == null || !Number.isFinite(raw)) {
+      return "--";
+    }
+    const abs = Math.abs(raw);
+    if (abs >= 100000) {
+      return compactFormatter.format(raw);
+    }
+    return numberFormatter.format(raw);
+  }
+
+  function createSparkline(values, color) {
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", "0 0 100 40");
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.classList.add("authority-kpi-sparkline");
+
+    const clean = values.filter((v) => Number.isFinite(v));
+    if (clean.length < 2) {
+      return svg;
+    }
+
+    const min = Math.min(...clean);
+    const max = Math.max(...clean);
+    const span = max - min || 1;
+
+    const d = clean
+      .map((value, idx) => {
+        const x = (idx / (clean.length - 1)) * 100;
+        const y = 36 - ((value - min) / span) * 30;
+        return `${idx === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+      })
+      .join(" ");
+
+    const path = document.createElementNS(svgNS, "path");
+    path.setAttribute("d", d);
+    path.setAttribute("stroke", color);
+    svg.appendChild(path);
+
+    return svg;
+  }
+
+  function updateAuthorityCards(data, rows) {
+    if (!authorityCards) {
+      return;
+    }
+
+    authorityCards.innerHTML = "";
+
+    if (!data || !data.columns || !rows || !rows.length) {
+      for (let i = 0; i < 3; i += 1) {
+        const card = document.createElement("article");
+        card.className = "authority-kpi-card authority-kpi-card-empty";
+        card.innerHTML =
+          '<div class="authority-kpi-label">Métrica</div><div class="authority-kpi-value">--</div><div class="authority-kpi-trend">Selecciona un dataset</div>';
+        authorityCards.appendChild(card);
+      }
+      return;
+    }
+
+    const selectedNames = getSelectedYFields();
+    const selectedCols = selectedNames
+      .map((name) => data.columns.find((c) => c.name === name))
+      .filter(Boolean);
+    const numericCols = data.columns.filter(
+      (c) => c.data_type === "INTEGER" || c.data_type === "FLOAT"
+    );
+    const sourceCols = (selectedCols.length ? selectedCols : numericCols).slice(0, 3);
+
+    if (!sourceCols.length) {
+      updateAuthorityCards(null, []);
+      return;
+    }
+
+    sourceCols.forEach((col, idx) => {
+      const values = rows
+        .map((row) => {
+          const raw = (row.values || {})[col.name];
+          if (raw == null || raw === "") {
+            return null;
+          }
+          const parsed = Number(raw);
+          return Number.isFinite(parsed) ? parsed : null;
+        })
+        .filter((v) => v != null);
+
+      const latest = values.length ? values[values.length - 1] : null;
+      const prev = values.length > 1 ? values[values.length - 2] : null;
+      const delta = latest != null && prev != null ? latest - prev : null;
+      const pct =
+        delta != null && prev !== 0 ? (delta / Math.abs(prev)) * 100 : null;
+
+      const trendClass = pct == null ? "" : pct >= 0 ? "up" : "down";
+      const trendPrefix = pct == null ? "" : pct >= 0 ? "+" : "";
+      const trendText =
+        pct == null
+          ? "Sin variación reciente"
+          : `${trendPrefix}${pct.toFixed(2)}% vs anterior`;
+
+      const card = document.createElement("article");
+      card.className = "authority-kpi-card";
+
+      const label = document.createElement("div");
+      label.className = "authority-kpi-label";
+      label.textContent = col.label || col.name;
+
+      const value = document.createElement("div");
+      value.className = "authority-kpi-value";
+      value.textContent = `${formatMetricValue(latest)}${col.unit ? ` ${col.unit}` : ""}`;
+
+      const trend = document.createElement("div");
+      trend.className = `authority-kpi-trend ${trendClass}`.trim();
+      trend.textContent = trendText;
+
+      card.appendChild(label);
+      card.appendChild(value);
+      card.appendChild(trend);
+      card.appendChild(createSparkline(values, authorityPalette[idx % authorityPalette.length]));
+
+      authorityCards.appendChild(card);
+    });
   }
 
   function firstDayOfRecentThreeMonths(maxDate) {
@@ -390,7 +546,9 @@ document.addEventListener("DOMContentLoaded", function () {
       stack = "total";
     }
 
-    const seriesColors = ["#6366f1", "#10b981", "#8b5cf6", "#f43f5e", "#f59e0b", "#06b6d4"];
+    const seriesColors = isAuthorityView
+      ? ["#f5b14f", "#33b6ff", "#23d3a6", "#8b7dff", "#f97393", "#39d1ff"]
+      : ["#6366f1", "#10b981", "#8b5cf6", "#f43f5e", "#f59e0b", "#06b6d4"];
     const series = yCols.map(function (yCol, idx) {
       const values = rows.map(function (row) {
         const raw = (row.values || {})[yCol.name];
@@ -403,21 +561,24 @@ document.addEventListener("DOMContentLoaded", function () {
         stack: stack,
         showSymbol: false,
         lineStyle: {
-          width: 3,
-          shadowColor: 'rgba(0, 0, 0, 0.3)',
-          shadowBlur: 10,
+          width: isAuthorityView ? 2.8 : 3,
+          shadowColor: isAuthorityView ? "rgba(0, 0, 0, 0.45)" : "rgba(0, 0, 0, 0.3)",
+          shadowBlur: isAuthorityView ? 12 : 10,
           shadowOffsetY: 5
         },
         itemStyle: {
           color: seriesColors[idx % seriesColors.length],
           borderRadius: seriesType === 'bar' ? [6, 6, 0, 0] : 0
         },
-        areaStyle: seriesType === 'line' && !stack ? {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: seriesColors[idx % seriesColors.length] + '33' },
-            { offset: 1, color: seriesColors[idx % seriesColors.length] + '00' }
-          ])
-        } : undefined,
+        areaStyle:
+          seriesType === "line" && !stack
+            ? {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: `${seriesColors[idx % seriesColors.length]}55` },
+                  { offset: 1, color: `${seriesColors[idx % seriesColors.length]}00` },
+                ]),
+              }
+            : undefined,
         data: values,
       };
     });
@@ -427,22 +588,25 @@ document.addEventListener("DOMContentLoaded", function () {
     return {
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(15, 23, 42, 0.95)",
-        borderColor: "rgba(99, 102, 241, 0.2)",
+        backgroundColor: isAuthorityView ? "rgba(6, 16, 32, 0.97)" : "rgba(15, 23, 42, 0.95)",
+        borderColor: isAuthorityView ? "rgba(51, 182, 255, 0.35)" : "rgba(99, 102, 241, 0.2)",
         borderWidth: 1,
         borderRadius: 12,
         padding: [10, 14],
-        textStyle: { color: "#f8fafc", fontSize: 13, fontFamily: 'Plus Jakarta Sans' },
+        textStyle: { color: "#f8fafc", fontSize: 12, fontFamily: "Lexend" },
         axisPointer: {
           type: "line",
-          lineStyle: { color: "rgba(99, 102, 241, 0.4)", width: 2 },
+          lineStyle: {
+            color: isAuthorityView ? "rgba(51, 182, 255, 0.45)" : "rgba(99, 102, 241, 0.4)",
+            width: 2,
+          },
         },
       },
       legend: {
         show: yCols.length > 1,
         top: 0,
         textStyle: {
-          color: "#475569", // Slate 600 for better visibility in light mode
+          color: isAuthorityView ? "#aec5e8" : "#475569",
           fontSize: 11,
           fontWeight: 600
         },
@@ -461,14 +625,18 @@ document.addEventListener("DOMContentLoaded", function () {
           bottom: 0,
           brushSelect: false,
           handleStyle: {
-            color: "#6366f1",
-            borderColor: "#1e293b",
+            color: isAuthorityView ? "#1bc9ff" : "#6366f1",
+            borderColor: isAuthorityView ? "#0f2745" : "#1e293b",
           },
           textStyle: {
-            color: "#64748b",
+            color: isAuthorityView ? "#7ea1cc" : "#64748b",
           },
-          fillerColor: "rgba(99, 102, 241, 0.08)",
-          borderColor: "rgba(255, 255, 255, 0.03)",
+          fillerColor: isAuthorityView
+            ? "rgba(27, 201, 255, 0.14)"
+            : "rgba(99, 102, 241, 0.08)",
+          borderColor: isAuthorityView
+            ? "rgba(27, 201, 255, 0.2)"
+            : "rgba(255, 255, 255, 0.03)",
         },
       ],
       grid: {
@@ -482,12 +650,12 @@ document.addEventListener("DOMContentLoaded", function () {
         type: "category",
         data: xValues,
         name: xCol.label || xCol.name,
-        axisLine: { lineStyle: { color: "#1f2937" } },
+        axisLine: { lineStyle: { color: isAuthorityView ? "#2b4369" : "#1f2937" } },
         axisTick: { show: false },
         axisLabel: {
           rotate: xIsTime ? 30 : 0,
           fontSize: 9,
-          color: "#94a3b8",
+          color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
           margin: 6,
         },
         splitLine: { show: false },
@@ -504,14 +672,18 @@ document.addEventListener("DOMContentLoaded", function () {
         axisLabel: {
           margin: 6,
           fontSize: 9,
-          color: "#94a3b8",
+          color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
           formatter: function (value) {
             return numberFormatter.format(value);
           },
         },
         splitLine: {
           show: true,
-          lineStyle: { color: "rgba(148, 163, 184, 0.12)" },
+          lineStyle: {
+            color: isAuthorityView
+              ? "rgba(101, 141, 189, 0.2)"
+              : "rgba(148, 163, 184, 0.12)",
+          },
         },
       },
       series: series,
@@ -716,6 +888,7 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
       chart.clear();
     }
+    updateAuthorityCards(currentData, rows);
   }
 
   function loadInstanceData() {
@@ -726,6 +899,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (chart) {
         chart.clear();
       }
+      updateAuthorityCards(null, []);
       if (tableContainer) {
         tableContainer.innerHTML = "";
       }
@@ -760,6 +934,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   instanceSelect.addEventListener("change", function () {
+    setDatasetInUrl(instanceSelect.value);
     loadInstanceData();
   });
 
@@ -775,5 +950,17 @@ document.addEventListener("DOMContentLoaded", function () {
   if (exportExcelButton) {
     exportExcelButton.addEventListener("click", exportExcel);
   }
+
+  const appliedFromUrl = applyDatasetFromUrl();
+  if (!appliedFromUrl && !instanceSelect.value) {
+    const firstDatasetOption = Array.from(instanceSelect.options || []).find(
+      (opt) => Boolean(opt.value)
+    );
+    if (firstDatasetOption) {
+      instanceSelect.value = firstDatasetOption.value;
+    }
+  }
+  setDatasetInUrl(instanceSelect.value);
+  loadInstanceData();
 
 });

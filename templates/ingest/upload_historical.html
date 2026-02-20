@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Carga historica - SICGAD{% endblock %}
-{% block page_title %}Carga historica{% endblock %}
+{% block title %}Carga histórica - SICGAD{% endblock %}
+{% block page_title %}Carga histórica{% endblock %}
 
 {% block extra_js %}
   <script src="{% static 'js/ingest_upload.js' %}"></script>
@@ -10,11 +10,11 @@
 
 {% block content %}
   <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4">
-    <h2 class="text-sm font-semibold">Importar historico diario</h2>
+    <h2 class="text-sm font-semibold">Importar histórico</h2>
     <p class="text-xs text-slate-300">
-      Esta opcion divide un archivo con muchas filas (una por dia) en multiples cargas diarias.
+      Esta opción divide un archivo con muchas filas (una por día) en múltiples cargas diarias.
       Cada fecha se convierte en un <span class="font-mono">DatasetInstance</span> con su propio archivo,
-      listo para enviarse a validacion.
+      listo para enviarse a validación.
     </p>
 
     <div class="text-[11px] text-slate-400 space-y-1">
@@ -60,20 +60,20 @@
 
       <div class="flex items-center justify-between pt-2">
         <div class="flex items-center gap-3">
-          <a href="{% url 'ingest:upload' %}" class="text-xs text-slate-300 hover:text-emerald-400">
+          <a href="{% url 'ingest:upload' %}" class="page-back-link">
             Volver a carga diaria
           </a>
           <button
             type="button"
             id="download-template-btn"
             data-download-url="{% url 'ingest:download_template' %}"
-            class="inline-flex items-center px-3 py-1.5 rounded-md bg-slate-800 text-xs font-semibold text-slate-100 hover:bg-slate-700"
+            class="btn-secondary inline-flex items-center"
           >
             Descargar plantilla (Excel)
           </button>
         </div>
-        <button id="historical-upload-submit" type="submit" class="inline-flex items-center px-4 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500">
-          Importar historico
+        <button id="historical-upload-submit" type="submit" class="btn-primary inline-flex items-center">
+          Importar histórico
         </button>
       </div>
     </form>
@@ -97,11 +97,11 @@
 
         <div id="historical-upload-backend-phase" class="hidden inline-flex items-center gap-2 text-[11px] text-sky-200">
           <span class="inline-block w-2.5 h-2.5 border-2 border-sky-300 border-t-transparent rounded-full animate-spin"></span>
-          <span id="historical-upload-backend-text">Procesando historico en servidor...</span>
+          <span id="historical-upload-backend-text">Procesando histórico en servidor...</span>
         </div>
 
         <div class="pt-2 flex justify-end">
-          <button id="historical-upload-cancel" type="button" class="inline-flex items-center px-3 py-1.5 rounded-md bg-rose-600 text-xs font-semibold text-white hover:bg-rose-500">
+          <button id="historical-upload-cancel" type="button" class="btn-danger inline-flex items-center">
             Cancelar
           </button>
         </div>

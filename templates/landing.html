@@ -1,101 +1,203 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-    <meta charset="utf-8" />
-    <title>SICGAD | Acceso institucional</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet" />
-
-    <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=3" />
-    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=3" />
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="min-h-screen selection:bg-emerald-400/30 saas-hybrid">
-    <a href="#contenido"
-        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-full focus:bg-slate-900 focus:text-white">
-        Saltar al contenido
-    </a>
-
-    <div class="landing-backdrop" aria-hidden="true">
-        <img src="{% static 'background.png' %}" alt="" class="landing-image" />
-        <div class="landing-overlay"></div>
-        <div class="landing-glow landing-glow-left"></div>
-        <div class="landing-glow landing-glow-right"></div>
-    </div>
-
-    <main id="contenido" class="relative z-10 min-h-screen flex items-center px-6 py-16">
-        <section class="landing-stagger w-full max-w-6xl mx-auto space-y-16">
-            <div class="flex justify-end">
-                <div class="system-status inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.35em]"
-                    data-system-status aria-live="polite">
-                    <span class="status-dot" aria-hidden="true"></span>
-                    <span data-status-label>Sistema en línea</span>
-                </div>
-            </div>
-
-            <div class="landing-header text-center space-y-8">
-                <div class="landing-emblem mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-white/95">
-                    <img src="{% static 'escudo.png' %}" alt="Escudo del Estado Plurinacional de Bolivia" class="h-24 w-24 sm:h-28 sm:w-28" />
-                </div>
-                <div class="text-[11px] sm:text-xs uppercase tracking-[0.38em] text-slate-300">
-                    <p>Ministerio de Hidrocarburos y Energías</p>
-                    <p class="text-[10px] sm:text-[11px] tracking-[0.3em] text-slate-400">Viceministerio de Exploración y Explotación de Recursos Energéticos</p>
-                </div>
-                <div class="space-y-4">
-                    <p class="text-sm sm:text-base text-slate-300">Bienvenidos a la plataforma institucional.</p>
-                    <h1 class="text-3xl sm:text-4xl lg:text-6xl font-heading font-semibold text-white">
-                        Sistema Integral de Carga, Gestión y Análisis de Datos
-                    </h1>
-                    <p class="text-base sm:text-lg font-semibold uppercase tracking-[0.45em] text-emerald-300">(SICGAD)</p>
-                </div>
-                <div class="landing-actions flex flex-wrap items-center justify-center gap-4 pt-6">
-                    <a href="{% url 'kpis_charts' %}"
-                        class="inline-flex items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_14px_32px_-18px_rgba(16,185,129,0.65)] transition hover:bg-emerald-400">
-                        Visualización de datos
-                    </a>
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'home' %}"
-                        class="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:bg-white/10">
-                        Volver a Panel de control
-                    </a>
-                    {% else %}
-                            <a href="{% url 'login' %}"
-                                class="inline-flex items-center justify-center rounded-full border border-emerald-300/40 bg-white/5 px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_-20px_rgba(16,185,129,0.6)] transition hover:border-emerald-200 hover:bg-emerald-400/20 landing-login-cta">
-                                Login
-                            </a>
-                            {% endif %}
-                </div>
-            </div>
-
-            <div class="landing-stats grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                    <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-semibold">Publicadas</p>
-                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
-                </div>
-                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                    <p class="text-[10px] uppercase tracking-[0.35em] text-sky-300 font-semibold">Esquemas</p>
-                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
-                </div>
-                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                    <p class="text-[10px] uppercase tracking-[0.35em] text-amber-300 font-semibold">Pendientes</p>
-                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
-                </div>
-                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-                    <p class="text-[10px] uppercase tracking-[0.35em] text-slate-300 font-semibold">Totales</p>
-                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
-                </div>
-            </div>
-        </section>
-    </main>
-    <script src="{% static 'js/landing_status.js' %}?v=1"></script>
-</body>
-
-</html>
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="es">
+
+
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <title>SICGAD | Acceso institucional</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <link
+
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
+
+        rel="stylesheet" />
+
+
+
+    <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=3" />
+
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=5" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+
+
+
+<body class="min-h-screen selection:bg-emerald-400/30 saas-hybrid">
+
+    <a href="#contenido"
+
+        class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-full focus:bg-slate-900 focus:text-white">
+
+        Saltar al contenido
+
+    </a>
+
+
+
+    <div class="landing-backdrop" aria-hidden="true">
+
+        <img src="{% static 'background.png' %}" alt="" class="landing-image" />
+
+        <div class="landing-overlay"></div>
+
+        <div class="landing-glow landing-glow-left"></div>
+
+        <div class="landing-glow landing-glow-right"></div>
+
+    </div>
+
+
+
+    <main id="contenido" class="relative z-10 min-h-screen flex items-center px-6 py-16">
+
+        <section class="landing-stagger w-full max-w-6xl mx-auto space-y-16">
+
+            <div class="flex justify-end">
+
+                <div class="system-status inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.35em]"
+
+                    data-system-status aria-live="polite">
+
+                    <span class="status-dot" aria-hidden="true"></span>
+
+                    <span data-status-label>Sistema en línea</span>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="landing-header text-center space-y-8">
+
+                <div class="landing-emblem mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-white/95">
+
+                    <img src="{% static 'escudo.png' %}" alt="Escudo del Estado Plurinacional de Bolivia" class="h-24 w-24 sm:h-28 sm:w-28" />
+
+                </div>
+
+                <div class="text-[11px] sm:text-xs uppercase tracking-[0.38em] text-slate-300">
+
+                    <p>Ministerio de Hidrocarburos y Energías</p>
+
+                    <p class="text-[10px] sm:text-[11px] tracking-[0.3em] text-slate-400">Viceministerio de Exploración y Explotación de Recursos Energéticos</p>
+
+                </div>
+
+                <div class="space-y-4">
+
+                    <p class="text-sm sm:text-base text-slate-300">Bienvenidos a la plataforma institucional.</p>
+
+                    <h1 class="text-3xl sm:text-4xl lg:text-6xl font-heading font-semibold text-white">
+
+                        Sistema Integral de Carga, Gestión y Análisis de Datos
+
+                    </h1>
+
+                    <p class="text-base sm:text-lg font-semibold uppercase tracking-[0.45em] text-emerald-300">(SICGAD)</p>
+
+                </div>
+
+                <div class="landing-actions flex flex-wrap items-center justify-center gap-4 pt-6">
+
+                    {% if user.is_authenticated %}
+
+                    <a href="{% url 'home' %}"
+
+                        class="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:bg-white/10">
+
+                        Volver a Panel de control
+
+                    </a>
+
+                    {% else %}
+
+                            <a href="{% url 'login' %}" class="landing-login-cta landing-login-cta--sky" aria-label="Iniciar sesion en SICGAD">
+                                <span class="landing-login-cta__icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H3m0 0l3-3m-3 3l3 3m7-8V5a2 2 0 012-2h3a2 2 0 012 2v14a2 2 0 01-2 2h-3a2 2 0 01-2-2v-1" />
+                                    </svg>
+                                </span>
+                                <span class="landing-login-cta__copy">
+                                    <span class="landing-login-cta__label">Acceso institucional</span>
+                                    <span class="landing-login-cta__title">Iniciar sesion</span>
+                                </span>
+                                <span class="landing-login-cta__arrow" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 12h15" />
+                                    </svg>
+                                </span>
+                            </a>
+
+                            {% endif %}
+
+                </div>
+
+            </div>
+
+
+
+            <div class="landing-stats grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+
+                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-semibold">Publicadas</p>
+
+                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
+
+                </div>
+
+                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-sky-300 font-semibold">Esquemas</p>
+
+                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
+
+                </div>
+
+                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-amber-300 font-semibold">Pendientes</p>
+
+                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
+
+                </div>
+
+                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-slate-300 font-semibold">Totales</p>
+
+                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <script src="{% static 'js/landing_status.js' %}?v=1"></script>
+
+</body>
+
+
+
+</html>
+

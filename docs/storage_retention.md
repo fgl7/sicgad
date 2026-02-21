@@ -5,7 +5,10 @@ Evitar crecimiento no controlado de `media/` conservando trazabilidad operativa.
 
 ## Politica implementada
 1. Al reemplazar o borrar registros con archivos (`DatasetInstance.raw_file`, `HistoricalImportBatch.source_file`, `DatasetChangeAttachment.file`), el archivo fisico se elimina automaticamente.
-2. Limpieza automatica periodica dentro de la app (sin comando manual):
+2. Al publicar y materializar correctamente, se limpia en el momento:
+- Borra `raw_file` de instancias `PUBLISHED`/`LOCKED` con `PublishedDataPoint`.
+- Borra `source_file` de historicos `DONE/FAILED` cuando ya no tienen instancias pendientes.
+3. Limpieza automatica periodica dentro de la app (sin comando manual):
 - Borra `raw_file` de instancias en `PUBLISHED/LOCKED`, ya materializadas, y fuera de retencion.
 - Borra `source_file` de historicos `DONE/FAILED`, fuera de retencion, y sin instancias pendientes.
 - Borra archivos huerfanos antiguos en `media/ingest/raw` y `media/ingest/historical`.

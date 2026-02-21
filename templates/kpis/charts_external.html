@@ -24,7 +24,12 @@
                 </option>
                 {% endfor %}
             </select>
-            <p class="mt-1 text-[10px] text-slate-500 italic">Este perfil visualiza solamente datos mensuales publicados.</p>
+            <p class="mt-1 text-[10px] text-slate-500 italic">Este perfil visualiza solamente datos mensuales publicados y el listado se actualiza segun la navegacion jerarquica del sidebar.</p>
+            {% if not datasets %}
+            <p class="mt-2 text-[11px] text-amber-300">
+                No hay datasets mensuales disponibles para tu alcance actual.
+            </p>
+            {% endif %}
         </div>
         <div class="md:col-span-6 lg:col-span-5">
             <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Rango de fechas</label>
@@ -55,7 +60,7 @@
                 <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de grafico</label>
                 <select id="kpi-chart-type-select" class="w-full">
                     <option value="line">Linea suave</option>
-                    <option value="bar">Barras modernas</option>
+                    <option value="bar">Barras</option>
                     <option value="stacked_bar">Barras apiladas</option>
                 </select>
             </div>

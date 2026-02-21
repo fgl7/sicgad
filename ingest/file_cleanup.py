@@ -104,11 +104,53 @@ def cleanup_ingest_files(
     return result
 
 
-def _cleanup_instance_raw_files(*, cutoff, apply_changes: bool, keep_ids: set[int]):
+def cleanup_files_after_publication(
+    *,
+    instance_ids: set[int] | None = None,
+    batch_ids: set[int] | None = None,
+    apply_changes: bool = True,
+) -> CleanupResult:
+    """
+    Limpia de inmediato archivos de instancias/batches ya publicables-materializados.
+
+    Se usa al finalizar aprobaciones para no esperar a la ventana de retención
+    periódica del middleware.
+    """
+    result = CleanupResult()
+
+    if instance_ids:
+        instance_result = _cleanup_instance_raw_files(
+            cutoff=None,
+            apply_changes=apply_changes,
+            keep_ids=set(),
+            only_ids=set(instance_ids),
+        )
+        result.instance_count = instance_result["count"]
+        result.instance_bytes = instance_result["bytes"]
+
+    if batch_ids:
+        batch_result = _cleanup_historical_source_files(
+            cutoff=None,
+            apply_changes=apply_changes,
+            keep_ids=set(),
+            only_ids=set(batch_ids),
+        )
+        result.batch_count = batch_result["count"]
+        result.batch_bytes = batch_result["bytes"]
+
+    return result
+
+
+def _cleanup_instance_raw_files(
+    *,
+    cutoff=None,
+    apply_changes: bool,
+    keep_ids: set[int],
+    only_ids: set[int] | None = None,
+):
     queryset = (
         DatasetInstance.objects.filter(
             state__in=[DatasetInstance.STATE_PUBLISHED, DatasetInstance.STATE_LOCKED],
-            updated_at__lt=cutoff,
         )
         .exclude(raw_file="")
         .filter(raw_file__isnull=False)
@@ -116,6 +158,12 @@ def _cleanup_instance_raw_files(*, cutoff, apply_changes: bool, keep_ids: set[in
         .filter(published_points__isnull=False)
         .distinct()
     )
+    if cutoff is not None:
+        queryset = queryset.filter(updated_at__lt=cutoff)
+    if only_ids is not None:
+        if not only_ids:
+            return {"count": 0, "bytes": 0}
+        queryset = queryset.filter(pk__in=only_ids)
 
     removed_count = 0
     removed_bytes = 0
@@ -136,7 +184,13 @@ def _cleanup_instance_raw_files(*, cutoff, apply_changes: bool, keep_ids: set[in
     return {"count": removed_count, "bytes": removed_bytes}
 
 
-def _cleanup_historical_source_files(*, cutoff, apply_changes: bool, keep_ids: set[int]):
+def _cleanup_historical_source_files(
+    *,
+    cutoff=None,
+    apply_changes: bool,
+    keep_ids: set[int],
+    only_ids: set[int] | None = None,
+):
     pending_states = [
         DatasetInstance.STATE_DRAFT,
         DatasetInstance.STATE_SUBMITTED,
@@ -150,7 +204,6 @@ def _cleanup_historical_source_files(*, cutoff, apply_changes: bool, keep_ids: s
                 HistoricalImportBatch.STATUS_DONE,
                 HistoricalImportBatch.STATUS_FAILED,
             ],
-            created_at__lt=cutoff,
         )
         .exclude(source_file="")
         .filter(source_file__isnull=False)
@@ -158,6 +211,12 @@ def _cleanup_historical_source_files(*, cutoff, apply_changes: bool, keep_ids: s
         .exclude(instances__state__in=pending_states)
         .distinct()
     )
+    if cutoff is not None:
+        queryset = queryset.filter(created_at__lt=cutoff)
+    if only_ids is not None:
+        if not only_ids:
+            return {"count": 0, "bytes": 0}
+        queryset = queryset.filter(pk__in=only_ids)
 
     removed_count = 0
     removed_bytes = 0

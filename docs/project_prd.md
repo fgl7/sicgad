@@ -55,7 +55,7 @@ Seguridad:
 - `AccountProfile.must_change_password` forzado por middleware.
 - Middleware: `accounts/middleware.py`.
 
-## 4. Alcance especial para "Visualizador autoridad MHE"
+## 4. Alcance para visualizadores jerarquicos (AUTHORITY_MHE y EXTERNAL_MONTHLY)
 Configurado desde UX de admin en:
 - `templates/accounts/admin_user_create.html`
 - `templates/accounts/admin_user_edit.html`
@@ -63,11 +63,15 @@ Configurado desde UX de admin en:
 - `static/js/accounts_user_scope.js`
 
 Comportamiento:
-- Si `role=VIEWER` y `viewer_profile_type=AUTHORITY_MHE`, el admin define alcance:
-  - `SECTOR`: el usuario ve todos los datasets de entidades activas del sector seleccionado.
-  - `ALL`: el usuario ve todos los sectores.
-- Implementacion tecnica de alcance global: membership `VIEWER` con `entity=None`.
-- Para alcance por sector: se crean memberships por cada entidad activa dentro del sector.
+- Para visualizadores jerarquicos (`AUTHORITY_MHE` y `EXTERNAL_MONTHLY`), el admin puede seleccionar multiples:
+  - `sector`
+  - `subsector`
+  - `category`
+  - `entity`
+- Las validaciones del formulario aseguran consistencia jerarquica entre selecciones.
+- Los memberships se crean por entidad efectiva (lista de entidades objetivo).
+- Soporte de alcance global (legacy/compatibilidad): membership `VIEWER` con `entity=None`.
+- En runtime, la navegacion jerarquica del sidebar se construye desde memberships activos del usuario.
 
 ## 5. Esquemas
 Modelos en `schemas/models.py`:
@@ -85,7 +89,8 @@ Flujo resumido:
 1. Loader crea/edita esquema.
 2. Loader envia (`PENDING`).
 3. Admin aprueba/rechaza.
-4. Certificacion mensual la crea admin.
+4. Certificacion mensual la crea admin (derivada de un dataset diario).
+5. La certificacion mensual creada por admin nace `APPROVED` y `is_active=True`.
 
 Vistas clave:
 - `schemas/views.py`
@@ -119,6 +124,8 @@ Reglas de negocio activas:
 - Carga historica crea/actualiza multiples `DatasetInstance` desde un archivo.
 - Descarga de plantilla usa columnas del esquema.
 - En envios/aprobaciones historicas, el flujo operativo usa `entity` (no `plant/project`) en permisos y consultas.
+- `materialize_instance` preserva puntos ya existentes cuando la instancia no tiene `raw_file`
+  (caso consolidaciones mensuales), evitando perdida de `PublishedDataPoint`.
 
 UX:
 - En `upload_historical`, spinner y barra de progreso de subida.
@@ -136,8 +143,16 @@ Vistas:
 Comportamiento:
 - Validadores ven bandeja segun memberships y periodicidad.
 - Publicacion final materializa datos a `PublishedDataPoint`.
+- Tras publicar y materializar, se ejecuta limpieza inmediata de archivos de ingest:
+  - borra `DatasetInstance.raw_file` de instancias `PUBLISHED/LOCKED` con puntos materializados.
+  - en historicos, intenta borrar `HistoricalImportBatch.source_file` si el lote ya no tiene instancias pendientes.
+  - esta limpieza es best-effort (si falla, no bloquea la aprobacion; se registra en logs).
 - `approve_historical_batch` contempla re-materializacion de instancias historicas ya publicadas que no tengan puntos, para evitar lotes parciales.
 - Si falla la materializacion de una instancia puntual, el proceso masivo continua y reporta conteo de errores.
+- Al aprobar diarios (individual o historico), se dispara consolidacion mensual automatica para
+  meses afectados via `consolidate_certifications_for_daily_periods`.
+- La consolidacion mensual automatica crea/actualiza instancias de certificacion en `SUBMITTED`
+  (no `DRAFT`) para que entren al flujo de validacion mensual.
 
 Regla operativa importante:
 - `DatasetInstance` publicado sin `PublishedDataPoint` no aparece en KPIs/tablas analiticas, aunque su estado sea `PUBLISHED`.
@@ -156,6 +171,8 @@ Reglas en backend:
 - Para `EXTERNAL_MONTHLY` (viewer puro, no admin/loader/validator):
   - solo datasets `MONTHLY`.
   - bloqueo de datasets no mensuales tambien en endpoint `dataset_data`.
+  - al entrar a `/kpis/` se intenta consolidacion lazy del mes previo (`ensure_previous_month_consolidated`).
+  - si no hay filtros jerarquicos, se redirige al primer `sector/subsector/category` disponible para poblar el selector.
 - Para `AUTHORITY_MHE` (viewer puro):
   - UI con navegacion sector > subsector > categoria > entidad.
   - soporte de filtros por query params `sector/subsector/category/entity`.
@@ -181,7 +198,7 @@ Entrega a plantillas:
 Sidebar:
 - base: `templates/partials/sidebar.html`
 - autoridad MHE: `templates/partials/sidebar_authority_mhe.html`
-- switch en `templates/base.html` segun `is_authority_viewer`
+- switch en `templates/base.html` segun `is_authority_viewer or is_external_monthly_viewer`
 
 Nota: Auditoria esta visible para usuarios autenticados segun reglas actuales de navegacion.
 
@@ -202,6 +219,8 @@ Implementado:
   - `ingest/signals.py`
 - Servicio de limpieza:
   - `ingest/file_cleanup.py`
+- Limpieza inmediata al publicar/materializar:
+  - `cleanup_files_after_publication` llamada desde `validation/views.py`
 - Middleware de limpieza automatica periodica:
   - `ingest/middleware.py`
 - Comando opcional (manual/auditoria):
@@ -210,6 +229,14 @@ Implementado:
   - `AUTO_INGEST_*`
   - `DATA_UPLOAD_MAX_NUMBER_FIELDS`
 - Guia: `docs/storage_retention.md`
+
+Operacion mensual (certificaciones):
+- Comando: `schemas/management/commands/consolidate_certifications.py`
+- Modos:
+  - consolidacion mes previo: `python manage.py consolidate_certifications`
+  - backfill historico total: `python manage.py consolidate_certifications --backfill`
+  - backfill por esquema: `python manage.py consolidate_certifications --backfill --schema-id <id>`
+  - backfill por rango: `--from-date YYYY-MM-DD --to-date YYYY-MM-DD`
 
 ## 12. Rutas principales
 Definidas en `config/urls.py`:
@@ -243,13 +270,15 @@ Funciona y se usa activamente:
 - Creacion/aprobacion de esquemas.
 - Creacion de usuarios y memberships por entidad.
 - Perfiles de visualizador diferenciados (`STANDARD`, `EXTERNAL_MONTHLY`, `AUTHORITY_MHE`).
-- Alcance de autoridad MHE por sector o todos los sectores desde UX de admin.
+- Alcance jerarquico para visualizadores `AUTHORITY_MHE` y `EXTERNAL_MONTHLY`
+  (multi sector/subsector/categoria/entidad) desde UX de admin.
 - Carga historica con progreso visual.
 - Aprobacion historica con overlay de progreso para proceso largo.
 - Aprobacion historica con rematerializacion de puntos faltantes.
-- Sidebar especializado para autoridad MHE.
+- Aprobacion diaria/historica con trigger de consolidacion mensual automatica.
+- Sidebar jerarquico compartido para autoridad MHE y visualizador externo mensual.
 - Restriccion mensual para visualizador externo en charts y dataset_data.
-- Limpieza automatica de archivos en media.
+- Limpieza inmediata post-publicacion/materializacion + limpieza periodica por retencion en media.
 - KPIs de dataset con ventana temporal reciente (3 meses) cuando aplica columna fecha.
 
 Requiere refactor planificado:
@@ -263,6 +292,7 @@ Requiere refactor planificado:
 3. Revisar si el cambio afecta perfiles de visualizador (`viewer_profile_type`).
 4. Ejecutar:
    - `python manage.py check`
+   - si hay cambios en consolidacion mensual: `python manage.py consolidate_certifications --backfill` (entorno de prueba)
 5. Si se modifica ingest/validation, probar manualmente:
    - carga historica
    - carga periodica
@@ -270,6 +300,7 @@ Requiere refactor planificado:
    - aprobacion historica
    - acceso de admin, loader, validator y viewer
 6. Si hay diferencias entre instancias publicadas y datos en KPIs, verificar `PublishedDataPoint` por dataset/periodo.
+   - para visualizador externo mensual, confirmar que las instancias mensuales esten en `PUBLISHED/LOCKED`.
 7. Si se toca UX de cuentas, validar formulario crear/editar usuario y creacion de memberships esperados.
 
 ## 16. Archivos que primero hay que abrir para entender el sistema

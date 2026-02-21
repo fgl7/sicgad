@@ -8,7 +8,7 @@
     <div class="flex items-center justify-between mb-2">
         <div>
             <h2 class="text-2xl font-header font-bold text-white tracking-tight">Crear usuario</h2>
-            <p class="text-slate-500 text-sm">Define credenciales y alcance por subsector/categoría/entidades.</p>
+            <p class="text-slate-500 text-sm">Define credenciales y alcance por sector/subsector/categorías/entidades.</p>
         </div>
         <a href="{% url 'accounts:admin_user_list' %}" class="page-back-link">
             Volver al listado
@@ -103,16 +103,23 @@
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5" data-standard-scope-container>
+            <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-white/5" data-standard-scope-container>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Sector</label>
+                    {{ form.sector }}
+                    <p class="text-[10px] text-slate-500">Seleccione uno o mas sectores.</p>
+                    {{ form.sector.errors }}
+                </div>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Subsector</label>
                     {{ form.subsector }}
+                    <p class="text-[10px] text-slate-500">Seleccione uno o mas subsectores de los sectores elegidos.</p>
                     {{ form.subsector.errors }}
                 </div>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Categorías</label>
                     {{ form.category }}
-                    <p class="text-[10px] text-slate-500">Seleccione una o más categorías del subsector (Ctrl/Cmd + clic).</p>
+                    <p class="text-[10px] text-slate-500">Seleccione una o más categorías del sector/subsector elegido (Ctrl/Cmd + clic).</p>
                     {{ form.category.errors }}
                 </div>
             </div>
@@ -126,7 +133,7 @@
                 <div class="space-y-2" data-entity-container>
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Entidades</label>
                     {{ form.entity }}
-                    <p class="text-[10px] text-slate-500">Seleccione una o varias entidades de las categorías elegidas (Ctrl/Cmd + clic).</p>
+                    <p class="text-[10px] text-slate-500">Seleccione una o varias entidades de las categorías elegidas (filtradas por sector/subsector).</p>
                     {{ form.entity.errors }}
                 </div>
                 <div class="space-y-2">
@@ -155,7 +162,7 @@
             </div>
         </section>
 
-        <section class="glass-card rounded-3xl p-8 space-y-6 uppercase">
+        <section class="glass-card rounded-3xl p-8 space-y-6 uppercase" data-validation-permissions-section>
             <h3 class="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2 mb-4">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
                 Permisos de validación

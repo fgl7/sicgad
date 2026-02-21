@@ -1,5 +1,6 @@
 from django.db.models import Exists, OuterRef, Q
 from django.db.utils import OperationalError, ProgrammingError
+from django.core.cache import cache
 
 from structure.models import Category, Sector
 from .models import AccountProfile, Membership
@@ -69,8 +70,30 @@ def _validator_pending_items_count(user, memberships):
     )
 
 
+def _resolve_current_section(path: str) -> str:
+    if path.startswith("/schemas/"):
+        return "Esquemas"
+    if path.startswith("/ingest/"):
+        return "Carga de datos"
+    if path.startswith("/validate/"):
+        return "Validacion"
+    if path.startswith("/accounts/"):
+        return "Usuarios y roles"
+    if path.startswith("/audit/"):
+        return "Auditoria"
+    if path.startswith("/performance/"):
+        return "Desempeno"
+    if path.startswith("/structure/"):
+        return "Clasificacion"
+    if path.startswith("/home/"):
+        return "Inicio"
+    return "Inicio"
+
+
 def admin_flags(request):
     user = getattr(request, "user", None)
+    path = getattr(request, "path", "") or ""
+    current_section = _resolve_current_section(path)
 
     is_admin = False
     is_loader = False
@@ -92,6 +115,64 @@ def admin_flags(request):
     loader_schema_approved = 0
     loader_schema_rejected = 0
     loader_default_entity = None
+
+    if not user or not user.is_authenticated:
+        return {
+            "is_admin": is_admin,
+            "is_loader": is_loader,
+            "is_validator": is_validator,
+            "is_viewer": is_viewer,
+            "viewer_profile_type": viewer_profile_type,
+            "is_authority_viewer": is_authority_viewer,
+            "is_external_monthly_viewer": is_external_monthly_viewer,
+            "authority_viewer_has_global_scope": authority_viewer_has_global_scope,
+            "viewer_nav_sectors": viewer_nav_sectors,
+            "authority_nav_tree": authority_nav_tree,
+            "current_section": current_section,
+            "pending_schema_requests": pending_schema_requests,
+            "pending_validation_items": pending_validation_items,
+            "pending_certification_alerts": pending_certification_alerts,
+            "loader_pending_certification_alerts": loader_pending_certification_alerts,
+            "loader_validation_approved": loader_validation_approved,
+            "loader_validation_rejected": loader_validation_rejected,
+            "loader_certification_rejected": loader_certification_rejected,
+            "loader_schema_approved": loader_schema_approved,
+            "loader_schema_rejected": loader_schema_rejected,
+            "loader_default_entity": loader_default_entity,
+        }
+
+    # Vistas públicas sin sidebar operativo: evita cálculos pesados de notificaciones.
+    if path == "/" or path.startswith("/accounts/login"):
+        return {
+            "is_admin": False,
+            "is_loader": False,
+            "is_validator": False,
+            "is_viewer": False,
+            "viewer_profile_type": AccountProfile.VIEWER_STANDARD,
+            "is_authority_viewer": False,
+            "is_external_monthly_viewer": False,
+            "authority_viewer_has_global_scope": False,
+            "viewer_nav_sectors": [],
+            "authority_nav_tree": [],
+            "current_section": current_section,
+            "pending_schema_requests": 0,
+            "pending_validation_items": 0,
+            "pending_certification_alerts": 0,
+            "loader_pending_certification_alerts": 0,
+            "loader_validation_approved": 0,
+            "loader_validation_rejected": 0,
+            "loader_certification_rejected": 0,
+            "loader_schema_approved": 0,
+            "loader_schema_rejected": 0,
+            "loader_default_entity": None,
+        }
+
+    cache_key = f"accounts:admin_flags:v3:user:{user.id}"
+    cached_flags = cache.get(cache_key)
+    if cached_flags:
+        payload = dict(cached_flags)
+        payload["current_section"] = current_section
+        return payload
 
     if user and user.is_authenticated:
         try:
@@ -128,10 +209,10 @@ def admin_flags(request):
                     and not is_loader
                     and not is_validator
                 )
-                if is_authority_viewer:
+                if is_authority_viewer or is_external_monthly_viewer:
                     viewer_memberships = memberships.filter(role="VIEWER")
                     has_global_viewer = viewer_memberships.filter(entity__isnull=True).exists()
-                    authority_viewer_has_global_scope = has_global_viewer
+                    authority_viewer_has_global_scope = has_global_viewer and is_authority_viewer
                     sector_qs = Sector.objects.filter(is_active=True)
                     if not has_global_viewer:
                         sector_ids = (
@@ -318,27 +399,7 @@ def admin_flags(request):
             is_validator = False
             is_viewer = False
 
-    path = getattr(request, "path", "") or ""
-    if path.startswith("/schemas/"):
-        current_section = "Esquemas"
-    elif path.startswith("/ingest/"):
-        current_section = "Carga de datos"
-    elif path.startswith("/validate/"):
-        current_section = "Validacion"
-    elif path.startswith("/accounts/"):
-        current_section = "Usuarios y roles"
-    elif path.startswith("/audit/"):
-        current_section = "Auditoria"
-    elif path.startswith("/performance/"):
-        current_section = "Desempeno"
-    elif path.startswith("/structure/"):
-        current_section = "Clasificacion"
-    elif path.startswith("/home/"):
-        current_section = "Inicio"
-    else:
-        current_section = "Inicio"
-
-    return {
+    payload = {
         "is_admin": is_admin,
         "is_loader": is_loader,
         "is_validator": is_validator,
@@ -361,3 +422,7 @@ def admin_flags(request):
         "loader_schema_rejected": loader_schema_rejected,
         "loader_default_entity": loader_default_entity,
     }
+
+    cache_ttl = 20
+    cache.set(cache_key, payload, timeout=cache_ttl)
+    return payload

@@ -16,23 +16,11 @@
 
 
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="{% static 'css/fonts_local.css' %}?v=1" />
+    <link rel="stylesheet" href="{% static 'css/tailwind.generated.css' %}?v=1" />
+    <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=4" />
 
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <link
-
-        href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
-
-        rel="stylesheet" />
-
-
-
-    <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=3" />
-
-    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=5" />
-
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=7" />
 
 </head>
 
@@ -155,37 +143,34 @@
 
             <div class="landing-stats grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
 
-                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+                <a href="{% url 'kpis_charts' %}" class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4 block hover:border-emerald-300/40 transition-colors">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-semibold">Publicaciones oficiales</p>
+                    <p class="mt-3 text-3xl font-semibold text-white">{{ landing_stats.published_total }}</p>
+                    <p class="mt-2 text-xs text-slate-300">Instancias publicadas y bloqueadas</p>
+                </a>
 
-                    <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-semibold">Publicadas</p>
+                <a href="{% url 'kpis_charts' %}" class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4 block hover:border-sky-300/40 transition-colors">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-sky-300 font-semibold">Datasets con datos</p>
+                    <p class="mt-3 text-3xl font-semibold text-white">{{ landing_stats.published_datasets }}</p>
+                    <p class="mt-2 text-xs text-slate-300">
+                        Último corte:
+                        {% if landing_stats.latest_period %}{{ landing_stats.latest_period|date:"d/m/Y" }}{% else %}sin publicaciones{% endif %}
+                    </p>
+                </a>
 
-                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
+                <a href="{% url 'kpis_charts' %}" class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4 block hover:border-amber-300/40 transition-colors">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-amber-300 font-semibold">Cobertura publicada</p>
+                    <p class="mt-3 text-3xl font-semibold text-white">{{ landing_stats.published_sectors }}</p>
+                    <p class="mt-2 text-xs text-slate-300">
+                        Sectores · {{ landing_stats.published_subsectors }} subsectores · {{ landing_stats.published_entities }} entidades
+                    </p>
+                </a>
 
-                </div>
-
-                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-
-                    <p class="text-[10px] uppercase tracking-[0.35em] text-sky-300 font-semibold">Esquemas</p>
-
-                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
-
-                </div>
-
-                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-
-                    <p class="text-[10px] uppercase tracking-[0.35em] text-amber-300 font-semibold">Pendientes</p>
-
-                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
-
-                </div>
-
-                <div class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4">
-
-                    <p class="text-[10px] uppercase tracking-[0.35em] text-slate-300 font-semibold">Totales</p>
-
-                    <p class="mt-3 text-3xl font-semibold text-white">0</p>
-
-                </div>
+                <a href="{% url 'kpis_charts' %}" class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4 block hover:border-cyan-300/40 transition-colors">
+                    <p class="text-[10px] uppercase tracking-[0.35em] text-slate-300 font-semibold">Instituciones registradas</p>
+                    <p class="mt-3 text-3xl font-semibold text-white">{{ landing_stats.institutions_total }}</p>
+                    <p class="mt-2 text-xs text-slate-300">Activas: {{ landing_stats.institutions_active }}</p>
+                </a>
 
             </div>
 

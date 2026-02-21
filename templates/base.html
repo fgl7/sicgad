@@ -6,42 +6,14 @@
   <meta charset="utf-8" />
   <title>{% block title %}SICGAD{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/fonts_local.css' %}?v=1" />
+  <link rel="stylesheet" href="{% static 'css/tailwind.generated.css' %}?v=1" />
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
   <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=4" />
-  <!-- Tailwind CSS via CDN (modo desarrollo) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#2563eb',
-            secondary: '#3b82f6',
-            emerald: {
-              DEFAULT: '#10b981',
-              500: '#10b981',
-            },
-            slate: {
-              950: '#020617',
-            }
-          },
-          fontFamily: {
-            sans: ['Source Sans 3', 'Inter', 'sans-serif'],
-            heading: ['Lexend', 'Source Sans 3', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
   <!-- HTMX -->
-  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <script src="{% static 'vendor/htmx-2.0.3.min.js' %}"></script>
   <!-- Alpine.js -->
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="{% static 'vendor/alpine-3.x.min.js' %}"></script>
   {% block extra_head %}{% endblock %}
 </head>
 
@@ -117,7 +89,7 @@
 
   <div class="app-shell">
     <div class="flex min-h-screen relative z-10">
-      {% if is_authority_viewer %}
+      {% if is_authority_viewer or is_external_monthly_viewer %}
       {% include "partials/sidebar_authority_mhe.html" %}
       {% else %}
       {% include "partials/sidebar.html" %}

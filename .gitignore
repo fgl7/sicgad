@@ -39,3 +39,6 @@ $RECYCLE.BIN/
 *.orig
 *.log
 
+# Frontend build
+node_modules/
+

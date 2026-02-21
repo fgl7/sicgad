@@ -125,47 +125,11 @@ def admin_user_edit(request, user_id):
             }
         )
 
-        if primary.role == "VIEWER" and viewer_profile_type == AccountProfile.VIEWER_AUTHORITY_MHE:
-            has_global_membership = any(m.entity_id is None for m in memberships)
-            if has_global_membership:
-                initial.update(
-                    {
-                        "authority_scope_mode": AdminUserCreateForm.AUTH_SCOPE_ALL,
-                        "authority_sector": None,
-                    }
-                )
-            else:
-                sector_ids = {
-                    m.entity.category.subsector.sector_id
-                    for m in memberships
-                    if m.entity_id and m.entity and m.entity.category_id
-                }
-                selected_sector = None
-                if len(sector_ids) == 1:
-                    sector_id = next(iter(sector_ids))
-                    selected_sector = memberships[0].entity.category.subsector.sector
-                    total_active_in_sector = Entity.objects.filter(
-                        category__subsector__sector_id=sector_id,
-                        is_active=True,
-                    ).count()
-                    memberships_in_sector = len(
-                        [m for m in memberships if m.entity_id and m.entity.category.subsector.sector_id == sector_id]
-                    )
-                    if total_active_in_sector > 0 and memberships_in_sector >= total_active_in_sector:
-                        initial["authority_scope_mode"] = AdminUserCreateForm.AUTH_SCOPE_SECTOR
-                    else:
-                        initial["authority_scope_mode"] = AdminUserCreateForm.AUTH_SCOPE_SECTOR
-                else:
-                    initial["authority_scope_mode"] = AdminUserCreateForm.AUTH_SCOPE_ALL
-                initial["authority_sector"] = selected_sector
-            initial.setdefault("scope_mode", AdminUserCreateForm.SCOPE_ENTITY)
-
         entities = [m.entity for m in memberships if m.entity_id]
         if entities:
             category_ids = {entity.category_id for entity in entities}
             subsector_ids = {entity.category.subsector_id for entity in entities}
-            first_entity = entities[0]
-            first_subsector = first_entity.category.subsector
+            sector_ids = {entity.category.subsector.sector_id for entity in entities}
             role_allows_category_global = primary.role != "LOADER"
 
             total_active_in_categories = Entity.objects.filter(
@@ -176,7 +140,8 @@ def admin_user_edit(request, user_id):
             if role_allows_category_global and total_active_in_categories > 0 and len(entities) >= total_active_in_categories:
                 initial.update(
                     {
-                        "subsector": first_subsector if len(subsector_ids) == 1 else None,
+                        "sector": sorted(sector_ids),
+                        "subsector": sorted(subsector_ids),
                         "category": list(category_ids),
                         "scope_mode": AdminUserCreateForm.SCOPE_CATEGORY_GLOBAL,
                         "entity": [],
@@ -185,7 +150,8 @@ def admin_user_edit(request, user_id):
             else:
                 initial.update(
                     {
-                        "subsector": first_subsector if len(subsector_ids) == 1 else None,
+                        "sector": sorted(sector_ids),
+                        "subsector": sorted(subsector_ids),
                         "category": list(category_ids),
                         "scope_mode": AdminUserCreateForm.SCOPE_ENTITY,
                         "entity": [entity.pk for entity in entities],
@@ -250,7 +216,7 @@ def admin_user_delete(request, user_id):
             request=request,
             module="Accounts",
             object_repr=f"Usuario {username} eliminado",
-            details="Usuario eliminado desde el panel de administraciÃ³n",
+            details="Usuario eliminado desde el panel de administracion",
         )
         return redirect("accounts:admin_user_list")
 

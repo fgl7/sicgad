@@ -457,6 +457,8 @@ def certification_schema_create(request):
                 is_certification=True,
                 is_active=True,
                 source_dataset=source,
+                status=DatasetType.STATUS_APPROVED,
+                status_comment="",
             )
 
             for col in columns:

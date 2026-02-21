@@ -425,3 +425,10 @@ html {
         min-width: 100%;
     }
 }
+
+/* Landing stat cards */
+.landing-stat {
+    text-decoration: none;
+    color: inherit;
+}
+

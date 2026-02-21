@@ -1,4 +1,5 @@
-﻿import calendar
+import calendar
+import logging
 from datetime import date, datetime
 
 from django.contrib import messages
@@ -9,10 +10,15 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Membership
+from ingest.file_cleanup import cleanup_files_after_publication
 from ingest.models import DatasetInstance, PublishedDataPoint, HistoricalImportBatch
 from ingest.utils import materialize_instance
 from schemas.models import DatasetType
-from schemas.services import collect_certification_status, previous_month_range
+from schemas.services import (
+    collect_certification_status,
+    consolidate_certifications_for_daily_periods,
+    previous_month_range,
+)
 
 from audit.utils import record_action
 from .forms import ValidationDecisionForm
@@ -26,6 +32,7 @@ PUBLISHED_STATES = [
     DatasetInstance.STATE_PUBLISHED,
     DatasetInstance.STATE_LOCKED,
 ]
+logger = logging.getLogger(__name__)
 
 
 def _format_value_for_display(column, value):
@@ -485,6 +492,7 @@ def approve_historical_batch(request, batch_id: int):
         )
     )
 
+    approved_periods = list(target_qs.values_list("period", flat=True).distinct())
     instance_ids = list(target_qs.values_list("id", flat=True))
     rematerialize_ids = list(
         DatasetInstance.objects.filter(
@@ -524,14 +532,31 @@ def approve_historical_batch(request, batch_id: int):
     materialize_ids = list(dict.fromkeys(instance_ids + rematerialize_ids))
     materialized_ok = 0
     materialize_errors = 0
+    materialized_instance_ids: list[int] = []
     if materialize_ids:
         # ContinÃºa aunque una instancia puntual falle para evitar dejar el lote a medias.
         for instance in DatasetInstance.objects.filter(id__in=materialize_ids).select_related("dataset_type").iterator(chunk_size=50):
             try:
                 materialize_instance(instance)
                 materialized_ok += 1
+                materialized_instance_ids.append(instance.id)
             except Exception:
                 materialize_errors += 1
+
+    cleaned_files_count = 0
+    if materialized_instance_ids:
+        try:
+            cleanup_result = cleanup_files_after_publication(
+                instance_ids=set(materialized_instance_ids),
+                batch_ids={batch.id},
+                apply_changes=True,
+            )
+            cleaned_files_count = cleanup_result.total_count
+        except Exception:
+            logger.exception(
+                "Error limpiando archivos tras aprobar historico (batch=%s).",
+                batch.id,
+            )
 
     if instance_ids:
         messages.success(request, f"HistÃ³rico aprobado: {len(instance_ids)} dÃ­as.")
@@ -545,6 +570,32 @@ def approve_historical_batch(request, batch_id: int):
             request,
             f"No se pudieron materializar {materialize_errors} instancias. Revise el lote.",
         )
+    consolidated_count = 0
+    if approved_periods:
+        try:
+            consolidated = consolidate_certifications_for_daily_periods(
+                batch.dataset_type,
+                batch.entity,
+                approved_periods,
+                request=request,
+            )
+            consolidated_count = len(consolidated)
+        except Exception:
+            logger.exception(
+                "Error consolidando certificaciones tras aprobar historico (batch=%s).",
+                batch.id,
+            )
+            messages.warning(
+                request,
+                "El historico se aprobo, pero fallo la consolidacion mensual automatica.",
+            )
+        else:
+            if consolidated_count:
+                messages.info(
+                    request,
+                    f"Se generaron/actualizaron {consolidated_count} certificaciones mensuales automaticamente.",
+                )
+
     record_action(
         "VALIDATION",
         request=request,
@@ -552,7 +603,8 @@ def approve_historical_batch(request, batch_id: int):
         object_repr=f"HistÃ³rico {batch.dataset_type.name} | {batch.entity.code or batch.entity.name}",
         details=(
             f"AprobaciÃ³n masiva ({len(instance_ids)} instancias), "
-            f"materializadas={materialized_ok}, errores={materialize_errors}"
+            f"materializadas={materialized_ok}, errores={materialize_errors}, "
+            f"certificaciones={consolidated_count}, archivos_limpiados={cleaned_files_count}"
         ),
     )
     return redirect("validation:inbox")
@@ -664,6 +716,38 @@ def detail(request, pk):
 
                 if instance.state == DatasetInstance.STATE_PUBLISHED:
                     materialize_instance(instance)
+                    try:
+                        cleanup_files_after_publication(
+                            instance_ids={instance.id},
+                            batch_ids=(
+                                {instance.historical_batch_id}
+                                if instance.historical_batch_id
+                                else None
+                            ),
+                            apply_changes=True,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Error limpiando archivos tras publicar instancia (instance=%s).",
+                            instance.id,
+                        )
+                    if freq == DatasetType.DAILY:
+                        try:
+                            consolidate_certifications_for_daily_periods(
+                                instance.dataset_type,
+                                instance.entity,
+                                [instance.period],
+                                request=request,
+                            )
+                        except Exception:
+                            logger.exception(
+                                "Error consolidando certificaciones tras aprobar diario (instance=%s).",
+                                instance.id,
+                            )
+                            messages.warning(
+                                request,
+                                "El dia fue aprobado, pero fallo la consolidacion mensual automatica.",
+                            )
                 messages.success(request, "Dataset aprobado correctamente.")
                 record_action(
                     "VALIDATION",
@@ -717,7 +801,3 @@ def detail(request, pk):
             "monthly_review": monthly_review,
         },
     )
-
-
-
-

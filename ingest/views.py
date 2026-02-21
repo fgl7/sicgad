@@ -14,7 +14,6 @@ from django.forms import formset_factory
 from django.core.files.base import ContentFile
 from io import BytesIO, TextIOWrapper, StringIO
 import csv
-import openpyxl
 import threading
 
 from accounts.models import Membership
@@ -1022,6 +1021,8 @@ def download_template(request):
         base_name = f"plantilla_{ds.name}"
     safe_name = f"{slugify(base_name) or 'plantilla'}.xlsx"
 
+    import openpyxl
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Plantilla"
@@ -1101,6 +1102,8 @@ def instance_detail(request, pk):
 
         try:
             if ext in ("xlsx", "xlsm", "xltx", "xltm"):
+                import openpyxl
+
                 with file_field.open("rb") as fh:
                     wb = openpyxl.load_workbook(fh, read_only=True, data_only=True)
                     ws = wb.active

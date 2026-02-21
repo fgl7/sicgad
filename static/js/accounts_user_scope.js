@@ -1,11 +1,13 @@
 (() => {
     const scopeSelect = document.getElementById("id_scope_mode");
+    const sectorSelect = document.getElementById("id_sector");
     const subsectorSelect = document.getElementById("id_subsector");
     const categorySelect = document.getElementById("id_category");
     const entitySelect = document.getElementById("id_entity");
     const entityContainer = document.querySelector("[data-entity-container]");
     const roleSelect = document.getElementById("id_role");
     const viewerProfileContainer = document.querySelector("[data-viewer-profile-container]");
+    const validationPermissionsSection = document.querySelector("[data-validation-permissions-section]");
     const viewerProfileSelect = document.getElementById("id_viewer_profile_type");
     const standardScopeContainers = document.querySelectorAll("[data-standard-scope-container]");
     const authorityScopeContainer = document.querySelector("[data-authority-scope-container]");
@@ -60,7 +62,7 @@
             if (!selected.length) {
                 const empty = document.createElement("span");
                 empty.className = "multi-select-empty";
-                empty.textContent = "Sin selección";
+                empty.textContent = "Sin seleccion";
                 chips.appendChild(empty);
                 return;
             }
@@ -150,7 +152,9 @@
         };
     }
 
-    const categoryUI = createMultiSelectUI(categorySelect, "Buscar categorías...");
+    const sectorUI = createMultiSelectUI(sectorSelect, "Buscar sectores...");
+    const subsectorUI = createMultiSelectUI(subsectorSelect, "Buscar subsectores...");
+    const categoryUI = createMultiSelectUI(categorySelect, "Buscar categorias...");
     const entityUI = createMultiSelectUI(entitySelect, "Buscar entidades...");
 
     const getSelectedValues = (select) => {
@@ -174,20 +178,47 @@
         }
     };
 
+    const filterSubsectorsBySector = () => {
+        if (!subsectorSelect) {
+            return;
+        }
+        const selectedSectorIds = getSelectedValues(sectorSelect);
+        Array.from(subsectorSelect.options || []).forEach((option) => {
+            if (!option.value) {
+                return;
+            }
+            const optionSector = option.dataset.sectorId || "";
+            const matches = selectedSectorIds.length === 0 || selectedSectorIds.includes(optionSector);
+            option.hidden = !matches;
+            option.disabled = !matches;
+            if (!matches && option.selected) {
+                option.selected = false;
+            }
+        });
+        if (subsectorUI) {
+            subsectorUI.refresh();
+        }
+    };
+
     const filterCategoriesBySubsector = () => {
         if (!categorySelect) {
             return;
         }
-        const selectedSubsector = subsectorSelect ? subsectorSelect.value : "";
+        const selectedSectorIds = getSelectedValues(sectorSelect);
+        const selectedSubsectorIds = getSelectedValues(subsectorSelect);
         Array.from(categorySelect.options || []).forEach((option) => {
             if (!option.value) {
                 return;
             }
             const optionSubsector = option.dataset.subsectorId || "";
-            const matches = !selectedSubsector || optionSubsector === selectedSubsector;
-            option.hidden = !matches;
-            option.disabled = !matches;
-            if (!matches && option.selected) {
+            const optionSector = option.dataset.sectorId || "";
+            const matchesSector = selectedSectorIds.length === 0 || selectedSectorIds.includes(optionSector);
+            const matchesSubsector =
+                selectedSubsectorIds.length === 0 || selectedSubsectorIds.includes(optionSubsector);
+            const visible = matchesSector && matchesSubsector;
+            option.hidden = !visible;
+            option.disabled = !visible;
+            if (!visible && option.selected) {
                 option.selected = false;
             }
         });
@@ -200,7 +231,8 @@
         if (!entitySelect) {
             return;
         }
-        const selectedSubsector = subsectorSelect ? subsectorSelect.value : "";
+        const selectedSectorIds = getSelectedValues(sectorSelect);
+        const selectedSubsectorIds = getSelectedValues(subsectorSelect);
         const selectedCategoryIds = getSelectedValues(categorySelect);
 
         Array.from(entitySelect.options || []).forEach((option) => {
@@ -209,10 +241,13 @@
             }
             const optionCategory = option.dataset.categoryId || "";
             const optionSubsector = option.dataset.subsectorId || "";
-            const matchesSubsector = !selectedSubsector || optionSubsector === selectedSubsector;
+            const optionSector = option.dataset.sectorId || "";
+            const matchesSector = selectedSectorIds.length === 0 || selectedSectorIds.includes(optionSector);
+            const matchesSubsector =
+                selectedSubsectorIds.length === 0 || selectedSubsectorIds.includes(optionSubsector);
             const matchesCategory =
                 selectedCategoryIds.length > 0 && selectedCategoryIds.includes(optionCategory);
-            const visible = matchesSubsector && matchesCategory;
+            const visible = matchesSector && matchesSubsector && matchesCategory;
             option.hidden = !visible;
             option.disabled = !visible;
             if (!visible && option.selected) {
@@ -250,71 +285,61 @@
         }
     };
 
-    const isAuthorityViewer = () => {
-        if (!roleSelect || !viewerProfileSelect) {
-            return false;
-        }
-        return roleSelect.value === "VIEWER" && viewerProfileSelect.value === "AUTHORITY_MHE";
-    };
-
-    const toggleAuthoritySectorField = () => {
-        if (!authorityScopeSelect || !authoritySectorContainer || !authoritySectorSelect) {
+    const toggleValidationPermissionsSection = () => {
+        if (!roleSelect || !validationPermissionsSection) {
             return;
         }
-        const allSectors = authorityScopeSelect.value === "ALL_SECTORS";
-        authoritySectorContainer.classList.toggle("opacity-50", allSectors);
-        authoritySectorContainer.classList.toggle("pointer-events-none", allSectors);
-        authoritySectorSelect.disabled = allSectors;
-        if (allSectors) {
-            authoritySectorSelect.value = "";
-        }
+        const isViewer = roleSelect.value === "VIEWER";
+        validationPermissionsSection.classList.toggle("hidden", isViewer);
     };
 
     const toggleScopeByViewerType = () => {
-        const useAuthorityScope = isAuthorityViewer();
         standardScopeContainers.forEach((container) => {
-            container.classList.toggle("hidden", useAuthorityScope);
+            container.classList.remove("hidden");
         });
         if (authorityScopeContainer) {
-            authorityScopeContainer.classList.toggle("hidden", !useAuthorityScope);
+            authorityScopeContainer.classList.add("hidden");
         }
 
         if (scopeSelect) {
-            scopeSelect.disabled = useAuthorityScope;
+            scopeSelect.disabled = false;
+        }
+        if (sectorSelect) {
+            sectorSelect.disabled = false;
+            if (sectorUI) {
+                sectorUI.setDisabled(false);
+            }
         }
         if (subsectorSelect) {
-            subsectorSelect.disabled = useAuthorityScope;
+            subsectorSelect.disabled = false;
+            if (subsectorUI) {
+                subsectorUI.setDisabled(false);
+            }
         }
         if (categorySelect) {
-            categorySelect.disabled = useAuthorityScope;
+            categorySelect.disabled = false;
             if (categoryUI) {
-                categoryUI.setDisabled(useAuthorityScope);
+                categoryUI.setDisabled(false);
             }
         }
         if (entitySelect) {
-            const disabled = useAuthorityScope || entityContainer.classList.contains("pointer-events-none");
+            const disabled = entityContainer.classList.contains("pointer-events-none");
             entitySelect.disabled = disabled;
             if (entityUI) {
                 entityUI.setDisabled(disabled);
             }
-            if (useAuthorityScope) {
-                clearMultiSelection(entitySelect, entityUI);
-            }
         }
 
         if (authorityScopeSelect) {
-            authorityScopeSelect.disabled = !useAuthorityScope;
+            authorityScopeSelect.disabled = true;
+            authorityScopeSelect.value = "SECTOR";
         }
         if (authoritySectorSelect) {
-            authoritySectorSelect.disabled = !useAuthorityScope;
-            if (!useAuthorityScope) {
-                authorityScopeSelect && (authorityScopeSelect.value = "SECTOR");
-                authoritySectorSelect.value = "";
-            }
+            authoritySectorSelect.disabled = true;
+            authoritySectorSelect.value = "";
         }
-
-        if (useAuthorityScope) {
-            toggleAuthoritySectorField();
+        if (authoritySectorContainer) {
+            authoritySectorContainer.classList.remove("opacity-50", "pointer-events-none");
         }
     };
 
@@ -322,6 +347,14 @@
         toggleEntityField();
         filterEntitiesByCategories();
     });
+
+    if (sectorSelect) {
+        sectorSelect.addEventListener("change", () => {
+            filterSubsectorsBySector();
+            filterCategoriesBySubsector();
+            filterEntitiesByCategories();
+        });
+    }
 
     if (subsectorSelect) {
         subsectorSelect.addEventListener("change", () => {
@@ -337,17 +370,17 @@
     if (roleSelect && viewerProfileContainer) {
         roleSelect.addEventListener("change", toggleViewerProfileField);
         roleSelect.addEventListener("change", toggleScopeByViewerType);
+        roleSelect.addEventListener("change", toggleValidationPermissionsSection);
         toggleViewerProfileField();
     }
     if (viewerProfileSelect) {
         viewerProfileSelect.addEventListener("change", toggleScopeByViewerType);
     }
-    if (authorityScopeSelect) {
-        authorityScopeSelect.addEventListener("change", toggleAuthoritySectorField);
-    }
 
     toggleEntityField();
+    filterSubsectorsBySector();
     filterCategoriesBySubsector();
     filterEntitiesByCategories();
     toggleScopeByViewerType();
+    toggleValidationPermissionsSection();
 })();

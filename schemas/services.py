@@ -2,10 +2,10 @@
 
 from calendar import monthrange
 from datetime import date, timedelta
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 from django.db import transaction
-from django.db.models import Max, Sum
+from django.db.models import Max, Min, Sum
 from django.utils import timezone
 
 from audit.utils import record_action
@@ -49,6 +49,133 @@ def consolidate_latest_month(
 
     month_start, month_end = previous_month_range(reference_date)
     return _consolidate_schema_for_period(schema, month_start, month_end, request=request)
+
+
+def consolidate_month_for_period(
+    schema: DatasetType,
+    period: date,
+    request=None,
+) -> Optional[DatasetInstance]:
+    """
+    Consolida el mes de la fecha indicada para un esquema de certificacion.
+    """
+    if not schema.is_certification or not schema.source_dataset:
+        return None
+
+    month_start = period.replace(day=1)
+    month_end = period.replace(day=monthrange(period.year, period.month)[1])
+    return _consolidate_schema_for_period(schema, month_start, month_end, request=request)
+
+
+def consolidate_certifications_for_daily_periods(
+    source_dataset: DatasetType,
+    entity,
+    periods: Iterable[date],
+    request=None,
+) -> List[DatasetInstance]:
+    """
+    Consolida certificaciones mensuales afectadas por uno o mas dias diarios publicados.
+    """
+    month_ends = sorted(
+        {
+            p.replace(day=monthrange(p.year, p.month)[1])
+            for p in periods
+            if isinstance(p, date)
+        }
+    )
+    if not month_ends:
+        return []
+
+    schemas = (
+        DatasetType.objects.filter(
+            is_certification=True,
+            validation_frequency=DatasetType.MONTHLY,
+            source_dataset=source_dataset,
+            entity=entity,
+        )
+        .select_related("source_dataset", "entity")
+        .order_by("id")
+    )
+    if not schemas.exists():
+        return []
+
+    results: List[DatasetInstance] = []
+    for schema in schemas:
+        for month_end in month_ends:
+            instance = consolidate_month_for_period(schema, month_end, request=request)
+            if instance:
+                results.append(instance)
+    return results
+
+
+def backfill_certification_schema(
+    schema: DatasetType,
+    *,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    request=None,
+) -> List[DatasetInstance]:
+    """
+    Ejecuta consolidacion historica mensual para un esquema de certificacion.
+    """
+    if not schema.is_certification or not schema.source_dataset:
+        return []
+
+    source = schema.source_dataset
+    daily_qs = DatasetInstance.objects.filter(
+        dataset_type=source,
+        entity=schema.entity,
+        state__in=PUBLISHED_STATES,
+    )
+    if from_date:
+        daily_qs = daily_qs.filter(period__gte=from_date)
+    if to_date:
+        daily_qs = daily_qs.filter(period__lte=to_date)
+
+    bounds = daily_qs.aggregate(min_period=Min("period"), max_period=Max("period"))
+    min_period = bounds["min_period"]
+    max_period = bounds["max_period"]
+    if not min_period or not max_period:
+        return []
+
+    cursor = min_period.replace(day=1)
+    max_month_end = max_period.replace(day=monthrange(max_period.year, max_period.month)[1])
+
+    results: List[DatasetInstance] = []
+    while cursor <= max_month_end:
+        month_end = cursor.replace(day=monthrange(cursor.year, cursor.month)[1])
+        instance = consolidate_month_for_period(schema, month_end, request=request)
+        if instance:
+            results.append(instance)
+        cursor = (month_end + timedelta(days=1)).replace(day=1)
+    return results
+
+
+def backfill_all_certifications(
+    *,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    request=None,
+) -> List[DatasetInstance]:
+    """
+    Ejecuta backfill historico para todos los esquemas de certificacion.
+    """
+    results: List[DatasetInstance] = []
+    schemas = DatasetType.objects.filter(
+        is_certification=True,
+        validation_frequency=DatasetType.MONTHLY,
+        source_dataset__isnull=False,
+    ).select_related("source_dataset", "entity")
+    for schema in schemas:
+        results.extend(
+            backfill_certification_schema(
+                schema,
+                from_date=from_date,
+                to_date=to_date,
+                request=request,
+            )
+        )
+    return results
 
 
 def consolidate_all_certifications(
@@ -180,10 +307,11 @@ def _consolidate_schema_for_period(
         .first()
     )
 
-    initial_state = DatasetInstance.STATE_DRAFT if loader_membership else DatasetInstance.STATE_SUBMITTED
+    # Las certificaciones automaticas deben ingresar al flujo de validacion.
+    initial_state = DatasetInstance.STATE_SUBMITTED
 
     with transaction.atomic():
-        instance, _ = DatasetInstance.objects.get_or_create(
+        instance, created = DatasetInstance.objects.get_or_create(
             dataset_type=schema,
             entity=schema.entity,
             period=month_end,
@@ -194,11 +322,12 @@ def _consolidate_schema_for_period(
                 "last_error_summary": "",
             },
         )
-        instance.state = initial_state
         instance.row_count = 1
         instance.error_count = 0
         instance.last_error_summary = ""
-        if loader_membership:
+        if created:
+            instance.state = initial_state
+        if loader_membership and instance.created_by_id is None:
             instance.created_by = loader_membership
         instance.save()
 

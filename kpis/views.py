@@ -1,20 +1,85 @@
+import logging
 from datetime import date, datetime
 
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db.models import Q
 from django.http import JsonResponse, Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
-from accounts.models import AccountProfile, Membership
+from accounts.models import AccountProfile, Institution, Membership
 from audit.models import AuditLog
 from ingest.models import DatasetInstance, PublishedDataPoint
 from performance.models import PerformanceIndicator, PerformanceIndicatorResult
 from ingest.utils import _read_instance_file
 from schemas.models import DatasetType
+from schemas.services import ensure_previous_month_consolidated
 
+
+logger = logging.getLogger(__name__)
+
+
+def _build_landing_stats():
+    cached = cache.get("kpis:landing:stats:v1")
+    if cached:
+        return cached
+
+    published_states = [DatasetInstance.STATE_PUBLISHED, DatasetInstance.STATE_LOCKED]
+    published_instances = DatasetInstance.objects.filter(state__in=published_states)
+
+    published_total = published_instances.count()
+    published_datasets = (
+        published_instances.values("dataset_type_id").distinct().count()
+    )
+    published_entities = (
+        published_instances.values("entity_id").distinct().count()
+    )
+    published_sectors = (
+        published_instances
+        .values("entity__category__subsector__sector_id")
+        .distinct()
+        .count()
+    )
+    published_subsectors = (
+        published_instances
+        .values("entity__category__subsector_id")
+        .distinct()
+        .count()
+    )
+
+    latest_instance = (
+        published_instances.select_related("dataset_type", "entity")
+        .order_by("-period", "-created_at")
+        .first()
+    )
+
+    institutions_total = Institution.objects.count()
+    institutions_active = Institution.objects.filter(is_active=True).count()
+
+    stats = {
+        "published_total": published_total,
+        "published_datasets": published_datasets,
+        "published_entities": published_entities,
+        "published_sectors": published_sectors,
+        "published_subsectors": published_subsectors,
+        "latest_period": latest_instance.period if latest_instance else None,
+        "latest_dataset_name": latest_instance.dataset_type.name if latest_instance else "",
+        "latest_entity_name": latest_instance.entity.name if latest_instance else "",
+        "institutions_total": institutions_total,
+        "institutions_active": institutions_active,
+    }
+
+    cache.set("kpis:landing:stats:v1", stats, timeout=120)
+    return stats
 
 def landing(request):
-    return render(request, "landing.html")
+    return render(
+        request,
+        "landing.html",
+        {
+            "landing_stats": _build_landing_stats(),
+        },
+    )
 
 
 @login_required
@@ -170,6 +235,14 @@ def charts(request):
         and not is_validator
     )
 
+    if is_external_monthly_viewer:
+        try:
+            ensure_previous_month_consolidated()
+        except Exception:
+            logger.exception(
+                "Error ejecutando consolidacion mensual automatica para visualizador externo."
+            )
+
     datasets = DatasetType.objects.select_related("entity")
     datasets = _apply_membership_scope(user, is_admin, datasets)
     if is_external_monthly_viewer:
@@ -180,6 +253,38 @@ def charts(request):
     subsector_id = request.GET.get("subsector")
     category_id = request.GET.get("category")
     entity_id = request.GET.get("entity")
+
+    # Para visualizador externo mensual, forzamos seleccion jerarquica inicial
+    # completa (sector/subsector/categoria) para que el selector de datasets
+    # se alimente desde el sidebar con un alcance concreto desde el primer ingreso.
+    has_hierarchy_filter = any([sector_id, subsector_id, category_id, entity_id])
+    if is_external_monthly_viewer and not has_hierarchy_filter:
+        first_path = (
+            authority_tree_datasets
+            .filter(instances__isnull=False)
+            .exclude(entity__category__subsector__sector_id__isnull=True)
+            .exclude(entity__category__subsector_id__isnull=True)
+            .exclude(entity__category_id__isnull=True)
+            .order_by(
+                "entity__category__subsector__sector__name",
+                "entity__category__subsector__name",
+                "entity__category__name",
+            )
+            .values_list(
+                "entity__category__subsector__sector_id",
+                "entity__category__subsector_id",
+                "entity__category_id",
+            )
+            .first()
+        )
+        if first_path:
+            first_sector_id, first_subsector_id, first_category_id = first_path
+            query = request.GET.copy()
+            query["sector"] = str(first_sector_id)
+            query["subsector"] = str(first_subsector_id)
+            query["category"] = str(first_category_id)
+            return redirect(f"{request.path}?{query.urlencode()}")
+
     if sector_id:
         datasets = datasets.filter(entity__category__subsector__sector_id=sector_id)
     if subsector_id:

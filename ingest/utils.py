@@ -7,8 +7,6 @@ from typing import Iterable, List, Tuple
 from io import TextIOWrapper, StringIO
 import csv
 
-import openpyxl
-
 from .models import DatasetInstance, PublishedDataPoint
 from schemas.models import ColumnDef, DatasetType
 
@@ -84,6 +82,8 @@ def read_uploaded_file(uploaded_file) -> Tuple[List[str], List[List[object]]]:
         pass
 
     if ext in ("xlsx", "xlsm", "xltx", "xltm"):
+        import openpyxl
+
         wb = openpyxl.load_workbook(uploaded_file, read_only=True, data_only=True)
         ws = wb.active
         for i, row in enumerate(ws.iter_rows(values_only=True)):
@@ -183,6 +183,8 @@ def _read_instance_file(instance: DatasetInstance) -> Tuple[List[str], List[Pars
     ext = name.lower().rsplit(".", 1)[-1] if "." in name else ""
 
     if ext in ("xlsx", "xlsm", "xltx", "xltm"):
+        import openpyxl
+
         with file_field.open("rb") as fh:
             wb = openpyxl.load_workbook(fh, read_only=True, data_only=True)
             ws = wb.active
@@ -249,6 +251,15 @@ def materialize_instance(instance: DatasetInstance) -> int:
     Si ya existían puntos para la instancia, se eliminan primero.
     Devuelve la cantidad de puntos creados.
     """
+
+    # Para consolidaciones mensuales ya materializadas (sin archivo bruto),
+    # no debemos borrar puntos existentes.
+    if not instance.raw_file:
+        existing_count = PublishedDataPoint.objects.filter(instance=instance).count()
+        if existing_count:
+            _auto_compute_performance(instance)
+            return existing_count
+        return 0
 
     # Limpieza previa
     PublishedDataPoint.objects.filter(instance=instance).delete()

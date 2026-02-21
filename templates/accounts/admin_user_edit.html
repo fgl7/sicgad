@@ -8,7 +8,7 @@
     <div class="flex items-center justify-between mb-2">
         <div>
             <h2 class="text-2xl font-header font-bold text-white tracking-tight">Editar Usuario: {{ user_obj.username }}</h2>
-            <p class="text-slate-500 text-sm">Actualiza credenciales y alcance por subsector/categoría/entidades.</p>
+            <p class="text-slate-500 text-sm">Actualiza credenciales y alcance por sector/subsector/categorías/entidades.</p>
         </div>
         <a href="{% url 'accounts:admin_user_list' %}" class="page-back-link">
             Volver al listado
@@ -104,16 +104,23 @@
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5" data-standard-scope-container>
+            <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-white/5" data-standard-scope-container>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Sector</label>
+                    {{ form.sector }}
+                    <p class="text-[10px] text-slate-500">Seleccione uno o mas sectores.</p>
+                    {{ form.sector.errors }}
+                </div>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Subsector</label>
                     {{ form.subsector }}
+                    <p class="text-[10px] text-slate-500">Seleccione uno o mas subsectores de los sectores elegidos.</p>
                     {{ form.subsector.errors }}
                 </div>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Categorías</label>
                     {{ form.category }}
-                    <p class="text-[10px] text-slate-500">Seleccione una o más categorías del subsector (Ctrl/Cmd + clic).</p>
+                    <p class="text-[10px] text-slate-500">Seleccione una o más categorías del sector/subsector elegido (Ctrl/Cmd + clic).</p>
                     {{ form.category.errors }}
                 </div>
             </div>
@@ -127,7 +134,7 @@
                 <div class="space-y-2" data-entity-container>
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Entidades</label>
                     {{ form.entity }}
-                    <p class="text-[10px] text-slate-500">Seleccione una o varias entidades de las categorías elegidas (Ctrl/Cmd + clic).</p>
+                    <p class="text-[10px] text-slate-500">Seleccione una o varias entidades de las categorías elegidas (filtradas por sector/subsector).</p>
                     {{ form.entity.errors }}
                 </div>
                 <div class="space-y-2">

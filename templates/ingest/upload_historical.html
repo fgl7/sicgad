@@ -4,82 +4,156 @@
 {% block title %}Carga histórica - SICGAD{% endblock %}
 {% block page_title %}Carga histórica{% endblock %}
 
-{% block extra_js %}
-  <script src="{% static 'js/ingest_upload.js' %}"></script>
+{% block extra_head %}
+  <style>
+    body.historical-upload-view .app-shell {
+      filter: blur(8px) saturate(0.92);
+      transform: scale(0.997);
+      opacity: 0.94;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    body.historical-upload-view {
+      overflow: hidden;
+    }
+
+    .historical-upload-dialog {
+      animation: historicalUploadEnter 0.18s ease-out both;
+    }
+
+    @keyframes historicalUploadEnter {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.99);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body.historical-upload-view .app-shell,
+      .historical-upload-dialog {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
 {% endblock %}
 
-{% block content %}
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4">
-    <h2 class="text-sm font-semibold">Importar histórico</h2>
-    <p class="text-xs text-slate-300">
-      Esta opción divide un archivo con muchas filas (una por día) en múltiples cargas diarias.
-      Cada fecha se convierte en un <span class="font-mono">DatasetInstance</span> con su propio archivo,
-      listo para enviarse a validación.
-    </p>
+{% block extra_js %}
+  <script src="{% static 'js/ingest_upload.js' %}?v=2"></script>
+{% endblock %}
 
-    <div class="text-[11px] text-slate-400 space-y-1">
-      <div><span class="text-slate-300 font-semibold">Importante:</span> el archivo debe incluir una columna con la fecha por fila.</div>
-      <div>Usa el campo "Columna fecha" para indicar el nombre exacto del encabezado (por ejemplo <span class="font-mono">fecha</span> o <span class="font-mono">date</span>).</div>
+{% block content %}{% endblock %}
+
+{% block modal %}
+  <div class="fixed inset-0 z-[9998] p-4 sm:p-6 lg:p-8">
+    <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"></div>
+    <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+      <div class="absolute -top-12 left-8 h-44 w-44 rounded-full bg-cyan-400/10 blur-3xl"></div>
+      <div class="absolute bottom-8 right-12 h-52 w-52 rounded-full bg-emerald-400/10 blur-3xl"></div>
     </div>
 
-    <form id="historical-upload-form" method="post" enctype="multipart/form-data" class="space-y-3 text-xs">
-      {% csrf_token %}
-      <div class="grid md:grid-cols-2 gap-3">
-        <div>
-          <label class="block mb-1 text-slate-300">Tipo de dataset</label>
-          {{ form.dataset_type }}
-          <p id="dataset-validation-hint" class="text-[11px] text-slate-400 mt-1"></p>
-        </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Entidad</label>
-          {% if loader_default_entity %}
-            <div class="text-slate-200 text-xs">
-              {{ loader_default_entity.code }} - {{ loader_default_entity.name }}
+    <div class="relative h-full w-full flex items-center justify-center">
+      <section
+        class="historical-upload-dialog w-full max-w-4xl rounded-2xl border border-white/10 bg-slate-900/90 shadow-2xl shadow-black/50 backdrop-blur-md"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Carga histórica"
+      >
+        <div class="p-5 sm:p-6 border-b border-white/10">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-cyan-300">Operaciones</p>
+              <h2 class="text-lg sm:text-xl font-semibold text-white">Importar histórico</h2>
+              <p class="text-sm text-slate-300 max-w-2xl">
+                Carga un archivo con múltiples fechas para generar instancias diarias listas para revisión y validación.
+              </p>
             </div>
-            <input
-              type="hidden"
-              name="entity"
-              value="{{ loader_default_entity.id }}"
-            />
-          {% else %}
-            {{ form.entity }}
-          {% endif %}
+            <a href="{% url 'ingest:upload' %}" class="page-back-link self-center" data-no-route-transition>
+              Volver a carga diaria
+            </a>
+          </div>
         </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Columna fecha (encabezado, opcional)</label>
-          {{ form.date_column_name }}
-          {% if form.date_column_name.help_text %}
-            <p class="text-[11px] text-slate-400 mt-1">{{ form.date_column_name.help_text }}</p>
-          {% endif %}
-        </div>
-        <div>
-          <label class="block mb-1 text-slate-300">Archivo</label>
-          {{ form.raw_file }}
-        </div>
-      </div>
 
-      <div class="flex items-center justify-between pt-2">
-        <div class="flex items-center gap-3">
-          <a href="{% url 'ingest:upload' %}" class="page-back-link">
-            Volver a carga diaria
-          </a>
-          <button
-            type="button"
-            id="download-template-btn"
-            data-download-url="{% url 'ingest:download_template' %}"
-            class="btn-secondary inline-flex items-center"
-          >
-            Descargar plantilla (Excel)
-          </button>
-        </div>
-        <button id="historical-upload-submit" type="submit" class="btn-primary inline-flex items-center">
-          Importar histórico
-        </button>
-      </div>
-    </form>
-  </section>
+        <div class="p-5 sm:p-6 space-y-5">
+          <div class="rounded-xl border border-amber-400/20 bg-amber-400/5 px-4 py-3 text-xs text-amber-100/90 space-y-1">
+            <p>
+              <span class="font-semibold text-amber-200">Importante:</span>
+              el archivo debe incluir una columna de fecha por fila.
+            </p>
+            <p class="text-amber-100/80">
+              Usa el campo <span class="font-semibold">Columna de fecha</span> para indicar el nombre exacto del encabezado
+              (por ejemplo, <span class="font-mono text-[11px]">fecha</span> o <span class="font-mono text-[11px]">date</span>).
+            </p>
+          </div>
 
-  <div id="historical-upload-modal" class="hidden fixed inset-0 z-50">
+          <form id="historical-upload-form" method="post" enctype="multipart/form-data" class="space-y-5 text-sm">
+            {% csrf_token %}
+
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block mb-1.5 text-slate-200 text-xs font-semibold">Tipo de dataset</label>
+                {{ form.dataset_type }}
+                <p id="dataset-validation-hint" class="text-[11px] text-slate-400 mt-1.5"></p>
+              </div>
+
+              <div>
+                <label class="block mb-1.5 text-slate-200 text-xs font-semibold">Entidad</label>
+                {% if loader_default_entity %}
+                  <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-slate-100 text-sm">
+                    {{ loader_default_entity.code }} - {{ loader_default_entity.name }}
+                  </div>
+                  <input type="hidden" name="entity" value="{{ loader_default_entity.id }}" />
+                {% else %}
+                  {{ form.entity }}
+                {% endif %}
+              </div>
+
+              <div>
+                <label class="block mb-1.5 text-slate-200 text-xs font-semibold">Columna de fecha (opcional)</label>
+                {{ form.date_column_name }}
+                {% if form.date_column_name.help_text %}
+                  <p class="text-[11px] text-slate-400 mt-1.5">{{ form.date_column_name.help_text }}</p>
+                {% endif %}
+              </div>
+
+              <div>
+                <label class="block mb-1.5 text-slate-200 text-xs font-semibold">Archivo</label>
+                {{ form.raw_file }}
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+              <div class="flex flex-col sm:flex-row gap-3">
+                <a href="{% url 'home' %}" class="btn-secondary inline-flex items-center justify-center" data-no-route-transition>
+                  Cancelar
+                </a>
+
+                <button
+                  type="button"
+                  id="download-template-btn"
+                  data-download-url="{% url 'ingest:download_template' %}"
+                  class="btn-secondary inline-flex items-center justify-center"
+                >
+                  Descargar plantilla (Excel)
+                </button>
+              </div>
+
+              <button id="historical-upload-submit" type="submit" class="btn-primary inline-flex items-center justify-center">
+                Importar histórico
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="historical-upload-modal" class="hidden fixed inset-0 z-[9999]">
     <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
     <div class="relative h-full w-full flex items-center justify-center p-4">
       <div class="w-full max-w-md rounded-xl border border-sky-500/40 bg-slate-900 shadow-2xl p-4 space-y-3">
@@ -108,4 +182,8 @@
       </div>
     </div>
   </div>
+
+  <script>
+    document.body.classList.add("historical-upload-view");
+  </script>
 {% endblock %}

@@ -2,7 +2,7 @@
 
 <!DOCTYPE html>
 
-<html lang="es">
+<html lang="es" style="background:#060b14; color:#f3f8ff;">
 
 
 
@@ -13,6 +13,7 @@
     <title>SICGAD | Acceso institucional</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="{% static 'favicon.ico' %}?v=1" type="image/x-icon" />
 
 
 
@@ -20,13 +21,13 @@
     <link rel="stylesheet" href="{% static 'css/tailwind.generated.css' %}?v=1" />
     <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=4" />
 
-    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=7" />
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=8" />
 
 </head>
 
 
 
-<body class="min-h-screen selection:bg-emerald-400/30 saas-hybrid">
+<body class="min-h-screen selection:bg-emerald-400/30 saas-hybrid" style="background:#060b14; color:#f3f8ff;">
 
     <a href="#contenido"
 
@@ -117,11 +118,6 @@
                     {% else %}
 
                             <a href="{% url 'login' %}" class="landing-login-cta landing-login-cta--sky" aria-label="Iniciar sesion en SICGAD">
-                                <span class="landing-login-cta__icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H3m0 0l3-3m-3 3l3 3m7-8V5a2 2 0 012-2h3a2 2 0 012 2v14a2 2 0 01-2 2h-3a2 2 0 01-2-2v-1" />
-                                    </svg>
-                                </span>
                                 <span class="landing-login-cta__copy">
                                     <span class="landing-login-cta__label">Acceso institucional</span>
                                     <span class="landing-login-cta__title">Iniciar sesion</span>
@@ -179,6 +175,38 @@
     </main>
 
     <script src="{% static 'js/landing_status.js' %}?v=1"></script>
+    <script>
+        (function () {
+            var isTransitioning = false;
+
+            document.addEventListener('click', function (event) {
+                var link = event.target.closest('.landing-login-cta');
+                if (!link) return;
+                if (isTransitioning) {
+                    event.preventDefault();
+                    return;
+                }
+
+                if (event.defaultPrevented) return;
+                if (event.button !== 0) return;
+                if (link.target && link.target !== '_self') return;
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+                event.preventDefault();
+                isTransitioning = true;
+                document.body.classList.add('is-route-transitioning');
+
+                window.setTimeout(function () {
+                    window.location.href = link.href;
+                }, 45);
+            });
+
+            window.addEventListener('pageshow', function () {
+                isTransitioning = false;
+                document.body.classList.remove('is-route-transitioning');
+            });
+        })();
+    </script>
 
 </body>
 

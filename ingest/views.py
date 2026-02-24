@@ -16,6 +16,7 @@ from io import BytesIO, TextIOWrapper, StringIO
 import csv
 import threading
 
+from accounts.cache_utils import invalidate_admin_flags_cache
 from accounts.models import Membership
 from schemas.models import DatasetType
 from schemas.services import previous_month_range
@@ -1935,6 +1936,7 @@ def upload_history(request):
         if profile:
             profile.last_seen_validation_status = timezone.now()
             profile.save(update_fields=["last_seen_validation_status"])
+            invalidate_admin_flags_cache(request.user.id)
 
         _, prev_month_end = previous_month_range()
         base_cert_qs = DatasetInstance.objects.select_related("dataset_type", "entity").filter(
@@ -1957,6 +1959,7 @@ def upload_history(request):
         if (loader_certifications_pending or loader_certifications_rejected) and profile:
             profile.last_seen_certification_alert = timezone.now()
             profile.save(update_fields=["last_seen_certification_alert"])
+            invalidate_admin_flags_cache(request.user.id)
 
         history_qs = (
             DatasetInstance.objects.select_related("dataset_type", "entity")

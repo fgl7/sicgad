@@ -2,6 +2,7 @@ from django.db.models import Exists, OuterRef, Q
 from django.db.utils import OperationalError, ProgrammingError
 from django.core.cache import cache
 
+from .cache_utils import admin_flags_cache_key
 from structure.models import Category, Sector
 from .models import AccountProfile, Membership
 
@@ -167,7 +168,7 @@ def admin_flags(request):
             "loader_default_entity": None,
         }
 
-    cache_key = f"accounts:admin_flags:v3:user:{user.id}"
+    cache_key = admin_flags_cache_key(user.id)
     cached_flags = cache.get(cache_key)
     if cached_flags:
         payload = dict(cached_flags)

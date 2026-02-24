@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.cache_utils import invalidate_admin_flags_cache
 from accounts.models import Membership
 from ingest.file_cleanup import cleanup_files_after_publication
 from ingest.models import DatasetInstance, PublishedDataPoint, HistoricalImportBatch
@@ -399,6 +400,7 @@ def inbox(request):
     if profile and certification_alerts:
         profile.last_seen_certification_alert = timezone.now()
         profile.save(update_fields=["last_seen_certification_alert"])
+        invalidate_admin_flags_cache(request.user.id)
 
     pending_historical_batches = []
     if daily_memberships.exists():
@@ -691,6 +693,7 @@ def detail(request, pk):
         if profile:
             profile.last_seen_certification_alert = timezone.now()
             profile.save(update_fields=["last_seen_certification_alert"])
+            invalidate_admin_flags_cache(request.user.id)
 
     if request.method == "POST":
         form = ValidationDecisionForm(request.POST)

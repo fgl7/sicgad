@@ -200,6 +200,10 @@ Sidebar:
 - autoridad MHE: `templates/partials/sidebar_authority_mhe.html`
 - switch en `templates/base.html` segun `is_authority_viewer or is_external_monthly_viewer`
 
+Topbar base:
+- `templates/partials/topbar.html`
+- estilo actual con clase `topbar-flat` (sin esquinas redondeadas / 90 grados)
+
 Nota: Auditoria esta visible para usuarios autenticados segun reglas actuales de navegacion.
 
 ## 10. Gestion de niveles (admin operativo)
@@ -280,6 +284,16 @@ Funciona y se usa activamente:
 - Restriccion mensual para visualizador externo en charts y dataset_data.
 - Limpieza inmediata post-publicacion/materializacion + limpieza periodica por retencion en media.
 - KPIs de dataset con ventana temporal reciente (3 meses) cuando aplica columna fecha.
+- Landing institucional con CTA de acceso refinado (una sola flecha) y favicon visible.
+- Favicon del sistema generado desde `static/escudo.png` y enlazado en `base`, `landing` y `registration/login`.
+- Mitigacion de microparpadeo (FOUC) en plantillas standalone (`templates/base.html`, `templates/landing.html`, `templates/registration/login.html`)
+  mediante fondo inline inicial.
+- Transicion visual de navegacion:
+  - landing -> login con overlay/fade en `templates/landing.html` + `static/css/landing.css`
+  - transicion global de entrada/salida en `templates/base.html` para navegacion full-page
+    con exclusiones para HTMX/links especiales y opt-out via `data-no-route-transition`
+- Estabilizacion visual de ancho por paginas con/sin scroll vertical via `scrollbar-gutter: stable`
+  en `static/css/sicgad_theme.css`.
 
 Requiere refactor planificado:
 - Extender pruebas de regresion para cubrir flujos refactorizados a `entity`.
@@ -302,6 +316,11 @@ Requiere refactor planificado:
 6. Si hay diferencias entre instancias publicadas y datos en KPIs, verificar `PublishedDataPoint` por dataset/periodo.
    - para visualizador externo mensual, confirmar que las instancias mensuales esten en `PUBLISHED/LOCKED`.
 7. Si se toca UX de cuentas, validar formulario crear/editar usuario y creacion de memberships esperados.
+8. Si se toca UX global / navegacion (`templates/base.html`, `templates/landing.html`, `templates/registration/login.html`):
+   - probar paginas con y sin scroll vertical (sin salto visual notable)
+   - probar links normales, links con query params, `target="_blank"` y formularios POST (logout)
+   - confirmar que HTMX/Alpine no se vean interceptados por la transicion
+   - usar `data-no-route-transition` en enlaces con JS propio si fuera necesario
 
 ## 16. Archivos que primero hay que abrir para entender el sistema
 1. `structure/models.py`

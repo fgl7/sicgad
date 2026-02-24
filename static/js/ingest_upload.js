@@ -28,22 +28,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (isCertification && freq === "MONTHLY") {
           hint.textContent =
-            "Este dataset es de certificacion mensual. Al enviarlo se genera una consolidacion automatica.";
+            "Este dataset es de certificación mensual. Al enviarlo se genera una consolidación automática.";
           return;
         }
         if (freq === "DAILY") {
           hint.textContent =
-            "Este dataset se valida de forma diaria. Recuerda enviarlo despues de cargarlo.";
+            "Este dataset se valida de forma diaria. Recuerda enviarlo después de cargarlo.";
           return;
         }
         if (freq === "WEEKLY") {
           hint.textContent =
-            "Este dataset se valida de forma semanal. Recuerda enviarlo despues de cargarlo.";
+            "Este dataset se valida de forma semanal. Recuerda enviarlo después de cargarlo.";
           return;
         }
         if (freq === "MONTHLY") {
           hint.textContent =
-            "Este dataset se valida de forma mensual. Recuerda enviarlo despues de cargarlo.";
+            "Este dataset se valida de forma mensual. Recuerda enviarlo después de cargarlo.";
           return;
         }
         if (freq === "FLEXIBLE") {
@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
       } else {
         historicalBackendPhase.classList.add("hidden");
       }
-      historicalBackendText.textContent = message || "Procesando historico en servidor...";
+      historicalBackendText.textContent = message || "Procesando histórico en servidor...";
     };
 
     const setFormDisabled = function (disabled) {
@@ -273,14 +273,14 @@ document.addEventListener("DOMContentLoaded", function () {
           }
 
           if (data.status === "FAILED") {
-            setProgress(0, data.error || data.message || "El proceso historico fallo.");
+            setProgress(0, data.error || data.message || "El proceso histórico falló.");
             setBackendPhase(false, "");
             stopPolling();
             resetInFlight();
             return;
           }
 
-          setBackendPhase(true, "Procesando historico en servidor...");
+          setBackendPhase(true, "Procesando histórico en servidor...");
           pollingTimer = window.setTimeout(function () {
             pollBatchProgress(fallbackRedirectUrl);
           }, 1000);
@@ -374,7 +374,7 @@ document.addEventListener("DOMContentLoaded", function () {
       xhr.upload.addEventListener("loadend", function () {
         if (inFlight) {
           setProgress(90, "Archivo recibido. Iniciando procesamiento...");
-          setBackendPhase(true, "Procesando historico en servidor...");
+          setBackendPhase(true, "Procesando histórico en servidor...");
         }
       });
 
@@ -393,7 +393,7 @@ document.addEventListener("DOMContentLoaded", function () {
             currentBatchProgressUrl = payload.batch_progress_url;
             currentBatchCancelUrl = payload.batch_cancel_url || "";
             setProgress(91, "Procesamiento iniciado en servidor...");
-            setBackendPhase(true, "Procesando historico en servidor...");
+            setBackendPhase(true, "Procesando histórico en servidor...");
             pollBatchProgress(payload.redirect_url || action);
             return;
           }
@@ -405,7 +405,7 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        const csrfMessage = xhr.status === 403 ? "La sesion de seguridad expiro (CSRF). Recarga la pagina e intenta de nuevo." : "No se pudo completar la importacion. Revisa el formulario.";
+        const csrfMessage = xhr.status === 403 ? "La sesión de seguridad expiró (CSRF). Recarga la página e intenta de nuevo." : "No se pudo completar la importación. Revisa el formulario.";
         setProgress(0, csrfMessage);
         setBackendPhase(false, "");
         resetInFlight();

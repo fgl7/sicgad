@@ -27,6 +27,7 @@ class PasswordChangeRequiredMiddleware:
                     "/static/",
                     "/admin/login",
                     "/admin/logout",
+                    "/logout",
                     "/accounts/password-change",
                 )
 

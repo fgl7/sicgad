@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.decorators import admin_required
+from accounts.cache_utils import invalidate_admin_flags_cache
 from accounts.models import Membership
 from audit.utils import record_action
 
@@ -86,6 +87,7 @@ def schema_list(request):
             if profile:
                 profile.last_seen_schema_status = timezone.now()
                 profile.save(update_fields=["last_seen_schema_status"])
+                invalidate_admin_flags_cache(user.id)
 
     return render(
         request,

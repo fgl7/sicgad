@@ -432,3 +432,44 @@ html {
     color: inherit;
 }
 
+/* Route transition mask for full-page navigation (landing -> login) */
+body {
+    background: #060b14;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    background:
+        radial-gradient(900px 420px at 100% 0%, rgba(0, 207, 160, 0.1), transparent 65%),
+        radial-gradient(1200px 520px at 14% -5%, rgba(31, 124, 255, 0.18), transparent 60%),
+        linear-gradient(170deg, #0f1b31, #0a1221 42%, #060b14);
+    transition: opacity 0.075s ease;
+}
+
+body.is-route-transitioning::after {
+    opacity: 1;
+}
+
+body .landing-backdrop,
+body #contenido {
+    transition: opacity 0.075s ease;
+}
+
+body.is-route-transitioning .landing-backdrop,
+body.is-route-transitioning #contenido {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body::after,
+    body .landing-backdrop,
+    body #contenido {
+        transition: none;
+    }
+}
+

@@ -29,6 +29,7 @@
 
 html {
     font-size: 16px;
+    scrollbar-gutter: stable;
 }
 
 body {
@@ -88,6 +89,10 @@ h6,
 
 .glass-card:hover {
     border-color: rgba(82, 212, 255, 0.5);
+}
+
+header.topbar-flat {
+    border-radius: 0 !important;
 }
 
 .sidebar {
@@ -628,5 +633,9 @@ h6,
     .glass-effect,
     .glass-card {
         border-radius: 16px;
+    }
+
+    header.topbar-flat {
+        border-radius: 0 !important;
     }
 }

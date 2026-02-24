@@ -4,7 +4,9 @@ from datetime import date, datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db.models import Q, F, Exists, OuterRef
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -34,6 +36,53 @@ PUBLISHED_STATES = [
     DatasetInstance.STATE_LOCKED,
 ]
 logger = logging.getLogger(__name__)
+
+
+def _is_ajax_request(request):
+    return request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+
+def _json_or_redirect(request, url_name, **kwargs):
+    url = reverse(url_name, kwargs=kwargs) if kwargs else reverse(url_name)
+    if _is_ajax_request(request):
+        return JsonResponse({"ok": True, "redirect_url": url})
+    return redirect(url)
+
+
+def _historical_approve_progress_key(user_id: int, batch_id: int) -> str:
+    return f"validation:historical-approve-progress:v1:u{user_id}:b{batch_id}"
+
+
+def _set_historical_approve_progress(
+    *,
+    user_id: int,
+    batch_id: int,
+    status: str,
+    percent: int,
+    message: str,
+    error: str = "",
+    redirect_url: str = "",
+    stage_index: int | None = None,
+    stage_total: int | None = None,
+    stage_label: str = "",
+    timeout: int = 900,
+):
+    payload = {
+        "status": status,
+        "percent": max(0, min(100, int(percent))),
+        "message": message or "",
+        "error": error or "",
+        "redirect_url": redirect_url or "",
+        "stage_index": stage_index,
+        "stage_total": stage_total,
+        "stage_label": stage_label or "",
+    }
+    cache.set(_historical_approve_progress_key(user_id, batch_id), payload, timeout=timeout)
+    return payload
+
+
+def _get_historical_approve_progress(user_id: int, batch_id: int):
+    return cache.get(_historical_approve_progress_key(user_id, batch_id))
 
 
 def _format_value_for_display(column, value):
@@ -448,14 +497,14 @@ def inbox(request):
 @login_required
 def approve_historical_batch(request, batch_id: int):
     if request.method != "POST":
-        return redirect("validation:inbox")
+        return _json_or_redirect(request, "validation:inbox")
 
     batch = get_object_or_404(
         HistoricalImportBatch.objects.select_related("dataset_type", "entity"),
         pk=batch_id,
     )
     if batch.dataset_type.validation_frequency != DatasetType.DAILY:
-        return redirect("validation:inbox")
+        return _json_or_redirect(request, "validation:inbox")
 
     user = request.user
     base_qs = Membership.objects.filter(
@@ -471,7 +520,7 @@ def approve_historical_batch(request, batch_id: int):
 
     if not membership:
         messages.error(request, "No tiene permisos de validaciÃ³n diaria para este histÃ³rico.")
-        return redirect("validation:inbox")
+        return _json_or_redirect(request, "validation:inbox")
 
     approval_subquery = ValidationAction.objects.filter(
         dataset_instance=OuterRef("pk"),
@@ -507,7 +556,60 @@ def approve_historical_batch(request, batch_id: int):
     )
     if not instance_ids and not rematerialize_ids:
         messages.info(request, "No hay instancias pendientes para aprobar en este histÃ³rico.")
-        return redirect("validation:inbox")
+        _set_historical_approve_progress(
+            user_id=user.id,
+            batch_id=batch.id,
+            status="DONE",
+            percent=100,
+            message="No hay instancias pendientes para aprobar.",
+            redirect_url=reverse("validation:inbox"),
+            stage_index=4,
+            stage_total=4,
+            stage_label="Completado",
+            timeout=300,
+        )
+        return _json_or_redirect(request, "validation:inbox")
+
+    total_materialize = len(dict.fromkeys(instance_ids + rematerialize_ids))
+    progress_total_units = max(1, total_materialize) + 5
+    progress_done_units = 0
+
+    def push_progress(
+        message,
+        *,
+        status="RUNNING",
+        error="",
+        percent_override=None,
+        stage_index=None,
+        stage_total=4,
+        stage_label="",
+        timeout=900,
+    ):
+        nonlocal progress_done_units
+        if percent_override is None:
+            percent = max(1, min(99, int((progress_done_units * 100) / progress_total_units)))
+        else:
+            percent = percent_override
+        _set_historical_approve_progress(
+            user_id=user.id,
+            batch_id=batch.id,
+            status=status,
+            percent=percent,
+            message=message,
+            error=error,
+            redirect_url=reverse("validation:inbox") if status == "DONE" else "",
+            stage_index=stage_index,
+            stage_total=stage_total,
+            stage_label=stage_label,
+            timeout=timeout,
+        )
+
+    push_progress(
+        "Preparando aprobacion del historico...",
+        percent_override=1,
+        stage_index=1,
+        stage_label="Preparacion",
+    )
 
     level = membership.validation_level if membership.validation_level else 1
     now = timezone.now()
@@ -531,19 +633,51 @@ def approve_historical_batch(request, batch_id: int):
             updated_at=now,
         )
 
+    progress_done_units += 1
+    push_progress(
+        "Instancias aprobadas. Preparando materializacion...",
+        stage_index=2,
+        stage_label="Materializacion",
+    )
+
     materialize_ids = list(dict.fromkeys(instance_ids + rematerialize_ids))
     materialized_ok = 0
     materialize_errors = 0
     materialized_instance_ids: list[int] = []
     if materialize_ids:
+        push_progress(
+            f"Materializando datos publicados... (0/{len(materialize_ids)} instancias)",
+            stage_index=2,
+            stage_label="Materializacion",
+        )
         # ContinÃºa aunque una instancia puntual falle para evitar dejar el lote a medias.
-        for instance in DatasetInstance.objects.filter(id__in=materialize_ids).select_related("dataset_type").iterator(chunk_size=50):
+        for idx, instance in enumerate(
+            DatasetInstance.objects.filter(id__in=materialize_ids)
+            .select_related("dataset_type")
+            .iterator(chunk_size=50),
+            start=1,
+        ):
             try:
                 materialize_instance(instance)
                 materialized_ok += 1
                 materialized_instance_ids.append(instance.id)
             except Exception:
                 materialize_errors += 1
+            progress_done_units += 1
+            if idx == len(materialize_ids) or idx % 5 == 0:
+                push_progress(
+                    f"Materializando datos publicados... ({idx}/{len(materialize_ids)} instancias)",
+                    stage_index=2,
+                    stage_label="Materializacion",
+                )
+
+    else:
+        progress_done_units += 1
+        push_progress(
+            "No se requiere materializacion adicional.",
+            stage_index=2,
+            stage_label="Materializacion",
+        )
 
     cleaned_files_count = 0
     if materialized_instance_ids:
@@ -559,6 +693,13 @@ def approve_historical_batch(request, batch_id: int):
                 "Error limpiando archivos tras aprobar historico (batch=%s).",
                 batch.id,
             )
+
+    progress_done_units += 1
+    push_progress(
+        "Limpieza de archivos completada. Consolidando certificaciones...",
+        stage_index=3,
+        stage_label="Consolidacion",
+    )
 
     if instance_ids:
         messages.success(request, f"HistÃ³rico aprobado: {len(instance_ids)} dÃ­as.")
@@ -598,6 +739,13 @@ def approve_historical_batch(request, batch_id: int):
                     f"Se generaron/actualizaron {consolidated_count} certificaciones mensuales automaticamente.",
                 )
 
+    progress_done_units += 1
+    push_progress(
+        "Consolidacion finalizada. Registrando auditoria...",
+        stage_index=4,
+        stage_label="Finalizacion",
+    )
+
     record_action(
         "VALIDATION",
         request=request,
@@ -609,7 +757,50 @@ def approve_historical_batch(request, batch_id: int):
             f"certificaciones={consolidated_count}, archivos_limpiados={cleaned_files_count}"
         ),
     )
-    return redirect("validation:inbox")
+    progress_done_units += 1
+    push_progress(
+        "Aprobacion historica completada.",
+        status="DONE",
+        percent_override=100,
+        stage_index=4,
+        stage_label="Completado",
+        timeout=300,
+    )
+    return _json_or_redirect(request, "validation:inbox")
+
+
+@login_required
+def approve_historical_batch_progress(request, batch_id: int):
+    batch = (
+        HistoricalImportBatch.objects.select_related("dataset_type", "entity")
+        .filter(pk=batch_id)
+        .first()
+    )
+    if not batch or batch.dataset_type.validation_frequency != DatasetType.DAILY:
+        return JsonResponse({"ok": False, "error": "No autorizado."}, status=403)
+
+    user = request.user
+    can_validate = Membership.objects.filter(
+        user=user,
+        role="VALIDATOR",
+        is_active=True,
+        can_validate_daily=True,
+    ).filter(Q(entity=batch.entity) | Q(entity__isnull=True)).exists()
+    if not can_validate:
+        return JsonResponse({"ok": False, "error": "No autorizado."}, status=403)
+
+    payload = _get_historical_approve_progress(user.id, batch.id) or {
+        "status": "IDLE",
+        "percent": 0,
+        "message": "Esperando inicio del proceso...",
+        "error": "",
+        "redirect_url": "",
+        "stage_index": None,
+        "stage_total": 4,
+        "stage_label": "",
+    }
+
+    return JsonResponse({"ok": True, **payload})
 
 
 @login_required

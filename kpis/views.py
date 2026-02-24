@@ -3,7 +3,7 @@ from datetime import date, datetime
 
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef
 from django.http import JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -85,12 +85,11 @@ def landing(request):
 @login_required
 def home(request):
     user = request.user
-    is_admin = False
-    if user.is_authenticated:
-        if user.is_superuser:
-            is_admin = True
-        else:
-            is_admin = Membership.objects.filter(user=user, role="ADMIN", is_active=True).exists()
+    is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
+
+    # Los visualizadores puros no usan el dashboard de inicio; entran directo a KPIs.
+    if is_viewer and not is_admin and not is_loader and not is_validator:
+        return redirect("kpis_charts")
 
     # Estado rápido: algunos contadores básicos
     total_schemas = DatasetType.objects.count()
@@ -294,14 +293,15 @@ def charts(request):
     if entity_id:
         datasets = datasets.filter(entity_id=entity_id)
 
+    has_instances_subquery = DatasetInstance.objects.filter(dataset_type_id=OuterRef("pk"))
     datasets = (
-        datasets.filter(instances__isnull=False)
-        .distinct()
+        datasets.annotate(_has_instances=Exists(has_instances_subquery))
+        .filter(_has_instances=True)
         .order_by("entity__name", "name", "-version")
     )
     authority_tree_datasets = (
-        authority_tree_datasets.filter(instances__isnull=False)
-        .distinct()
+        authority_tree_datasets.annotate(_has_instances=Exists(has_instances_subquery))
+        .filter(_has_instances=True)
         .order_by("entity__name", "name", "-version")
     )
 
@@ -322,6 +322,10 @@ def charts(request):
     elif is_authority_mhe_viewer:
         template_name = "kpis/charts_authority.html"
 
+    authority_dataset_tree = []
+    if is_external_monthly_viewer or is_authority_mhe_viewer:
+        authority_dataset_tree = _group_datasets_for_authority(authority_tree_datasets)
+
     return render(
         request,
         template_name,
@@ -332,7 +336,7 @@ def charts(request):
             "is_external_monthly_viewer": is_external_monthly_viewer,
             "is_authority_mhe_viewer": is_authority_mhe_viewer,
             "viewer_profile_type": viewer_profile_type,
-            "authority_dataset_tree": _group_datasets_for_authority(authority_tree_datasets),
+            "authority_dataset_tree": authority_dataset_tree,
             "selected_sector": sector_id or "",
             "selected_subsector": subsector_id or "",
             "selected_category": category_id or "",
@@ -380,7 +384,16 @@ def dataset_data(request, dataset_id: int):
     if source == "published" and not (is_admin or is_loader or is_validator or is_viewer):
         raise Http404
 
-    columns_qs = dataset.columns.filter(is_active=True).order_by("display_order", "name")
+    cache_key = None
+    if source == "published":
+        cache_key = f"kpis:dataset-data:published:v2:{dataset.id}"
+        cached_payload = cache.get(cache_key)
+        if cached_payload is not None:
+            return JsonResponse(cached_payload)
+
+    columns_list = list(
+        dataset.columns.filter(is_active=True).order_by("display_order", "name")
+    )
     columns = [
         {
             "id": col.id,
@@ -392,9 +405,9 @@ def dataset_data(request, dataset_id: int):
             "default_agg": col.default_agg,
             "is_primary_kpi": col.is_primary_kpi,
         }
-        for col in columns_qs
+        for col in columns_list
     ]
-    columns_map = {col.name: col for col in columns_qs}
+    columns_map = {col.name: col for col in columns_list}
 
     def _normalize_date_value(raw_value):
         if raw_value in (None, ""):
@@ -428,13 +441,23 @@ def dataset_data(request, dataset_id: int):
             instance__dataset_type=dataset,
             instance__state__in=published_states,
         )
-        .select_related("column", "instance")
         .order_by(
             "instance__period",
             "instance_id",
             "row_index",
             "column__display_order",
             "column__name",
+        )
+        .values_list(
+            "instance_id",
+            "row_index",
+            "instance__period",
+            "column__name",
+            "column__data_type",
+            "numeric_value",
+            "date_value",
+            "bool_value",
+            "text_value",
         )
     )
 
@@ -448,37 +471,46 @@ def dataset_data(request, dataset_id: int):
             rows.append(current_row)
             current_row = None
 
-    for point in published_points:
-        key = (point.instance_id, point.row_index)
+    for (
+        point_instance_id,
+        point_row_index,
+        point_period,
+        point_column_name,
+        point_column_data_type,
+        point_numeric_value,
+        point_date_value,
+        point_bool_value,
+        point_text_value,
+    ) in published_points.iterator(chunk_size=2000):
+        key = (point_instance_id, point_row_index)
         if key != current_key:
             _append_current_row()
             current_key = key
             current_row = {
-                "row_index": 0,
                 "values": {},
-                "period": point.instance.period.isoformat(),
+                "period": point_period.isoformat(),
                 "source": "published",
-                "_sort_key": (point.instance.period, 0, point.row_index),
+                "_sort_key": (point_period, 0, point_row_index),
             }
 
-        if point.numeric_value is not None:
-            value = point.numeric_value
-        elif point.date_value is not None:
-            value = point.date_value.isoformat()
-        elif point.bool_value is not None:
-            value = bool(point.bool_value)
+        if point_numeric_value is not None:
+            value = point_numeric_value
+        elif point_date_value is not None:
+            value = point_date_value.isoformat()
+        elif point_bool_value is not None:
+            value = bool(point_bool_value)
         else:
-            if point.column.data_type == "DATE":
-                value = _normalize_date_value(point.text_value)
+            if point_column_data_type == "DATE":
+                value = _normalize_date_value(point_text_value)
             else:
-                value = point.text_value
-        current_row["values"][point.column.name] = value
+                value = point_text_value
+        current_row["values"][point_column_name] = value
 
     _append_current_row()
 
     def _build_header_map():
         header_map = {}
-        for col in columns_qs:
+        for col in columns_list:
             key = (col.label or col.name or "").strip().lower()
             if key:
                 header_map[key] = col.name
@@ -513,7 +545,6 @@ def dataset_data(request, dataset_id: int):
 
                 rows.append(
                     {
-                        "row_index": 0,
                         "values": values,
                         "period": draft_instance.period.isoformat(),
                         "source": "draft",
@@ -522,8 +553,7 @@ def dataset_data(request, dataset_id: int):
                 )
 
     rows.sort(key=lambda r: r["_sort_key"])
-    for idx, row in enumerate(rows, start=1):
-        row["row_index"] = idx
+    for row in rows:
         row.pop("_sort_key", None)
 
     data = {
@@ -538,6 +568,9 @@ def dataset_data(request, dataset_id: int):
         "columns": columns,
         "rows": rows,
     }
+
+    if cache_key:
+        cache.set(cache_key, data, timeout=180)
 
     return JsonResponse(data)
 

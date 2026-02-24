@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es" style="background:#060b14; color:#f3f8ff;">
+<html lang="es" style="{% block html_style %}background:#060b14; color:#f3f8ff;{% endblock %}">
 
 <head>
   <meta charset="utf-8" />
@@ -23,17 +23,15 @@
       z-index: 2147483000;
       pointer-events: none;
       opacity: 0;
-      background:
-        radial-gradient(1100px 500px at 100% 0%, rgba(0, 207, 160, 0.08), transparent 65%),
-        radial-gradient(1200px 520px at 14% -5%, rgba(31, 124, 255, 0.16), transparent 60%),
-        linear-gradient(170deg, #0f1b31, #0a1221 42%, #060b14);
-      transition: opacity 0.075s ease;
+      background: rgba(6, 11, 20, 0.16);
+      transition: opacity 0.14s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .app-shell {
-      animation: pageRouteIn 0.09s ease both;
-      will-change: opacity, transform, filter;
-      transition: opacity 0.075s ease, transform 0.075s ease, filter 0.075s ease;
+      animation: pageRouteIn 0.14s cubic-bezier(0.22, 1, 0.36, 1) both;
+      will-change: opacity, transform;
+      transition: opacity 0.14s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     body.is-route-transitioning::after {
@@ -41,21 +39,18 @@
     }
 
     body.is-route-transitioning .app-shell {
-      opacity: 0.9;
-      transform: scale(0.996);
-      filter: saturate(0.94);
+      opacity: 0.94;
+      transform: translateY(1px);
     }
 
     @keyframes pageRouteIn {
       from {
-        opacity: 0.92;
+        opacity: 0.97;
         transform: translateY(2px);
-        filter: saturate(0.95);
       }
       to {
         opacity: 1;
         transform: translateY(0);
-        filter: none;
       }
     }
 
@@ -70,13 +65,16 @@
   {% block extra_head %}{% endblock %}
 </head>
 
-<body class="min-h-screen selection:bg-sky-400/30 antialiased font-body saas-hybrid" style="background:#060b14; color:#f3f8ff;">
+<body class="{% block body_class %}min-h-screen selection:bg-sky-400/30 antialiased font-body saas-hybrid{% endblock %}" style="{% block body_style %}background:#060b14; color:#f3f8ff;{% endblock %}">
+  {% block background_layer %}
   <div class="fixed inset-0 -z-10" aria-hidden="true">
     <div class="absolute -top-36 -left-24 h-[28rem] w-[28rem] rounded-full bg-cyan-500/10 blur-3xl"></div>
     <div class="absolute bottom-0 right-0 h-[36rem] w-[36rem] rounded-full bg-blue-500/20 blur-3xl"></div>
     <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40"></div>
   </div>
+  {% endblock %}
 
+  {% block system_messages %}
   <!-- System Messages (Toasts) -->
   <div x-data="{ 
                   toasts: [
@@ -139,7 +137,9 @@
       </div>
     </template>
   </div>
+  {% endblock %}
 
+  {% block page_layout %}
   <div class="app-shell">
     <div class="flex min-h-screen relative z-10">
       {% if is_authority_viewer or is_external_monthly_viewer %}
@@ -155,8 +155,10 @@
       </div>
     </div>
   </div>
+  {% endblock %}
   {% block modal %}{% endblock %}
   {% block extra_js %}{% endblock %}
+  {% block route_transition_script %}
   <script>
     (function () {
       var isTransitioning = false;
@@ -222,7 +224,7 @@
 
         window.setTimeout(function () {
           window.location.href = link.href;
-        }, 45);
+        }, 85);
       }, true);
 
       window.addEventListener('pageshow', function () {
@@ -231,6 +233,7 @@
       });
     })();
   </script>
+  {% endblock %}
 </body>
 
 </html>

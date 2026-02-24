@@ -4,10 +4,13 @@ document.addEventListener("DOMContentLoaded", function () {
   const xFieldSelect = document.getElementById("kpi-x-field-select");
   const yFieldBox = document.getElementById("kpi-y-field-box");
   const chartTypeSelect = document.getElementById("kpi-chart-type-select");
+  const executiveModeToggle = document.getElementById("kpi-executive-mode-toggle");
   const dateStartInput = document.getElementById("kpi-date-start");
   const dateEndInput = document.getElementById("kpi-date-end");
   const dateApplyButton = document.getElementById("kpi-date-apply");
   const chartContainer = document.getElementById("kpi-chart");
+  const chartStage = document.getElementById("kpi-chart-stage");
+  const presentationButton = document.getElementById("kpi-chart-presentation-btn");
   const authorityCards = document.getElementById("authority-kpi-cards");
   const tableContainer = document.getElementById("kpi-table-container");
   const exportCsvButton = document.getElementById("kpi-export-csv");
@@ -32,6 +35,9 @@ document.addEventListener("DOMContentLoaded", function () {
   if (window.echarts) {
     chart = echarts.init(chartContainer);
   }
+  const baseChartHeight = chartContainer.style.height || `${Math.max(chartContainer.clientHeight, 320)}px`;
+  let presentationHintTimer = null;
+  let wasPresentationFullscreen = false;
 
   const numberFormatter = new Intl.NumberFormat("es-CL", {
     maximumFractionDigits: 2,
@@ -40,6 +46,20 @@ document.addEventListener("DOMContentLoaded", function () {
     notation: "compact",
     maximumFractionDigits: 1,
   });
+  const shortMonthNamesEs = [
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+  ];
   const authorityPalette = ["#f5b14f", "#33b6ff", "#23d3a6", "#8b7dff"];
 
   function parseDateValue(raw) {
@@ -72,8 +92,201 @@ document.addEventListener("DOMContentLoaded", function () {
   let currentData = null;
   let currentColumns = [];
   let availableDateColumn = null;
+  let tableExpanded = false;
   const filterBounds = { start: null, end: null };
   const url = new URL(window.location.href);
+  const TABLE_RENDER_LIMIT = 300;
+  let xlsxLoaderPromise = null;
+  const KPI_EXECUTIVE_MODE_STORAGE_KEY = "sicgad_kpi_executive_mode";
+
+  function getStoredExecutiveMode() {
+    try {
+      return window.localStorage.getItem(KPI_EXECUTIVE_MODE_STORAGE_KEY) === "1";
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function setStoredExecutiveMode(enabled) {
+    try {
+      window.localStorage.setItem(KPI_EXECUTIVE_MODE_STORAGE_KEY, enabled ? "1" : "0");
+    } catch (_err) {
+      // ignore storage restrictions
+    }
+  }
+
+  function isExecutiveMode() {
+    return Boolean(executiveModeToggle && executiveModeToggle.checked);
+  }
+
+  function getFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function isChartStageFullscreen() {
+    const fsElement = getFullscreenElement();
+    return Boolean(chartStage && fsElement && (fsElement === chartStage || chartStage.contains(fsElement)));
+  }
+
+  function requestFullscreenForElement(element) {
+    if (!element) {
+      return Promise.resolve(false);
+    }
+    if (typeof element.requestFullscreen === "function") {
+      return element.requestFullscreen().then(() => true);
+    }
+    if (typeof element.webkitRequestFullscreen === "function") {
+      element.webkitRequestFullscreen();
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(false);
+  }
+
+  function exitFullscreenIfNeeded() {
+    if (typeof document.exitFullscreen === "function") {
+      return document.exitFullscreen();
+    }
+    if (typeof document.webkitExitFullscreen === "function") {
+      document.webkitExitFullscreen();
+      return Promise.resolve();
+    }
+    return Promise.resolve();
+  }
+
+  function resizeChartSoon() {
+    if (!chart) {
+      return;
+    }
+    window.requestAnimationFrame(function () {
+      if (chart) {
+        chart.resize();
+      }
+    });
+  }
+
+  function ensurePresentationHintElement() {
+    if (!chartStage) {
+      return null;
+    }
+    let hint = chartStage.querySelector('[data-presentation-hint="kpi"]');
+    if (hint) {
+      return hint;
+    }
+    hint = document.createElement("div");
+    hint.setAttribute("data-presentation-hint", "kpi");
+    hint.className =
+      "pointer-events-none absolute left-1/2 top-14 z-20 -translate-x-1/2 rounded-full border border-cyan-300/20 bg-slate-950/85 px-3 py-1.5 text-[11px] font-medium text-cyan-100 shadow-lg shadow-black/30 opacity-0 transition-opacity duration-200";
+    hint.textContent = "Presiona Esc para salir de presentacion";
+    chartStage.appendChild(hint);
+    return hint;
+  }
+
+  function hidePresentationHint() {
+    const hint = ensurePresentationHintElement();
+    if (!hint) {
+      return;
+    }
+    hint.classList.add("opacity-0");
+    hint.classList.remove("opacity-100");
+  }
+
+  function flashPresentationHint() {
+    const hint = ensurePresentationHintElement();
+    if (!hint) {
+      return;
+    }
+    if (presentationHintTimer) {
+      window.clearTimeout(presentationHintTimer);
+      presentationHintTimer = null;
+    }
+    hint.classList.remove("opacity-0");
+    hint.classList.add("opacity-100");
+    presentationHintTimer = window.setTimeout(function () {
+      hidePresentationHint();
+    }, 2200);
+  }
+
+  function syncChartPresentationUi() {
+    const inPresentation = isChartStageFullscreen();
+    const enteredPresentation = inPresentation && !wasPresentationFullscreen;
+    wasPresentationFullscreen = inPresentation;
+    if (chartStage) {
+      chartStage.classList.toggle("ring-2", inPresentation);
+      chartStage.classList.toggle("ring-cyan-300/20", inPresentation);
+      chartStage.classList.toggle("bg-slate-950/95", inPresentation);
+      chartStage.classList.toggle("border-cyan-300/20", inPresentation);
+    }
+    if (chartContainer) {
+      chartContainer.style.height = inPresentation
+        ? `${Math.max(420, window.innerHeight - 120)}px`
+        : baseChartHeight;
+    }
+    if (presentationButton) {
+      presentationButton.textContent = inPresentation ? "Salir presentación" : "Presentación";
+      presentationButton.title = inPresentation
+        ? "Salir de presentación (Esc)"
+        : "Abrir en presentación";
+    }
+    if (enteredPresentation) {
+      flashPresentationHint();
+    } else if (!inPresentation) {
+      hidePresentationHint();
+    }
+    resizeChartSoon();
+  }
+
+  function activateExecutiveMode() {
+    if (!executiveModeToggle || executiveModeToggle.checked) {
+      return;
+    }
+    executiveModeToggle.checked = true;
+    setStoredExecutiveMode(true);
+    updateChart();
+  }
+
+  function togglePresentationMode() {
+    activateExecutiveMode();
+    if (!chartStage) {
+      return;
+    }
+    if (isChartStageFullscreen()) {
+      exitFullscreenIfNeeded().catch(function (err) {
+        console.error(err);
+      });
+      return;
+    }
+    requestFullscreenForElement(chartStage)
+      .then(function (entered) {
+        if (!entered) {
+          syncChartPresentationUi();
+        }
+      })
+      .catch(function (err) {
+        console.error(err);
+      });
+  }
+
+  function ensureXlsxLoaded() {
+    if (window.XLSX) {
+      return Promise.resolve(window.XLSX);
+    }
+    if (xlsxLoaderPromise) {
+      return xlsxLoaderPromise;
+    }
+    xlsxLoaderPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+      script.async = true;
+      script.onload = function () {
+        resolve(window.XLSX);
+      };
+      script.onerror = function () {
+        reject(new Error("No se pudo cargar XLSX"));
+      };
+      document.head.appendChild(script);
+    });
+    return xlsxLoaderPromise;
+  }
 
   function setDatasetInUrl(datasetId) {
     if (!datasetId) {
@@ -251,6 +464,85 @@ document.addEventListener("DOMContentLoaded", function () {
       return compactFormatter.format(raw);
     }
     return numberFormatter.format(raw);
+  }
+
+  function inferDateGranularity(values) {
+    const stamps = (values || [])
+      .map((value) => parseDateValue(value))
+      .filter(Boolean)
+      .map((date) => date.getTime())
+      .sort((a, b) => a - b);
+
+    if (stamps.length < 2) {
+      return "date";
+    }
+
+    const deltas = [];
+    for (let i = 1; i < stamps.length; i += 1) {
+      const diff = stamps[i] - stamps[i - 1];
+      if (diff > 0) {
+        deltas.push(diff);
+      }
+    }
+    if (!deltas.length) {
+      return "date";
+    }
+
+    deltas.sort((a, b) => a - b);
+    const median = deltas[Math.floor(deltas.length / 2)];
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    if (median <= dayMs * 3) {
+      return "daily";
+    }
+    if (median <= dayMs * 45) {
+      return "monthly";
+    }
+    if (median <= dayMs * 120) {
+      return "quarterly";
+    }
+    return "yearly";
+  }
+
+  function formatDateShort(raw, granularity) {
+    const date = parseDateValue(raw);
+    if (!date) {
+      return raw != null ? String(raw) : "";
+    }
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mon = shortMonthNamesEs[date.getMonth()];
+    const yy = String(date.getFullYear()).slice(-2);
+    const yyyy = date.getFullYear();
+
+    if (granularity === "yearly") {
+      return String(yyyy);
+    }
+    if (granularity === "monthly" || granularity === "quarterly") {
+      return `${mon} ${yy}`;
+    }
+    if (granularity === "daily") {
+      return `${dd} ${mon}`;
+    }
+    return `${dd} ${mon} ${yy}`;
+  }
+
+  function formatDateLong(raw) {
+    const date = parseDateValue(raw);
+    if (!date) {
+      return raw != null ? String(raw) : "";
+    }
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mon = shortMonthNamesEs[date.getMonth()];
+    const yyyy = date.getFullYear();
+    return `${dd} ${mon} ${yyyy}`;
+  }
+
+  function truncateAxisLabel(value, maxLength) {
+    const text = value == null ? "" : String(value);
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
   }
 
   function createSparkline(values, color) {
@@ -521,18 +813,11 @@ document.addEventListener("DOMContentLoaded", function () {
     rows.forEach(function (row) {
       const values = row.values || {};
       let xVal = values[xName] ?? null;
-      if (xIsTime && xVal) {
-        const d = parseDateValue(xVal);
-        if (d) {
-          const dd = String(d.getDate()).padStart(2, "0");
-          const mm = String(d.getMonth() + 1).padStart(2, "0");
-          const yyyy = d.getFullYear();
-          xVal = `${dd}/${mm}/${yyyy}`;
-        }
-      }
       xValues.push(xVal);
     });
     const chartType = chartTypeSelect.value || "line";
+    const xGranularity = xIsTime ? inferDateGranularity(xValues) : "text";
+    const executiveMode = isExecutiveMode();
 
     let seriesType = "line";
     let smooth = true;
@@ -549,65 +834,178 @@ document.addEventListener("DOMContentLoaded", function () {
     const seriesColors = isAuthorityView
       ? ["#f5b14f", "#33b6ff", "#23d3a6", "#8b7dff", "#f97393", "#39d1ff"]
       : ["#6366f1", "#10b981", "#8b5cf6", "#f43f5e", "#f59e0b", "#06b6d4"];
+    const showArea = seriesType === "line" && !stack && yCols.length === 1 && !executiveMode;
+    const showSymbols = !executiveMode && rows.length <= 36;
+    const barMaxWidth =
+      rows.length > 180 ? 6 : rows.length > 120 ? 8 : rows.length > 70 ? 10 : 14;
+    const xLabelTargetCount = executiveMode ? 8 : 14;
+    const xLabelInterval =
+      rows.length > xLabelTargetCount
+        ? Math.max(0, Math.ceil(rows.length / xLabelTargetCount) - 1)
+        : 0;
+    const unitsBySeriesName = {};
     const series = yCols.map(function (yCol, idx) {
       const values = rows.map(function (row) {
         const raw = (row.values || {})[yCol.name];
         return raw != null && raw !== "" ? Number(raw) : null;
       });
-      return {
-        name: yCol.label || yCol.name,
+      const color = seriesColors[idx % seriesColors.length];
+      const seriesName = yCol.label || yCol.name;
+      unitsBySeriesName[seriesName] = yCol.unit || "";
+
+      const baseSeries = {
+        name: seriesName,
         type: seriesType,
-        smooth: smooth,
         stack: stack,
-        showSymbol: false,
-        lineStyle: {
-          width: isAuthorityView ? 2.8 : 3,
-          shadowColor: isAuthorityView ? "rgba(0, 0, 0, 0.45)" : "rgba(0, 0, 0, 0.3)",
-          shadowBlur: isAuthorityView ? 12 : 10,
-          shadowOffsetY: 5
+        showSymbol: seriesType === "line" ? showSymbols : false,
+        symbol: "circle",
+        symbolSize: rows.length > 90 ? 4 : 6,
+        connectNulls: false,
+        animationDuration: 420,
+        animationEasing: "cubicOut",
+        emphasis: {
+          focus: "series",
         },
         itemStyle: {
-          color: seriesColors[idx % seriesColors.length],
-          borderRadius: seriesType === 'bar' ? [6, 6, 0, 0] : 0
+          color:
+            seriesType === "bar"
+              ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: `${color}ff` },
+                  { offset: 1, color: `${color}9f` },
+                ])
+              : color,
+          borderRadius: seriesType === "bar" ? [7, 7, 0, 0] : 0,
         },
-        areaStyle:
-          seriesType === "line" && !stack
-            ? {
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  { offset: 0, color: `${seriesColors[idx % seriesColors.length]}55` },
-                  { offset: 1, color: `${seriesColors[idx % seriesColors.length]}00` },
-                ]),
-              }
-            : undefined,
         data: values,
       };
+
+      if (seriesType === "line") {
+        baseSeries.smooth = smooth;
+        baseSeries.sampling = "lttb";
+        baseSeries.lineStyle = {
+          width: isAuthorityView ? 2.8 : 3,
+          color: color,
+          shadowColor: isAuthorityView ? "rgba(0, 0, 0, 0.38)" : "rgba(0, 0, 0, 0.28)",
+          shadowBlur: executiveMode ? 6 : 10,
+          shadowOffsetY: executiveMode ? 2 : 4,
+          cap: "round",
+          join: "round",
+        };
+        if (showArea) {
+          baseSeries.areaStyle = {
+            opacity: isAuthorityView ? 0.2 : 0.18,
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: `${color}70` },
+              { offset: 0.6, color: `${color}1f` },
+              { offset: 1, color: `${color}00` },
+            ]),
+          };
+        }
+      } else {
+        baseSeries.barMaxWidth = barMaxWidth;
+        baseSeries.barMinHeight = 1;
+        baseSeries.barCategoryGap = stack ? "22%" : "30%";
+        baseSeries.emphasis = {
+          focus: "series",
+          itemStyle: {
+            shadowColor: `${color}55`,
+            shadowBlur: 12,
+          },
+        };
+      }
+
+      return baseSeries;
     });
 
-    const gridTop = yCols.length > 1 ? 56 : 32;
+    const gridTop = yCols.length > 1 ? (executiveMode ? 50 : 56) : executiveMode ? 28 : 32;
+    const tooltipPointerType = seriesType === "bar" ? "shadow" : "line";
+    const xAxisRotate = executiveMode
+      ? 0
+      : xIsTime
+        ? (rows.length > 32 ? 28 : 0)
+        : rows.length > 20
+          ? 18
+          : 0;
 
     return {
+      animationDurationUpdate: 220,
+      animationEasingUpdate: "cubicOut",
       tooltip: {
         trigger: "axis",
         backgroundColor: isAuthorityView ? "rgba(6, 16, 32, 0.97)" : "rgba(15, 23, 42, 0.95)",
         borderColor: isAuthorityView ? "rgba(51, 182, 255, 0.35)" : "rgba(99, 102, 241, 0.2)",
         borderWidth: 1,
-        borderRadius: 12,
-        padding: [10, 14],
+        borderRadius: executiveMode ? 12 : 14,
+        padding: executiveMode ? [8, 10] : [10, 12],
+        extraCssText:
+          "box-shadow: 0 10px 30px rgba(2,6,23,.35); backdrop-filter: blur(8px);",
         textStyle: { color: "#f8fafc", fontSize: 12, fontFamily: "Lexend" },
+        formatter: function (params) {
+          const items = Array.isArray(params) ? params : [params];
+          if (!items.length) {
+            return "";
+          }
+
+          const axisRaw = items[0].axisValue;
+          const title = xIsTime ? formatDateLong(axisRaw) : truncateAxisLabel(axisRaw, 44);
+          const rowsHtml = items
+            .map(function (item) {
+              const seriesName = item.seriesName || "";
+              const unit = unitsBySeriesName[seriesName] ? ` ${unitsBySeriesName[seriesName]}` : "";
+              const color =
+                typeof item.color === "string"
+                  ? item.color
+                  : item.color && Array.isArray(item.color.colorStops) && item.color.colorStops[0]
+                    ? item.color.colorStops[0].color
+                    : seriesColors[items.indexOf(item) % seriesColors.length];
+              const value = Array.isArray(item.value) ? item.value[item.value.length - 1] : item.value;
+              const numericValue =
+                value == null || value === "" ? null : Number.isFinite(Number(value)) ? Number(value) : null;
+              return (
+                `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:220px;margin-top:6px;">` +
+                `<div style="display:flex;align-items:center;gap:8px;color:#dbeafe;">` +
+                `<span style="width:8px;height:8px;border-radius:999px;background:${color};box-shadow:0 0 0 3px ${color}22;"></span>` +
+                `<span style="opacity:.95;">${seriesName}</span>` +
+                `</div>` +
+                `<div style="font-weight:700;color:#ffffff;">${formatMetricValue(numericValue)}${unit}</div>` +
+                `</div>`
+              );
+            })
+            .join("");
+
+          return (
+            `<div style="font-family:Lexend, sans-serif;">` +
+            `<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#93c5fd;opacity:.9;margin-bottom:2px;">${xCol.label || xCol.name}</div>` +
+            `<div style="font-size:13px;font-weight:700;color:#f8fafc;">${title}</div>` +
+            rowsHtml +
+            `</div>`
+          );
+        },
         axisPointer: {
-          type: "line",
+          type: tooltipPointerType,
           lineStyle: {
             color: isAuthorityView ? "rgba(51, 182, 255, 0.45)" : "rgba(99, 102, 241, 0.4)",
-            width: 2,
+            width: executiveMode ? 1.5 : 2,
+          },
+          shadowStyle: {
+            color: isAuthorityView ? "rgba(51, 182, 255, 0.08)" : "rgba(99, 102, 241, 0.06)",
+          },
+          label: {
+            show: false,
           },
         },
       },
       legend: {
         show: yCols.length > 1,
-        top: 0,
+        top: executiveMode ? 4 : 0,
+        left: "center",
+        icon: "roundRect",
+        itemWidth: executiveMode ? 12 : 14,
+        itemHeight: executiveMode ? 6 : 8,
+        itemGap: executiveMode ? 10 : 14,
         textStyle: {
           color: isAuthorityView ? "#aec5e8" : "#475569",
-          fontSize: 11,
+          fontSize: executiveMode ? 10 : 11,
           fontWeight: 600
         },
       },
@@ -617,16 +1015,25 @@ document.addEventListener("DOMContentLoaded", function () {
           xAxisIndex: 0,
           start: 0,
           end: 100,
+          zoomLock: false,
+          throttle: 50,
         },
         {
           type: "slider",
           xAxisIndex: 0,
-          height: 40,
-          bottom: 0,
+          height: executiveMode ? 30 : 40,
+          bottom: executiveMode ? 2 : 0,
+          showDetail: false,
           brushSelect: false,
+          borderRadius: 10,
+          backgroundColor: isAuthorityView
+            ? "rgba(11, 24, 44, 0.7)"
+            : "rgba(15, 23, 42, 0.42)",
           handleStyle: {
             color: isAuthorityView ? "#1bc9ff" : "#6366f1",
             borderColor: isAuthorityView ? "#0f2745" : "#1e293b",
+            shadowBlur: 8,
+            shadowColor: "rgba(0,0,0,.25)",
           },
           textStyle: {
             color: isAuthorityView ? "#7ea1cc" : "#64748b",
@@ -634,29 +1041,78 @@ document.addEventListener("DOMContentLoaded", function () {
           fillerColor: isAuthorityView
             ? "rgba(27, 201, 255, 0.14)"
             : "rgba(99, 102, 241, 0.08)",
+          dataBackground: {
+            lineStyle: {
+              color: isAuthorityView ? "rgba(125, 162, 214, 0.35)" : "rgba(148, 163, 184, 0.3)",
+              width: 1,
+            },
+            areaStyle: {
+              color: isAuthorityView ? "rgba(59, 130, 246, 0.08)" : "rgba(99, 102, 241, 0.06)",
+            },
+          },
+          selectedDataBackground: {
+            lineStyle: {
+              color: isAuthorityView ? "rgba(125, 162, 214, 0.65)" : "rgba(165, 180, 252, 0.55)",
+              width: 1.2,
+            },
+            areaStyle: {
+              color: isAuthorityView ? "rgba(51, 182, 255, 0.1)" : "rgba(99, 102, 241, 0.1)",
+            },
+          },
+          labelFormatter: xIsTime
+            ? function (value) {
+                return formatDateShort(value, xGranularity);
+              }
+            : function (value) {
+                return truncateAxisLabel(value, 12);
+              },
           borderColor: isAuthorityView
             ? "rgba(27, 201, 255, 0.2)"
             : "rgba(255, 255, 255, 0.03)",
+          showDataShadow: !executiveMode,
         },
       ],
       grid: {
-        left: 46,
-        right: 24,
+        left: executiveMode ? 44 : 54,
+        right: executiveMode ? 12 : 18,
         top: gridTop,
-        bottom: (xIsTime ? 48 : 30) + 40,
+        bottom: (xIsTime ? (executiveMode ? 26 : 54) : executiveMode ? 22 : 32) +
+          (executiveMode ? 30 : 40),
         containLabel: true,
       },
       xAxis: {
         type: "category",
         data: xValues,
-        name: xCol.label || xCol.name,
-        axisLine: { lineStyle: { color: isAuthorityView ? "#2b4369" : "#1f2937" } },
+        boundaryGap: seriesType === "bar",
+        name: executiveMode ? "" : xCol.label || xCol.name,
+        nameTextStyle: {
+          color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
+          fontSize: executiveMode ? 9 : 10,
+          fontWeight: 600,
+          padding: [12, 0, 0, 0],
+        },
+        axisLine: {
+          lineStyle: {
+            color: isAuthorityView ? "rgba(72, 108, 153, 0.55)" : "rgba(148, 163, 184, 0.18)",
+            width: 1,
+          },
+        },
         axisTick: { show: false },
         axisLabel: {
-          rotate: xIsTime ? 30 : 0,
-          fontSize: 9,
+          rotate: xAxisRotate,
+          fontSize: executiveMode ? 9 : 10,
+          lineHeight: executiveMode ? 10 : 12,
           color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
-          margin: 6,
+          margin: executiveMode ? 6 : 10,
+          hideOverlap: true,
+          interval: xLabelInterval,
+          formatter: xIsTime
+            ? function (value) {
+                return formatDateShort(value, xGranularity);
+              }
+            : function (value) {
+                return truncateAxisLabel(value, executiveMode ? 12 : 18);
+              },
         },
         splitLine: { show: false },
       },
@@ -667,22 +1123,36 @@ document.addEventListener("DOMContentLoaded", function () {
             ? (yCols[0].label || yCols[0].name) +
             (yCols[0].unit ? ` (${yCols[0].unit})` : "")
             : "Valores",
+        minInterval: 0,
+        nameTextStyle: {
+          color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
+          fontSize: executiveMode ? 9 : 10,
+          fontWeight: 600,
+          padding: [0, 0, executiveMode ? 2 : 6, 0],
+        },
+        splitNumber: executiveMode ? 4 : 5,
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
-          margin: 6,
-          fontSize: 9,
+          margin: executiveMode ? 6 : 10,
+          fontSize: executiveMode ? 9 : 10,
           color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
           formatter: function (value) {
-            return numberFormatter.format(value);
+            return formatMetricValue(value);
           },
         },
         splitLine: {
           show: true,
           lineStyle: {
             color: isAuthorityView
-              ? "rgba(101, 141, 189, 0.2)"
-              : "rgba(148, 163, 184, 0.12)",
+              ? executiveMode
+                ? "rgba(101, 141, 189, 0.1)"
+                : "rgba(101, 141, 189, 0.16)"
+              : executiveMode
+                ? "rgba(148, 163, 184, 0.06)"
+                : "rgba(148, 163, 184, 0.1)",
+            width: 1,
+            type: executiveMode ? [3, 6] : [4, 4],
           },
         },
       },
@@ -742,6 +1212,30 @@ document.addEventListener("DOMContentLoaded", function () {
       return value;
     }
 
+    const visibleRows =
+      !tableExpanded && rows.length > TABLE_RENDER_LIMIT
+        ? rows.slice(0, TABLE_RENDER_LIMIT)
+        : rows;
+
+    if (rows.length > TABLE_RENDER_LIMIT && !tableExpanded) {
+      const summary = document.createElement("div");
+      summary.className =
+        "flex flex-wrap items-center justify-between gap-3 p-3 text-[11px] text-slate-400 border-b border-white/5 bg-white/[0.02]";
+      summary.innerHTML =
+        `<span>Mostrando ${visibleRows.length} de ${rows.length} filas para mejorar la velocidad inicial.</span>`;
+      const expandBtn = document.createElement("button");
+      expandBtn.type = "button";
+      expandBtn.className =
+        "px-3 py-1 rounded-lg border border-cyan-400/20 bg-cyan-400/5 text-cyan-300 hover:bg-cyan-400/10 transition-colors";
+      expandBtn.textContent = "Mostrar todas";
+      expandBtn.addEventListener("click", function () {
+        tableExpanded = true;
+        renderTable(data, rows);
+      });
+      summary.appendChild(expandBtn);
+      tableContainer.appendChild(summary);
+    }
+
     const table = document.createElement("table");
     table.className = "w-full text-left border-collapse";
 
@@ -758,7 +1252,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const tbody = document.createElement("tbody");
     tbody.className = "text-sm";
-    rows.forEach(function (row) {
+    visibleRows.forEach(function (row) {
       const tr = document.createElement("tr");
       tr.className = "border-t border-white/5 hover:bg-white/[0.02] transition-colors";
       data.columns.forEach(function (col) {
@@ -856,32 +1350,39 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!data.rows.length) {
       return;
     }
-    if (!window.XLSX) {
-      console.error("XLSX no disponible para exportar.");
-      return;
-    }
 
-    const header = data.columns.map((col) => col.name);
-    const rows = data.rows.map((row) => {
-      return data.columns.map((col) => {
-        const value = (row.values || {})[col.name];
-        return value != null ? value : "";
+    ensureXlsxLoaded()
+      .then(() => {
+        if (!window.XLSX) {
+          throw new Error("XLSX no disponible para exportar.");
+        }
+
+        const header = data.columns.map((col) => col.name);
+        const rows = data.rows.map((row) => {
+          return data.columns.map((col) => {
+            const value = (row.values || {})[col.name];
+            return value != null ? value : "";
+          });
+        });
+
+        const worksheet = window.XLSX.utils.aoa_to_sheet([header, ...rows]);
+        const workbook = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(workbook, worksheet, "Datos");
+
+        const filename = `${buildFileBaseName()}.xlsx`;
+        window.XLSX.writeFile(workbook, filename);
+      })
+      .catch((err) => {
+        console.error(err);
       });
-    });
-
-    const worksheet = window.XLSX.utils.aoa_to_sheet([header, ...rows]);
-    const workbook = window.XLSX.utils.book_new();
-    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Datos");
-
-    const filename = `${buildFileBaseName()}.xlsx`;
-    window.XLSX.writeFile(workbook, filename);
   }
 
-  function updateChart() {
+  function updateChart(rowsOverride) {
     if (!chart || !currentData) {
       return;
     }
-    const rows = getFilteredRows(currentData.rows || []);
+    const rows =
+      Array.isArray(rowsOverride) ? rowsOverride : getFilteredRows(currentData.rows || []);
     const option = buildChartOptions(currentData, rows);
     if (option) {
       chart.setOption(option, true);
@@ -918,10 +1419,11 @@ document.addEventListener("DOMContentLoaded", function () {
       })
       .then((data) => {
         currentData = data;
+        tableExpanded = false;
         populateFieldSelectors(data.columns || []);
         updateDateInputs(currentColumns, data.rows || []);
         const filteredRows = getFilteredRows(data.rows || []);
-        updateChart();
+        updateChart(filteredRows);
         renderTable(data, filteredRows);
       })
       .catch((err) => {
@@ -943,6 +1445,13 @@ document.addEventListener("DOMContentLoaded", function () {
     updateChart();
   });
   chartTypeSelect.addEventListener("change", updateChart);
+  if (executiveModeToggle) {
+    executiveModeToggle.checked = getStoredExecutiveMode();
+    executiveModeToggle.addEventListener("change", function () {
+      setStoredExecutiveMode(executiveModeToggle.checked);
+      updateChart();
+    });
+  }
   dateApplyButton.addEventListener("click", applyDateFilter);
   if (exportCsvButton) {
     exportCsvButton.addEventListener("click", exportCsv);
@@ -950,6 +1459,12 @@ document.addEventListener("DOMContentLoaded", function () {
   if (exportExcelButton) {
     exportExcelButton.addEventListener("click", exportExcel);
   }
+  if (presentationButton) {
+    presentationButton.addEventListener("click", togglePresentationMode);
+  }
+  document.addEventListener("fullscreenchange", syncChartPresentationUi);
+  document.addEventListener("webkitfullscreenchange", syncChartPresentationUi);
+  window.addEventListener("resize", resizeChartSoon);
 
   const appliedFromUrl = applyDatasetFromUrl();
   if (!appliedFromUrl && !instanceSelect.value) {
@@ -962,5 +1477,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   setDatasetInUrl(instanceSelect.value);
   loadInstanceData();
+  syncChartPresentationUi();
 
 });

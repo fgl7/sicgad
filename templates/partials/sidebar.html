@@ -22,6 +22,7 @@
     {% url 'audit:log_list' as audit_url %}
     {% url 'performance:formulas' as performance_url %}
 
+    {% if not is_viewer or is_admin or is_loader or is_validator %}
     <div class="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-4 mb-2">General</div>
 
     <a href='{{ home_url }}'
@@ -31,6 +32,7 @@
       </svg>
       <span class="font-medium">Inicio</span>
     </a>
+    {% endif %}
 
     <a href='{{ schemas_url }}'
       class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path|slice:":9" == "/schemas/" %}active{% endif %}'>

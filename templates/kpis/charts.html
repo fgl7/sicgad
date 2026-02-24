@@ -50,11 +50,42 @@
     </div>
 </section>
 
+{% if performance_indicators %}
+<section class="glass-effect mb-6 px-5 py-3 relative overflow-hidden">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <p class="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Modo global de visualizaci&oacute;n</p>
+            <p class="text-xs text-slate-300">Sincroniza la presentaci&oacute;n visual del chart principal y el chart de desempe&ntilde;o.</p>
+        </div>
+        <div class="w-full sm:w-auto sm:min-w-[250px]">
+            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading text-[11px]">
+                Vista de charts
+            </label>
+            <div class="flex items-center gap-2">
+                <select id="charts-global-view-mode-select" class="w-full h-10">
+                    <option value="operativo">Operativo</option>
+                    <option value="presentacion">Presentaci&oacute;n</option>
+                </select>
+                <button id="charts-global-reset-view-btn" type="button"
+                    class="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-slate-200 text-[11px] font-semibold hover:bg-white/5 transition-colors whitespace-nowrap">
+                    Restaurar vista
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
 <section class="glass-effect mb-6 p-6 relative overflow-hidden">
     <div class="pointer-events-none absolute -bottom-20 -right-16 h-44 w-44 rounded-full bg-blue-500/10 blur-3xl"></div>
     <div class="grid gap-6 md:grid-cols-12">
         <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
-            <div class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+            <div id="kpi-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+                <button id="kpi-chart-presentation-btn" type="button"
+                    style="right: 0.75rem; top: 0.75rem;"
+                    class="absolute z-10 px-3 py-1.5 rounded-lg border border-cyan-300/20 bg-slate-950/75 text-cyan-200 text-[10px] font-semibold tracking-wide uppercase hover:bg-slate-900/90 hover:border-cyan-300/35 transition-colors">
+                    Presentaci&oacute;n
+                </button>
                 <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
             </div>
         </div>
@@ -72,6 +103,15 @@
                 <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje
                     X</label>
                 <select id="kpi-x-field-select" class="w-full"></select>
+            </div>
+            <div>
+                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Presentaci&oacute;n</label>
+                <label
+                    class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-slate-200 cursor-pointer">
+                    <span class="font-medium">Modo ejecutivo</span>
+                    <input id="kpi-executive-mode-toggle" type="checkbox"
+                        class="size-4 rounded border-slate-600 bg-black/40 text-cyan-400 focus:ring-cyan-500/20" />
+                </label>
             </div>
             <div>
                 <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores
@@ -110,6 +150,12 @@
                 <option value="bar">Comparativa (Barras)</option>
                 <option value="stacked_bar">Composici&oacute;n</option>
             </select>
+            <label
+                class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-slate-200 cursor-pointer">
+                <span class="font-medium">Modo ejecutivo</span>
+                <input id="performance-executive-mode-toggle" type="checkbox"
+                    class="size-4 rounded border-slate-600 bg-black/40 text-amber-500 focus:ring-amber-500/20" />
+            </label>
         </div>
         <div class="md:col-span-2">
             <label
@@ -138,7 +184,12 @@
 </section>
 
 <section class="glass-effect mb-6 p-6">
-    <div class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+    <div id="performance-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+        <button id="performance-chart-presentation-btn" type="button"
+            style="right: 0.75rem; top: 0.75rem;"
+            class="absolute z-10 px-3 py-1.5 rounded-lg border border-amber-300/20 bg-slate-950/75 text-amber-200 text-[10px] font-semibold tracking-wide uppercase hover:bg-slate-900/90 hover:border-amber-300/35 transition-colors">
+            Presentaci&oacute;n
+        </button>
         <div id="performance-chart" class="w-full" style="height: 360px;"></div>
     </div>
     <div id="performance-chart-empty" class="mt-4 text-[11px] text-slate-500 italic hidden text-center">
@@ -193,9 +244,101 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="{% static 'js/kpis_charts.js' %}?v=18"></script>
+<script src="{% static 'js/kpis_charts.js' %}?v=21"></script>
 {% if performance_indicators %}
-<script src="{% static 'js/performance_charts.js' %}?v=5"></script>
+<script src="{% static 'js/performance_charts.js' %}?v=8"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const globalSelect = document.getElementById('charts-global-view-mode-select');
+    const resetViewButton = document.getElementById('charts-global-reset-view-btn');
+    const kpiToggle = document.getElementById('kpi-executive-mode-toggle');
+    const performanceToggle = document.getElementById('performance-executive-mode-toggle');
+    const GLOBAL_VIEW_MODE_STORAGE_KEY = 'sicgad_charts_global_view_mode';
+
+    if (!globalSelect || !kpiToggle || !performanceToggle) {
+        return;
+    }
+
+    function getStoredGlobalMode() {
+        try {
+            const value = window.localStorage.getItem(GLOBAL_VIEW_MODE_STORAGE_KEY);
+            return value === 'presentacion' || value === 'operativo' ? value : null;
+        } catch (_err) {
+            return null;
+        }
+    }
+
+    function setStoredGlobalMode(value) {
+        try {
+            window.localStorage.setItem(GLOBAL_VIEW_MODE_STORAGE_KEY, value);
+        } catch (_err) {
+            // ignore storage restrictions
+        }
+    }
+
+    function setToggle(toggle, checked) {
+        if (!toggle || toggle.checked === checked) {
+            return;
+        }
+        toggle.checked = checked;
+        toggle.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function exitFullscreenIfNeeded() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            return;
+        }
+        try {
+            if (typeof document.exitFullscreen === 'function') {
+                document.exitFullscreen();
+                return;
+            }
+            if (typeof document.webkitExitFullscreen === 'function') {
+                document.webkitExitFullscreen();
+            }
+        } catch (_err) {
+            // ignore fullscreen API errors
+        }
+    }
+
+    function syncGlobalSelectFromToggles() {
+        if (kpiToggle.checked && performanceToggle.checked) {
+            globalSelect.value = 'presentacion';
+            setStoredGlobalMode('presentacion');
+            return;
+        }
+        globalSelect.value = 'operativo';
+        setStoredGlobalMode('operativo');
+    }
+
+    globalSelect.addEventListener('change', function () {
+        const useExecutive = globalSelect.value === 'presentacion';
+        setStoredGlobalMode(globalSelect.value);
+        setToggle(kpiToggle, useExecutive);
+        setToggle(performanceToggle, useExecutive);
+    });
+
+    if (resetViewButton) {
+        resetViewButton.addEventListener('click', function () {
+            globalSelect.value = 'operativo';
+            globalSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            exitFullscreenIfNeeded();
+        });
+    }
+
+    kpiToggle.addEventListener('change', syncGlobalSelectFromToggles);
+    performanceToggle.addEventListener('change', syncGlobalSelectFromToggles);
+
+    const storedMode = getStoredGlobalMode();
+    if (storedMode === 'presentacion' || storedMode === 'operativo') {
+        globalSelect.value = storedMode;
+        const useExecutive = storedMode === 'presentacion';
+        setToggle(kpiToggle, useExecutive);
+        setToggle(performanceToggle, useExecutive);
+    } else {
+        syncGlobalSelectFromToggles();
+    }
+});
+</script>
 {% endif %}
 {% endblock %}

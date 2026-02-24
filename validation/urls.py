@@ -12,5 +12,10 @@ urlpatterns = [
         views.approve_historical_batch,
         name="approve_historical_batch",
     ),
+    path(
+        "historical/<int:batch_id>/approve/progress/",
+        views.approve_historical_batch_progress,
+        name="approve_historical_batch_progress",
+    ),
     path("<int:pk>/", views.detail, name="detail"),
 ]

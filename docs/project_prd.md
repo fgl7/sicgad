@@ -131,6 +131,11 @@ UX:
 - En `upload_historical`, spinner y barra de progreso de subida.
 - Segunda fase visual: "procesando en servidor".
 - En validacion historica (`validate/inbox`), aprobacion con overlay de carga y progreso visual para evitar doble accion.
+- Para validador, la aprobacion historica usa `fetch` (AJAX) + polling de progreso real:
+  - porcentaje por etapas
+  - detalle de avance (incluye conteo de instancias cuando aplica)
+  - badge visual de etapa (`Etapa X/4`) con color por fase
+  - compatibilidad con redirect/mensajes Django al finalizar
 
 ## 7. Validacion
 Modelo:
@@ -153,6 +158,9 @@ Comportamiento:
   meses afectados via `consolidate_certifications_for_daily_periods`.
 - La consolidacion mensual automatica crea/actualiza instancias de certificacion en `SUBMITTED`
   (no `DRAFT`) para que entren al flujo de validacion mensual.
+- Endpoint de progreso para aprobacion historica del validador:
+  - `validation/urls.py` -> `historical/<batch_id>/approve/progress/`
+  - payload expone `percent`, `message`, `stage_index`, `stage_total`, `stage_label`
 
 Regla operativa importante:
 - `DatasetInstance` publicado sin `PublishedDataPoint` no aparece en KPIs/tablas analiticas, aunque su estado sea `PUBLISHED`.
@@ -168,6 +176,8 @@ Plantillas activas segun perfil:
 
 Reglas en backend:
 - Scope por memberships se aplica siempre (excepto admin global).
+- `VIEWER` puro (sin rol admin/loader/validator) no usa dashboard `home`:
+  - acceso a `/home/` redirige a `/kpis/` (vista principal de consumo).
 - Para `EXTERNAL_MONTHLY` (viewer puro, no admin/loader/validator):
   - solo datasets `MONTHLY`.
   - bloqueo de datasets no mensuales tambien en endpoint `dataset_data`.
@@ -179,6 +189,38 @@ Reglas en backend:
 
 Detalle de series:
 - Los datos publicados y validados convergen en la misma base logica (`PublishedDataPoint`) y se consumen desde alli para charts/tablas.
+
+Rendimiento y UX reciente (charts):
+- Optimizaciones backend en `kpis/views.py`:
+  - se evita construir `authority_dataset_tree` para usuarios que no lo requieren
+  - listado de datasets con datos via consulta `EXISTS` (mejor que `JOIN + DISTINCT`)
+  - cache corto para respuestas `published` del endpoint `dataset_data`
+  - lectura de `PublishedDataPoint` con iteracion liviana (`values_list(...).iterator(...)`)
+- Optimizaciones frontend en `static/js/kpis_charts.js`:
+  - carga lazy de `xlsx` (solo al exportar Excel)
+  - tabla de detalle renderiza inicialmente un subconjunto (con boton "Mostrar todas")
+  - fix de cambio de tipo de grafico (`line/bar/stacked_bar`) que podia limpiar el chart por manejo de evento `change`
+- Optimizaciones frontend en `static/js/performance_charts.js`:
+  - carga lazy de `xlsx`
+  - defer de tablas de desempeno en carga inicial (prioriza chart)
+- Redisenio visual de charts (KPI y desempeno):
+  - tooltip moderno, leyenda refinada, ejes/grid mas sobrios
+  - barras con gradiente + esquinas redondeadas
+  - lineas refinadas + area sutil (solo cuando aporta)
+  - `dataZoom` inferior mejorado
+  - formato corto de fechas en eje X (`10 dic`, `dic 25`, etc.) segun granularidad
+- Modo ejecutivo opcional en charts:
+  - menos ruido visual (menos labels/grid mas discreto/espaciado)
+  - persistencia via `localStorage`
+- Boton `Presentacion` por chart:
+  - activa modo ejecutivo
+  - abre fullscreen del chart
+  - redimensiona ECharts al entrar/salir
+  - ubicacion visual ajustada al extremo derecho superior del stage para no tapar info del chart
+- En `kpis/charts.html` existe selector global `Operativo/Presentacion` que sincroniza modo visual entre chart principal y chart de desempeno.
+- El selector global de charts persiste en `localStorage` (`sicgad_charts_global_view_mode`).
+- Accion `Restaurar vista` (en `kpis/charts.html`) devuelve ambos charts a modo operativo y cierra fullscreen si estaba activo.
+- Al entrar a fullscreen, cada chart muestra ayuda breve: `Presiona Esc para salir de presentacion`.
 
 ## 9. Sidebar y contexto global
 Context processor:
@@ -199,10 +241,23 @@ Sidebar:
 - base: `templates/partials/sidebar.html`
 - autoridad MHE: `templates/partials/sidebar_authority_mhe.html`
 - switch en `templates/base.html` segun `is_authority_viewer or is_external_monthly_viewer`
+- visualizadores puros (authority/external) no muestran `General > Inicio` en sidebar
+- en sidebar base, `Inicio` se oculta para `VIEWER` puro (si no tiene tambien rol admin/loader/validator)
 
 Topbar base:
 - `templates/partials/topbar.html`
 - estilo actual con clase `topbar-flat` (sin esquinas redondeadas / 90 grados)
+
+Plantillas publicas y base visual:
+- `templates/landing.html` y `templates/registration/login.html` fueron unificadas para extender `templates/base.html`.
+- `templates/base.html` expone bloques adicionales para paginas publicas (sin sidebar/topbar) sin romper vistas internas:
+  - `background_layer`
+  - `page_layout`
+  - `body_class` / `body_style`
+  - `system_messages`
+  - otros bloques auxiliares de estilo/transicion
+- Se movieron fondos decorativos `position: fixed` (landing/login) fuera de `.app-shell` para evitar recortes visuales cuando hay `transform` durante transiciones.
+- Transicion de rutas unificada en `base.html` con estilo `fade-through` neutro (sin "flash" azul).
 
 Nota: Auditoria esta visible para usuarios autenticados segun reglas actuales de navegacion.
 
@@ -281,7 +336,9 @@ Funciona y se usa activamente:
 - Aprobacion historica con rematerializacion de puntos faltantes.
 - Aprobacion diaria/historica con trigger de consolidacion mensual automatica.
 - Sidebar jerarquico compartido para autoridad MHE y visualizador externo mensual.
+- Sidebar de visualizadores sin acceso visible a `Inicio` (enfoque en navegacion/KPIs).
 - Restriccion mensual para visualizador externo en charts y dataset_data.
+- Redireccion de `/home/` a `/kpis/` para visualizadores puros.
 - Limpieza inmediata post-publicacion/materializacion + limpieza periodica por retencion en media.
 - KPIs de dataset con ventana temporal reciente (3 meses) cuando aplica columna fecha.
 - Landing institucional con CTA de acceso refinado (una sola flecha) y favicon visible.

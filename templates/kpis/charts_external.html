@@ -51,7 +51,12 @@
 <section class="glass-effect mb-6 p-6 relative overflow-hidden">
     <div class="grid gap-6 md:grid-cols-12">
         <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
-            <div class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+            <div id="kpi-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+                <button id="kpi-chart-presentation-btn" type="button"
+                    style="right: 0.75rem; top: 0.75rem;"
+                    class="absolute z-10 px-3 py-1.5 rounded-lg border border-cyan-300/20 bg-slate-950/75 text-cyan-200 text-[10px] font-semibold tracking-wide uppercase hover:bg-slate-900/90 hover:border-cyan-300/35 transition-colors">
+                    Presentacion
+                </button>
                 <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
             </div>
         </div>
@@ -67,6 +72,15 @@
             <div>
                 <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje X</label>
                 <select id="kpi-x-field-select" class="w-full"></select>
+            </div>
+            <div>
+                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Presentacion</label>
+                <label
+                    class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-slate-200 cursor-pointer">
+                    <span class="font-medium">Modo ejecutivo</span>
+                    <input id="kpi-executive-mode-toggle" type="checkbox"
+                        class="size-4 rounded border-slate-600 bg-black/40 text-cyan-400 focus:ring-cyan-500/20" />
+                </label>
             </div>
             <div>
                 <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores (Eje Y)</label>
@@ -106,6 +120,5 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="{% static 'js/kpis_charts.js' %}?v=18"></script>
+<script src="{% static 'js/kpis_charts.js' %}?v=21"></script>
 {% endblock %}

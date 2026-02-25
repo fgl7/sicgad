@@ -5,6 +5,9 @@ Guia operativa para publicar el piloto de SICGAD en `pythonanywhere.com` usando:
 - Base de datos `sqlite3` (piloto)
 - Datos actuales del proyecto (snapshot del `db.sqlite3` del repo)
 
+Checklist rapido (redeploy / referencia breve):
+- `docs/pythonanywhere_pilot_deploy_checklist.md`
+
 Cuenta objetivo (ejemplo actual):
 - usuario PythonAnywhere: `lfl`
 - dominio esperado: `lfl.pythonanywhere.com`
@@ -23,14 +26,15 @@ git ls-files db.sqlite3
 ```
 
 ### 1.2 Media (archivos subidos)
-La carpeta `media/` **no** esta en Git. Si quieres conservar archivos del piloto (uploads, adjuntos, etc.), debes subirla aparte.
+La estructura base de `media/` **si** esta en Git (con archivos `.gitkeep`), por lo que al clonar el repo en PythonAnywhere ya se crean las carpetas necesarias.
 
-Empaquetar en Windows (PowerShell):
-```powershell
-Compress-Archive -Path .\media\* -DestinationPath .\media_pilot.zip -Force
-```
+Estado actual del piloto (segun repo):
+- `media/ingest/raw/.gitkeep`
+- `media/ingest/historical/.gitkeep`
 
-Si `media/` es grande, tambien puedes crear varios zips por subcarpetas.
+Importante:
+- Si mas adelante quieres migrar archivos reales (uploads/adjuntos) al servidor, esos archivos **no** se sincronizan automaticamente salvo que tambien los subas al repo.
+- Para ese caso, puedes subir un `.zip` manualmente desde PythonAnywhere (ver nota en la seccion 4.2).
 
 ## 2. Crear el entorno en PythonAnywhere (Bash)
 
@@ -42,11 +46,20 @@ git clone https://github.com/fgl7/sicgad.git
 cd ~/sicgad
 ```
 
+Nota (repo privado):
+- Puedes usar el mismo `git clone https://github.com/...`.
+- Si Git pide credenciales, usa tu usuario de GitHub + token (PAT).
+- Evita poner el token directamente en la URL del comando.
+
 ### 2.1 Crear entorno virtual
-Usa la misma version de Python que vayas a configurar en la Web app (por ejemplo `3.11`).
+Usa la misma version de Python que vayas a configurar en la Web app.
+
+Caso validado en este piloto:
+- `python --version` en Bash: `Python 3.13.1`
+- Web app configurada con `Python 3.13`
 
 ```bash
-python3.11 -m venv ~/.virtualenvs/sicgad-pilot
+python -m venv ~/.virtualenvs/sicgad-pilot
 source ~/.virtualenvs/sicgad-pilot/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
@@ -100,7 +113,15 @@ Verificar:
 ls -lh ~/sicgad/db.sqlite3
 ```
 
-### 4.2 Subir `media/` (si aplica)
+### 4.2 `media/` (actualmente ya viaja con el repo)
+Para este piloto, la estructura de `media/` ya llega con el `git clone` (carpetas + `.gitkeep`), asi que **no necesitas** subir `media/` manualmente si sigue vacia o sin archivos relevantes.
+
+Verificar:
+```bash
+find ~/sicgad/media -maxdepth 3 -type f | head -20
+```
+
+#### Solo si necesitas migrar archivos reales a futuro (opcional)
 Como no hay SSH obligatorio, puedes subir `media_pilot.zip` desde:
 - `Files` tab en PythonAnywhere (por ejemplo a `/home/lfl/`)
 
@@ -139,6 +160,10 @@ Opcional (recomendado para revisar seguridad):
 python manage.py check --deploy
 ```
 
+Resultado esperado en este piloto:
+- Puede aparecer una advertencia `security.W004` por `SECURE_HSTS_SECONDS` no configurado.
+- Esa advertencia no bloquea el despliegue del piloto.
+
 ## 6. Crear la Web App en PythonAnywhere (UI Web tab)
 
 Esto no se puede hacer solo desde Bash: requiere configurar la web app en la pestaña `Web`.
@@ -147,13 +172,19 @@ Esto no se puede hacer solo desde Bash: requiere configurar la web app en la pes
 En `Web`:
 1. `Add a new web app`
 2. `Manual configuration`
-3. Selecciona la misma version de Python que usaste en el `venv` (ej. `Python 3.11`)
+3. Selecciona la misma version de Python que usaste en el `venv` (en este piloto: `Python 3.13`)
+
+Nota:
+- Esta seccion se realiza en la interfaz web (pestaña `Web`), no en Bash.
 
 ### 6.2 Configurar paths
 En la Web app:
 - **Source code**: `/home/lfl/sicgad`
 - **Working directory**: `/home/lfl/sicgad`
 - **Virtualenv**: `/home/lfl/.virtualenvs/sicgad-pilot`
+
+Nota:
+- PythonAnywhere puede dejar inicialmente `Working directory` como `/home/lfl/`; en ese caso, cambialo manualmente a `/home/lfl/sicgad`.
 
 ### 6.3 Configurar WSGI
 Abre el archivo WSGI desde la Web tab (algo como `/var/www/lfl_pythonanywhere_com_wsgi.py`) y deja algo asi:
@@ -177,6 +208,11 @@ En `Static files` agrega:
 - URL: `/static/` -> Path: `/home/lfl/sicgad/staticfiles`
 - URL: `/media/` -> Path: `/home/lfl/sicgad/media`
 
+### 6.5 HTTPS (recomendado para piloto con login)
+En `Security` (misma pagina de la Web app):
+- PythonAnywhere provee certificado HTTPS automatico para `lfl.pythonanywhere.com`
+- Activar `Force HTTPS` = `Enabled`
+
 ## 7. Reiniciar y probar
 
 En la Web tab:
@@ -189,6 +225,10 @@ Pruebas minimas:
 4. `/home/` con usuario viewer puro (debe redirigir a `/kpis/`)
 5. chart + boton `Presentacion`
 6. carga de CSS/JS/imagenes (sin 404 en `static`)
+
+Estado real validado:
+- Despliegue funcionando correctamente en `https://lfl.pythonanywhere.com/`
+- Landing carga con datos del snapshot (`db.sqlite3` del repo)
 
 ## 8. Logs y troubleshooting
 
@@ -214,6 +254,7 @@ Se acepta para piloto, pero con limites:
 - No es ideal para alta concurrencia
 - Mantener una sola instancia web (configuracion tipica de PythonAnywhere)
 - Hacer backup frecuente del archivo `db.sqlite3`
+- En cuenta gratuita nueva, la web app gratuita expira aproximadamente en 1 mes (reactivable desde la cuenta)
 
 Backup rapido en Bash:
 ```bash
@@ -239,3 +280,6 @@ Si el nuevo snapshot de datos cambia (y quieres reemplazarlo en piloto):
 - sube nuevo `db.sqlite3` manualmente (con respaldo previo), o
 - usa scripts de migracion/carga definidos por el proyecto.
 
+Si luego decides versionar archivos reales dentro de `media/` (ademas de `.gitkeep`):
+- bastara con `git pull` para traerlos al servidor
+- revisa el tamaño del repo y evita archivos muy grandes/sensibles

@@ -17,6 +17,24 @@ Repositorio:
 
 ## 1. Antes de empezar (local)
 
+### 1.0 Compilar Tailwind (si cambiaste templates/JS con clases Tailwind)
+Si en tus cambios modificaste clases Tailwind en:
+- `templates/**/*.html`
+- `static/js/**/*.js`
+- `tailwind.config.js`
+
+entonces **antes de hacer deploy** debes regenerar `static/css/tailwind.generated.css` localmente:
+
+```powershell
+cd d:\34_other\sigad
+npm run build:tailwind
+```
+
+Importante:
+- Este paso normalmente se hace **en tu maquina local** (no en PythonAnywhere).
+- El archivo generado `static/css/tailwind.generated.css` debe quedar incluido en el commit que subes a Git.
+- Si solo cambias Python o CSS propio (por ejemplo `static/css/sicgad_theme.css`) y no agregaste/quitaste clases Tailwind, no hace falta correrlo.
+
 ### 1.1 Confirmar que el snapshot de datos esta en Git
 En este repo, `db.sqlite3` esta versionado en Git, por lo que al clonar en PythonAnywhere se descargan los datos del commit actual.
 
@@ -262,6 +280,16 @@ cp ~/sicgad/db.sqlite3 ~/sicgad/db.sqlite3.bak.$(date +%Y%m%d_%H%M%S)
 ```
 
 ## 10. Actualizar el deploy despues (nuevo commit)
+
+### 10.0 Previo al `git push` (local)
+Si el cambio toca plantillas/JS con clases Tailwind, ejecuta localmente:
+
+```powershell
+npm run build:tailwind
+```
+
+Luego haz commit del archivo actualizado:
+- `static/css/tailwind.generated.css`
 
 ```bash
 cd ~/sicgad

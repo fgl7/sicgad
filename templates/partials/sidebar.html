@@ -1,5 +1,5 @@
 {% load static %}
-<aside class='w-64 sidebar border-r border-white/10 hidden lg:flex flex-col h-screen sticky top-0 z-50'>
+<aside class='{% if sidebar_mode == "mobile" %}sidebar-mobile-shell max-w-full sidebar border-r border-white/10 flex flex-col h-full shadow-2xl relative lg:hidden{% else %}w-64 sidebar border-r border-white/10 hidden lg:flex flex-col h-screen sticky top-0 z-50{% endif %}'>
   <div class='p-6 flex items-center gap-3'>
     <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
       <img src="{% static 'escudo.png' %}" alt="Escudo Bolivia" class="w-7 h-7 object-contain" />

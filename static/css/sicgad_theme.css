@@ -46,6 +46,41 @@ body {
     overflow-x: hidden;
 }
 
+.app-shell,
+.app-shell * {
+    box-sizing: border-box;
+}
+
+.app-shell .flex-1,
+.app-shell main {
+    min-width: 0;
+}
+
+.saas-hybrid .grid > * {
+    min-width: 0;
+}
+
+.mobile-sidebar-overlay {
+    z-index: 120;
+}
+
+.mobile-sidebar-backdrop {
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.mobile-sidebar-close {
+    z-index: 130;
+}
+
+.sidebar-mobile-shell {
+    width: min(20rem, 86vw);
+}
+
+.topbar-user-meta {
+    max-width: 18rem;
+}
+
 .app-shell::before {
     content: "";
     position: fixed;
@@ -513,6 +548,60 @@ header.topbar-flat {
     background: rgba(6, 16, 30, 0.48);
 }
 
+.authority-chart-controls-compact > * + * {
+    margin-top: 0.75rem !important;
+}
+
+.authority-chart-controls-compact > div {
+    padding: 8px;
+    border-radius: 10px;
+}
+
+.authority-chart-controls-compact .authority-control-label {
+    margin-bottom: 0.35rem !important;
+    font-size: 10px;
+    letter-spacing: 0.07em;
+}
+
+.authority-chart-controls-compact .authority-control-select {
+    height: 36px;
+    min-height: 36px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    font-size: 0.8rem;
+}
+
+.authority-chart-controls-compact .authority-control-toggle {
+    padding: 0.4rem 0.6rem;
+    min-height: 36px;
+}
+
+.authority-chart-controls-compact .authority-y-field-box {
+    padding: 0.5rem;
+    gap: 0.4rem;
+    max-height: 9.5rem;
+    font-size: 10px;
+}
+
+.authority-chart-controls-compact .authority-y-field-box label {
+    gap: 0.35rem;
+    font-size: 10px;
+    line-height: 1.15;
+}
+
+.authority-chart-controls-compact .authority-y-field-box input[type="checkbox"] {
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+.kpi-chart-canvas {
+    height: 440px;
+}
+
+.performance-chart-canvas {
+    height: 360px;
+}
+
 .multi-select-shell {
     margin-top: 0.4rem;
     border: 1px solid rgba(94, 122, 170, 0.45);
@@ -637,5 +726,27 @@ header.topbar-flat {
 
     header.topbar-flat {
         border-radius: 0 !important;
+    }
+
+    .kpi-chart-canvas {
+        height: 360px;
+    }
+
+    .performance-chart-canvas {
+        height: 320px;
+    }
+}
+
+@media (max-width: 640px) {
+    .topbar-user-meta {
+        max-width: 12rem;
+    }
+
+    .kpi-chart-canvas {
+        height: 300px;
+    }
+
+    .performance-chart-canvas {
+        height: 260px;
     }
 }

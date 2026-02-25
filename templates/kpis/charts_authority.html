@@ -5,16 +5,16 @@
 {% block page_title %}KPIs autoridad MHE{% endblock %}
 
 {% block content %}
-<section class="glass-effect mb-5 px-5 py-3 relative overflow-hidden">
+<section class="glass-effect mb-5 px-4 sm:px-5 py-3 relative overflow-hidden">
     <div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-cyan-400/10 blur-3xl"></div>
     <div class="grid gap-3 text-[13px] md:grid-cols-12">
-        <div class="md:col-span-2">
+        <div class="md:col-span-2 min-w-0">
             <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Modo de datos</label>
             <select id="kpi-mode-select" class="w-full h-10" disabled>
                 <option value="published">Datos oficiales</option>
             </select>
         </div>
-        <div class="md:col-span-4 lg:col-span-5">
+        <div class="md:col-span-4 lg:col-span-5 min-w-0">
             <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Dataset</label>
             <select id="kpi-instance-select" class="w-full h-10">
                 <option value="">Selecciona un dataset...</option>
@@ -26,7 +26,7 @@
             </select>
             <p class="mt-1 text-[10px] text-slate-500 italic">Este perfil visualiza datos diarios y mensuales publicados.</p>
         </div>
-        <div class="md:col-span-6 lg:col-span-5">
+        <div class="md:col-span-6 lg:col-span-5 min-w-0">
             <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Rango de fechas</label>
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div class="flex-1">
@@ -63,57 +63,57 @@
 
 <section class="mb-6">
     <div class="space-y-6">
-        <section class="glass-effect p-6 rounded-2xl border border-white/5 relative overflow-hidden authority-chart-shell">
+        <section class="glass-effect p-4 sm:p-6 rounded-2xl border border-white/5 relative overflow-hidden authority-chart-shell">
             <div class="grid gap-6 md:grid-cols-12">
-                <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
-                    <div id="kpi-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative authority-chart-stage">
+                <div class="md:col-span-8 lg:col-span-9 xl:col-span-10 min-w-0">
+                    <div id="kpi-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-3 sm:p-4 overflow-hidden relative authority-chart-stage min-w-0">
                         <button id="kpi-chart-presentation-btn" type="button"
                             style="right: 0.75rem; top: 0.75rem;"
                             class="absolute z-10 px-3 py-1.5 rounded-lg border border-cyan-300/20 bg-slate-950/75 text-cyan-200 text-[10px] font-semibold tracking-wide uppercase hover:bg-slate-900/90 hover:border-cyan-300/35 transition-colors">
                             Presentaci&oacute;n
                         </button>
-                        <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
+                        <div id="kpi-chart" class="w-full kpi-chart-canvas"></div>
                     </div>
                 </div>
-                <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 space-y-6 text-sm authority-chart-controls">
+                <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 min-w-0 space-y-6 text-sm authority-chart-controls authority-chart-controls-compact">
                     <div>
-                        <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de gráfico</label>
-                        <select id="kpi-chart-type-select" class="w-full">
+                        <label class="authority-control-label block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de gráfico</label>
+                        <select id="kpi-chart-type-select" class="w-full authority-control-select">
                             <option value="line">Línea suave</option>
                             <option value="bar">Barras</option>
                             <option value="stacked_bar">Barras apiladas</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje X</label>
-                        <select id="kpi-x-field-select" class="w-full"></select>
+                        <label class="authority-control-label block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje X</label>
+                        <select id="kpi-x-field-select" class="w-full authority-control-select"></select>
                     </div>
                     <div>
-                        <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Presentaci&oacute;n</label>
+                        <label class="authority-control-label block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Presentaci&oacute;n</label>
                         <label
-                            class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-slate-200 cursor-pointer">
+                            class="authority-control-toggle flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-slate-200 cursor-pointer">
                             <span class="font-medium">Modo ejecutivo</span>
                             <input id="kpi-executive-mode-toggle" type="checkbox"
                                 class="size-4 rounded border-slate-600 bg-black/40 text-cyan-400 focus:ring-cyan-500/20" />
                         </label>
                     </div>
                     <div>
-                        <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores (Eje Y)</label>
+                        <label class="authority-control-label block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores (Eje Y)</label>
                         <div id="kpi-y-field-box"
-                            class="rounded-xl border border-white/10 bg-black/20 p-3 grid gap-2.5 max-h-64 overflow-auto text-[11px]">
+                            class="authority-y-field-box rounded-xl border border-white/10 bg-black/20 p-3 grid gap-2.5 max-h-64 overflow-auto text-[11px]">
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="glass-effect p-6 text-sm rounded-2xl border border-white/5">
+        <section class="glass-effect p-4 sm:p-6 text-sm rounded-2xl border border-white/5">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <h2 class="text-base font-bold text-white tracking-tight flex items-center gap-2 font-heading">
                     <span class="w-1.5 h-6 bg-amber-500 rounded-full"></span>
                     Detalle de Datos Publicados
                 </h2>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <button id="kpi-export-csv" type="button"
                         class="px-4 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                         disabled>

@@ -41,4 +41,5 @@ $RECYCLE.BIN/
 
 # Frontend build
 node_modules/
+static/css/tailwind.audit.tmp.css
 

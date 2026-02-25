@@ -5,10 +5,10 @@
 {% block page_title %}KPIs y gr&aacute;ficos{% endblock %}
 
 {% block content %}
-<section class="glass-effect mb-5 px-5 py-3 relative overflow-hidden">
+<section class="glass-effect mb-5 px-4 sm:px-5 py-3 relative overflow-hidden">
     <div class="pointer-events-none absolute -top-12 -right-12 h-36 w-36 rounded-full bg-cyan-400/10 blur-3xl"></div>
     <div class="grid gap-3 text-[13px] md:grid-cols-12">
-        <div class="md:col-span-2">
+        <div class="md:col-span-2 min-w-0">
             <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Modo de
                 datos</label>
             <select id="kpi-mode-select" class="w-full h-10">
@@ -18,7 +18,7 @@
                 {% endif %}
             </select>
         </div>
-        <div class="md:col-span-4 lg:col-span-5">
+        <div class="md:col-span-4 lg:col-span-5 min-w-0">
             <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Dataset</label>
             <select id="kpi-instance-select" class="w-full h-10">
                 <option value="">Selecciona un dataset...</option>
@@ -32,7 +32,7 @@
             <p class="mt-1 text-[10px] text-slate-500 italic">A&uacute;n no existen datasets con datos cargados.</p>
             {% endif %}
         </div>
-        <div class="md:col-span-6 lg:col-span-5">
+        <div class="md:col-span-6 lg:col-span-5 min-w-0">
             <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Rango de
                 fechas</label>
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -51,13 +51,13 @@
 </section>
 
 {% if performance_indicators %}
-<section class="glass-effect mb-6 px-5 py-3 relative overflow-hidden">
+<section class="glass-effect mb-6 px-4 sm:px-5 py-3 relative overflow-hidden">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <p class="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Modo global de visualizaci&oacute;n</p>
             <p class="text-xs text-slate-300">Sincroniza la presentaci&oacute;n visual del chart principal y el chart de desempe&ntilde;o.</p>
         </div>
-        <div class="w-full sm:w-auto sm:min-w-[250px]">
+        <div class="w-full sm:w-auto sm:min-w-[250px] min-w-0">
             <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading text-[11px]">
                 Vista de charts
             </label>
@@ -76,20 +76,20 @@
 </section>
 {% endif %}
 
-<section class="glass-effect mb-6 p-6 relative overflow-hidden">
+<section class="glass-effect mb-6 p-4 sm:p-6 relative overflow-hidden">
     <div class="pointer-events-none absolute -bottom-20 -right-16 h-44 w-44 rounded-full bg-blue-500/10 blur-3xl"></div>
     <div class="grid gap-6 md:grid-cols-12">
-        <div class="md:col-span-8 lg:col-span-9 xl:col-span-10">
-            <div id="kpi-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+        <div class="md:col-span-8 lg:col-span-9 xl:col-span-10 min-w-0">
+            <div id="kpi-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-3 sm:p-4 overflow-hidden relative min-w-0">
                 <button id="kpi-chart-presentation-btn" type="button"
                     style="right: 0.75rem; top: 0.75rem;"
                     class="absolute z-10 px-3 py-1.5 rounded-lg border border-cyan-300/20 bg-slate-950/75 text-cyan-200 text-[10px] font-semibold tracking-wide uppercase hover:bg-slate-900/90 hover:border-cyan-300/35 transition-colors">
                     Presentaci&oacute;n
                 </button>
-                <div id="kpi-chart" class="w-full" style="height: 440px;"></div>
+                <div id="kpi-chart" class="w-full kpi-chart-canvas"></div>
             </div>
         </div>
-        <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 space-y-6 text-sm">
+        <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 min-w-0 space-y-6 text-sm">
             <div>
                 <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de
                     gr&aacute;fico</label>
@@ -125,9 +125,9 @@
 </section>
 
 {% if performance_indicators %}
-<section class="glass-effect mb-6 px-6 py-4 relative overflow-hidden">
+<section class="glass-effect mb-6 px-4 sm:px-6 py-4 relative overflow-hidden">
     <div class="grid gap-6 text-xs md:grid-cols-12">
-        <div class="md:col-span-4 lg:col-span-4">
+        <div class="md:col-span-4 lg:col-span-4 min-w-0">
             <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores de
                 desempe&ntilde;o</label>
             <div id="performance-indicator-box"
@@ -142,7 +142,7 @@
                 {% endfor %}
             </div>
         </div>
-        <div class="md:col-span-2">
+        <div class="md:col-span-2 min-w-0">
             <label
                 class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Visualizaci&oacute;n</label>
             <select id="performance-chart-type-select" class="w-full">
@@ -157,7 +157,7 @@
                     class="size-4 rounded border-slate-600 bg-black/40 text-amber-500 focus:ring-amber-500/20" />
             </label>
         </div>
-        <div class="md:col-span-2">
+        <div class="md:col-span-2 min-w-0">
             <label
                 class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Granularidad</label>
             <select id="performance-frequency-select" class="w-full">
@@ -165,7 +165,7 @@
                 <option value="DAILY">Vista Diaria</option>
             </select>
         </div>
-        <div class="md:col-span-4 lg:col-span-4">
+        <div class="md:col-span-4 lg:col-span-4 min-w-0">
             <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Periodo de
                 an&aacute;lisis</label>
             <div class="flex flex-col gap-3 sm:flex-row">
@@ -183,14 +183,14 @@
     </div>
 </section>
 
-<section class="glass-effect mb-6 p-6">
-    <div id="performance-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-4 overflow-hidden relative">
+<section class="glass-effect mb-6 p-4 sm:p-6">
+    <div id="performance-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-3 sm:p-4 overflow-hidden relative min-w-0">
         <button id="performance-chart-presentation-btn" type="button"
             style="right: 0.75rem; top: 0.75rem;"
             class="absolute z-10 px-3 py-1.5 rounded-lg border border-amber-300/20 bg-slate-950/75 text-amber-200 text-[10px] font-semibold tracking-wide uppercase hover:bg-slate-900/90 hover:border-amber-300/35 transition-colors">
             Presentaci&oacute;n
         </button>
-        <div id="performance-chart" class="w-full" style="height: 360px;"></div>
+        <div id="performance-chart" class="w-full performance-chart-canvas"></div>
     </div>
     <div id="performance-chart-empty" class="mt-4 text-[11px] text-slate-500 italic hidden text-center">
         No se encontraron registros de desempe&ntilde;o para el periodo seleccionado.
@@ -198,16 +198,16 @@
 </section>
 {% endif %}
 
-<section class="glass-effect p-6 text-sm">
+<section class="glass-effect p-4 sm:p-6 text-sm">
     <div class="grid gap-6 lg:grid-cols-12">
         <div
-            class="{% if performance_indicators %}lg:col-span-6{% else %}lg:col-span-12{% endif %} rounded-2xl border border-white/5 bg-black/20 p-5">
+            class="{% if performance_indicators %}lg:col-span-6{% else %}lg:col-span-12{% endif %} min-w-0 rounded-2xl border border-white/5 bg-black/20 p-4 sm:p-5">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <h2 class="text-base font-bold text-white tracking-tight flex items-center gap-2 font-heading">
                     <span class="w-1.5 h-6 bg-amber-500 rounded-full"></span>
                     Detalle de Datos
                 </h2>
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <button id="kpi-export-csv" type="button"
                         class="px-4 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                         disabled>
@@ -226,13 +226,13 @@
         </div>
 
         {% if performance_indicators %}
-        <div class="rounded-xl border border-white/5 bg-black/20 p-3 lg:col-span-3">
+        <div class="rounded-xl border border-white/5 bg-black/20 p-3 lg:col-span-3 min-w-0">
             <h2 class="text-sm font-semibold text-slate-300 mb-2 font-heading">Desempe&ntilde;o diario</h2>
             <div id="performance-table-daily"
                 class="max-h-80 overflow-auto border border-white/5 rounded-lg bg-transparent"></div>
         </div>
 
-        <div class="rounded-xl border border-white/5 bg-black/20 p-3 lg:col-span-3">
+        <div class="rounded-xl border border-white/5 bg-black/20 p-3 lg:col-span-3 min-w-0">
             <h2 class="text-sm font-semibold text-slate-300 mb-2 font-heading">Desempe&ntilde;o mensual</h2>
             <div id="performance-table-monthly"
                 class="max-h-80 overflow-auto border border-white/5 rounded-lg bg-transparent"></div>

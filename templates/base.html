@@ -16,6 +16,10 @@
   <!-- Alpine.js -->
   <script defer src="{% static 'vendor/alpine-3.x.min.js' %}"></script>
   <style>
+    [x-cloak] {
+      display: none !important;
+    }
+
     body::after {
       content: "";
       position: fixed;
@@ -34,6 +38,12 @@
         transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
+    .route-main-pane {
+      will-change: opacity, transform;
+      transition: opacity 0.14s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
     body.is-route-transitioning::after {
       opacity: 1;
     }
@@ -41,6 +51,19 @@
     body.is-route-transitioning .app-shell {
       opacity: 0.94;
       transform: translateY(1px);
+    }
+
+    /* Pane-only navigation (e.g., sidebar links / KPI query filters): keep sidebar stable */
+    body.is-route-transitioning-pane-only .app-shell,
+    body.is-route-transitioning-query .app-shell {
+      opacity: 1;
+      transform: none;
+    }
+
+    body.is-route-transitioning-pane-only .route-main-pane,
+    body.is-route-transitioning-query .route-main-pane {
+      opacity: 0.94;
+      transform: none;
     }
 
     @keyframes pageRouteIn {
@@ -56,7 +79,8 @@
 
     @media (prefers-reduced-motion: reduce) {
       body::after,
-      .app-shell {
+      .app-shell,
+      .route-main-pane {
         animation: none !important;
         transition: none !important;
       }
@@ -140,16 +164,39 @@
   {% endblock %}
 
   {% block page_layout %}
-  <div class="app-shell">
-    <div class="flex min-h-screen relative z-10">
+  <div class="app-shell" x-data="{ mobileNavOpen: false }"
+    x-on:open-mobile-sidebar.window="mobileNavOpen = true"
+    x-on:close-mobile-sidebar.window="mobileNavOpen = false">
+    <div x-cloak x-show="mobileNavOpen" x-transition.opacity.duration.150ms
+      class="fixed inset-0 lg:hidden mobile-sidebar-overlay" aria-label="Navegacion lateral movil" role="dialog" aria-modal="true">
+      <div class="absolute inset-0 bg-black/70 mobile-sidebar-backdrop" @click="mobileNavOpen = false"></div>
+      <div class="relative h-full max-w-full"
+        @click.stop
+        @click.capture="if ($event.target.closest('a, button[type=submit]')) { mobileNavOpen = false; }">
+        <button type="button"
+          class="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-slate-950/80 text-slate-100 shadow-lg mobile-sidebar-close"
+          @click="mobileNavOpen = false" aria-label="Cerrar navegacion">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+        {% if is_authority_viewer or is_external_monthly_viewer %}
+        {% include "partials/sidebar_authority_mhe.html" with sidebar_mode="mobile" %}
+        {% else %}
+        {% include "partials/sidebar.html" with sidebar_mode="mobile" %}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="flex min-h-screen w-full max-w-full relative z-10 overflow-x-hidden">
       {% if is_authority_viewer or is_external_monthly_viewer %}
       {% include "partials/sidebar_authority_mhe.html" %}
       {% else %}
       {% include "partials/sidebar.html" %}
       {% endif %}
-      <div class="flex-1 flex flex-col">
+      <div class="route-main-pane flex-1 min-w-0 flex flex-col">
         {% include "partials/topbar.html" %}
-        <main class="flex-1 p-4 lg:p-6 relative z-10">
+        <main class="flex-1 min-w-0 p-3 sm:p-4 lg:p-6 relative z-10">
           {% block content %}{% endblock %}
         </main>
       </div>
@@ -162,6 +209,10 @@
   <script>
     (function () {
       var isTransitioning = false;
+      var QUERY_NAV_CLASS = 'is-route-transitioning-query';
+      var PANE_ONLY_NAV_CLASS = 'is-route-transitioning-pane-only';
+      var BASE_NAV_CLASS = 'is-route-transitioning';
+      var SIDEBAR_SCROLL_STORAGE_KEY = 'sicgad_sidebar_scroll_v1';
 
       function hasHtmxBehavior(el) {
         if (!el || !el.getAttributeNames) return false;
@@ -209,6 +260,74 @@
         return false;
       }
 
+      function isSamePathQueryNavigation(link) {
+        if (!link || !link.href) return false;
+        var nextUrl;
+        try {
+          nextUrl = new URL(link.href, window.location.href);
+        } catch (_e) {
+          return false;
+        }
+        var currentUrl;
+        try {
+          currentUrl = new URL(window.location.href);
+        } catch (_e2) {
+          return false;
+        }
+
+        if (nextUrl.origin !== currentUrl.origin) return false;
+        if (nextUrl.pathname !== currentUrl.pathname) return false;
+        if (nextUrl.search === currentUrl.search) return false;
+        return true;
+      }
+
+      function isSidebarNavigation(link) {
+        return Boolean(link && link.closest && link.closest('.sidebar'));
+      }
+
+      function safeSetSessionStorage(key, value) {
+        try {
+          window.sessionStorage.setItem(key, value);
+        } catch (_err) {
+          // ignore storage restrictions
+        }
+      }
+
+      function safeGetSessionStorage(key) {
+        try {
+          return window.sessionStorage.getItem(key);
+        } catch (_err) {
+          return null;
+        }
+      }
+
+      function saveSidebarScrollForLink(link) {
+        if (!isSidebarNavigation(link)) return;
+        var sidebar = link.closest('.sidebar');
+        if (!sidebar) return;
+        var nav = sidebar.querySelector('nav');
+        if (!nav) return;
+        safeSetSessionStorage(SIDEBAR_SCROLL_STORAGE_KEY, String(nav.scrollTop || 0));
+      }
+
+      function restoreSidebarScroll() {
+        var raw = safeGetSessionStorage(SIDEBAR_SCROLL_STORAGE_KEY);
+        if (raw == null) return;
+        var value = Number(raw);
+        if (!Number.isFinite(value) || value < 0) return;
+        var navs = document.querySelectorAll('.sidebar nav');
+        if (!navs || !navs.length) return;
+        for (var i = 0; i < navs.length; i++) {
+          navs[i].scrollTop = value;
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', restoreSidebarScroll, { once: true });
+      } else {
+        restoreSidebarScroll();
+      }
+
       document.addEventListener('click', function (event) {
         var link = event.target.closest('a');
         if (shouldSkipLink(link, event)) return;
@@ -219,17 +338,36 @@
         }
 
         isTransitioning = true;
-        document.body.classList.add('is-route-transitioning');
+        var isQueryNavigation = isSamePathQueryNavigation(link);
+        var isSidebarNav = isSidebarNavigation(link);
+        var usePaneOnlyTransition = isSidebarNav || isQueryNavigation;
+        if (isSidebarNav) {
+          saveSidebarScrollForLink(link);
+        }
+        document.body.classList.add(BASE_NAV_CLASS);
+        if (isQueryNavigation) {
+          document.body.classList.add(QUERY_NAV_CLASS);
+        } else {
+          document.body.classList.remove(QUERY_NAV_CLASS);
+        }
+        if (usePaneOnlyTransition) {
+          document.body.classList.add(PANE_ONLY_NAV_CLASS);
+        } else {
+          document.body.classList.remove(PANE_ONLY_NAV_CLASS);
+        }
         event.preventDefault();
 
         window.setTimeout(function () {
           window.location.href = link.href;
-        }, 85);
+        }, usePaneOnlyTransition ? 120 : 85);
       }, true);
 
       window.addEventListener('pageshow', function () {
         isTransitioning = false;
-        document.body.classList.remove('is-route-transitioning');
+        document.body.classList.remove(BASE_NAV_CLASS);
+        document.body.classList.remove(QUERY_NAV_CLASS);
+        document.body.classList.remove(PANE_ONLY_NAV_CLASS);
+        restoreSidebarScroll();
       });
     })();
   </script>

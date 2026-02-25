@@ -16,7 +16,7 @@ venv/
 # Django
 # *.sqlite3
 # db.sqlite3
-media/
+# media/
 staticfiles/
 
 # IDE / Editor

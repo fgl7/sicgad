@@ -190,6 +190,76 @@ Reglas en backend:
 Detalle de series:
 - Los datos publicados y validados convergen en la misma base logica (`PublishedDataPoint`) y se consumen desde alli para charts/tablas.
 
+### Modulo de desempeno / formulas (admin)
+Objetivo funcional actual:
+- Permitir al `ADMIN` crear formulas de desempeno/eficiencia por `entity`, usando columnas de esquemas aprobados, ver preview y materializar resultados calculados.
+
+Modelos y servicios clave:
+- `performance/models.py`
+  - `PerformanceIndicator` (definicion de formula por entidad)
+  - `PerformanceIndicatorInput` (variables/columnas fuente)
+  - `PerformanceIndicatorResult` (resultado por periodo para preview y persistencia)
+- `performance/services.py`
+  - calculo de indicadores desde `PublishedDataPoint`
+  - materializacion a dataset derivado (dataset + columnas + puntos publicados)
+
+Estado implementado (MVP funcional):
+- Builder por entidad en `/performance/formulas/` (solo admin).
+- Variables seleccionadas desde `ColumnDef` de `DatasetType` `APPROVED` y activos de la entidad.
+- Formula editable por texto (tokens tipo `A`, `B`, `C` + operadores `+ - * / ( )`).
+- Preview de resultados:
+  - grafico simple
+  - tabla compacta (`periodo`, `valor`, `estado`)
+- Flujo de aprobacion:
+  - valida que existan variables y expresion
+  - aprueba formula (`PerformanceIndicator.status`)
+  - materializa resultados en base de datos como dataset derivado
+- Materializacion crea/actualiza:
+  - `DatasetType` derivado asociado a la formula
+  - columnas de salida (valor y fecha/periodo segun implementacion actual)
+  - `DatasetInstance` + `PublishedDataPoint`
+- Recalculo automatico:
+  - al publicarse datos de origen (ingest/validation), formulas `APPROVED` pueden recalcularse y rematerializarse automaticamente.
+
+Workflow y estado de formula:
+- `PerformanceIndicator` maneja estado y metadatos de aprobacion:
+  - `DRAFT`
+  - `APPROVED`
+  - `ARCHIVED` (soft delete desde UI)
+- Campos de aprobacion/materializacion agregados:
+  - `approved_at`
+  - `approved_by`
+  - referencias a dataset/columnas derivadas de salida
+
+UX actual (iteracion en curso en `templates/performance/formulas.html`):
+- Cabecera compacta:
+  - nombre de formula (editable mientras no este aprobada)
+  - selector de entidad
+  - esquemas relacionados (referencia visual)
+- Variables y Formula en cards separados (lado a lado) para evitar compresion/apilado.
+- Resumen informativo de entidad:
+  - periodicidades con datos publicados
+  - rango de fechas con datos publicados (min/max por `PublishedDataPoint`)
+- Botones de gestion:
+  - guardar nombre
+  - guardar formula
+  - cancelar/limpiar todo
+  - aprobar formula (materializa directamente)
+- Lista de formulas creadas con acciones:
+  - editar
+  - eliminar (soft delete / archived)
+
+Notas operativas / limitaciones actuales:
+- El calculo/preview sigue usando rango de fechas/frecuencia en backend para procesamiento y grafico.
+- La UX se esta moviendo a flujo "crear columna calculada para todo el historico + nuevos datos futuros"; por eso la seleccion visible de periodicidad/fechas se redujo en cabecera.
+- Aprobacion/materializacion soportada de forma controlada para `DAILY` y `MONTHLY` (alineacion con consumo en KPIs).
+- Cobertura automatizada de `performance` sigue baja (tests pendientes).
+
+Mantenimiento / migraciones recientes:
+- Migracion de workflow de `PerformanceIndicator` (campos de aprobacion/materializacion).
+- Migracion de reparacion SQLite local para FKs legacy en tablas de performance que aun apuntaban a `plants_plant` en lugar de `structure_entity`
+  (evita `IntegrityError: FOREIGN KEY constraint failed` al guardar previews/resultados).
+
 Rendimiento y UX reciente (charts):
 - Optimizaciones backend en `kpis/views.py`:
   - se evita construir `authority_dataset_tree` para usuarios que no lo requieren
@@ -315,6 +385,8 @@ Foco actual de deuda:
 - Consolidar cobertura de pruebas (ingest, validation, kpis, performance).
 - Normalizar textos/encoding en plantillas antiguas.
 - Revisar y limpiar documentacion tecnica vieja que todavia menciona `plant/project`.
+- Seguir simplificando UX del builder de formulas para alinearlo al flujo admin definido
+  (entidad -> variables -> formula -> preview -> aprobacion/materializacion).
 
 Impacto:
 - Menor riesgo de `FieldError` por referencias legacy eliminadas.
@@ -341,6 +413,13 @@ Funciona y se usa activamente:
 - Redireccion de `/home/` a `/kpis/` para visualizadores puros.
 - Limpieza inmediata post-publicacion/materializacion + limpieza periodica por retencion en media.
 - KPIs de dataset con ventana temporal reciente (3 meses) cuando aplica columna fecha.
+- Modulo `performance/formulas` con MVP funcional para admin:
+  - creacion de formulas por entidad
+  - seleccion de columnas desde esquemas aprobados
+  - expresion manual con aliases (`A`, `B`, `C`)
+  - preview (grafico + tabla)
+  - aprobacion y materializacion a dataset derivado en BD
+  - auto-recalculo/rematerializacion para formulas aprobadas al publicarse datos fuente
 - Landing institucional con CTA de acceso refinado (una sola flecha) y favicon visible.
 - Favicon del sistema generado desde `static/escudo.png` y enlazado en `base`, `landing` y `registration/login`.
 - Mitigacion de microparpadeo (FOUC) en plantillas standalone (`templates/base.html`, `templates/landing.html`, `templates/registration/login.html`)

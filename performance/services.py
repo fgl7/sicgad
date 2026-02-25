@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from calendar import monthrange
 
+from django.db import transaction
 from django.db.models import Avg, Max, Min, Sum
 
-from ingest.models import PublishedDataPoint
+from ingest.models import DatasetInstance, PublishedDataPoint
 from performance.models import (
     FREQ_DAILY,
     FREQ_MONTHLY,
@@ -17,6 +18,7 @@ from performance.models import (
     PerformanceIndicatorResult,
     PerformanceVariable,
 )
+from schemas.models import ColumnDef, DatasetType
 
 
 @dataclass(frozen=True)
@@ -503,7 +505,7 @@ def compute_and_store_indicators(
     updated = 0
     for indicator in indicators:
         value, status, trace = compute_indicator(indicator, window, frequency=frequency)
-        PerformanceIndicatorResult.objects.update_or_create(
+        result, _ = PerformanceIndicatorResult.objects.update_or_create(
             indicator=indicator,
             entity=entity,
             period_end=window.period_end,
@@ -517,8 +519,231 @@ def compute_and_store_indicators(
                 "trace": trace,
             },
         )
+        if (
+            indicator.status == PerformanceIndicator.STATUS_APPROVED
+            and _materialization_frequency_for_indicator(indicator) == frequency
+        ):
+            materialize_indicator_result_to_output(indicator, result)
         updated += 1
     return updated
+
+
+def _materialization_frequency_for_indicator(indicator: PerformanceIndicator) -> str:
+    return FREQ_DAILY if indicator.frequency == FREQ_DAILY else FREQ_MONTHLY
+
+
+def _derived_dataset_name(indicator: PerformanceIndicator) -> str:
+    base_label = (indicator.label or indicator.key or "formula").strip()
+    return f"Desempeno derivado {base_label} ({indicator.key})"[:255]
+
+
+def ensure_indicator_output_dataset(
+    indicator: PerformanceIndicator,
+) -> tuple[DatasetType, ColumnDef, ColumnDef]:
+    dataset = indicator.output_dataset_type
+    expected_frequency = (
+        DatasetType.DAILY if _materialization_frequency_for_indicator(indicator) == FREQ_DAILY else DatasetType.MONTHLY
+    )
+
+    if dataset is None or dataset.entity_id != indicator.entity_id:
+        dataset = None
+
+    if dataset is None:
+        dataset = DatasetType.objects.create(
+            entity=indicator.entity,
+            name=_derived_dataset_name(indicator),
+            version=1,
+            validation_frequency=expected_frequency,
+            is_certification=False,
+            is_active=True,
+            is_one_time=False,
+            status=DatasetType.STATUS_APPROVED,
+            status_comment=f"Generado automaticamente por formula de desempeno {indicator.key}",
+        )
+    else:
+        changed_fields: list[str] = []
+        target_name = _derived_dataset_name(indicator)
+        if dataset.name != target_name:
+            dataset.name = target_name
+            changed_fields.append("name")
+        if dataset.validation_frequency != expected_frequency:
+            dataset.validation_frequency = expected_frequency
+            changed_fields.append("validation_frequency")
+        if dataset.is_certification:
+            dataset.is_certification = False
+            changed_fields.append("is_certification")
+        if dataset.status != DatasetType.STATUS_APPROVED:
+            dataset.status = DatasetType.STATUS_APPROVED
+            changed_fields.append("status")
+        if not dataset.is_active:
+            dataset.is_active = True
+            changed_fields.append("is_active")
+        if changed_fields:
+            changed_fields.append("updated_at")
+            dataset.save(update_fields=changed_fields)
+
+    date_col = indicator.output_date_column
+    if date_col is None or date_col.dataset_type_id != dataset.id:
+        date_col = None
+    if date_col is None:
+        date_col, _ = ColumnDef.objects.get_or_create(
+            dataset_type=dataset,
+            name="result_date",
+            defaults={
+                "label": "Fecha del resultado",
+                "data_type": "DATE",
+                "required": True,
+                "axis_role": "X",
+                "default_agg": "NONE",
+                "is_primary_kpi": False,
+                "display_order": 0,
+                "is_active": True,
+            },
+        )
+    elif not date_col.is_active:
+        date_col.is_active = True
+        date_col.save(update_fields=["is_active", "updated_at"])
+
+    value_col = indicator.output_value_column
+    if value_col is None or value_col.dataset_type_id != dataset.id:
+        value_col = None
+    if value_col is None:
+        value_col, _ = ColumnDef.objects.get_or_create(
+            dataset_type=dataset,
+            name="result_value",
+            defaults={
+                "label": indicator.label or "Resultado",
+                "data_type": "FLOAT",
+                "required": False,
+                "unit": indicator.unit or "",
+                "axis_role": "Y",
+                "default_agg": "NONE",
+                "is_primary_kpi": True,
+                "display_order": 1,
+                "is_active": True,
+            },
+        )
+    else:
+        changed = []
+        if value_col.label != (indicator.label or value_col.label):
+            value_col.label = indicator.label or value_col.label
+            changed.append("label")
+        if (indicator.unit or "") != value_col.unit:
+            value_col.unit = indicator.unit or ""
+            changed.append("unit")
+        if not value_col.is_active:
+            value_col.is_active = True
+            changed.append("is_active")
+        if changed:
+            changed.append("updated_at")
+            value_col.save(update_fields=changed)
+
+    if (
+        indicator.output_dataset_type_id != dataset.id
+        or indicator.output_date_column_id != date_col.id
+        or indicator.output_value_column_id != value_col.id
+    ):
+        indicator.output_dataset_type = dataset
+        indicator.output_date_column = date_col
+        indicator.output_value_column = value_col
+        indicator.save(
+            update_fields=[
+                "output_dataset_type",
+                "output_date_column",
+                "output_value_column",
+                "updated_at",
+            ]
+        )
+
+    return dataset, date_col, value_col
+
+
+@transaction.atomic
+def materialize_indicator_result_to_output(
+    indicator: PerformanceIndicator,
+    result: PerformanceIndicatorResult,
+) -> bool:
+    if result.entity_id != indicator.entity_id:
+        return False
+    if _materialization_frequency_for_indicator(indicator) != result.frequency:
+        return False
+
+    dataset, date_col, value_col = ensure_indicator_output_dataset(indicator)
+    instance, _ = DatasetInstance.objects.get_or_create(
+        dataset_type=dataset,
+        entity=indicator.entity,
+        period=result.period_end,
+        defaults={
+            "state": DatasetInstance.STATE_PUBLISHED,
+            "row_count": 0,
+            "error_count": 0,
+            "last_error_summary": "",
+        },
+    )
+    if instance.state != DatasetInstance.STATE_PUBLISHED:
+        instance.state = DatasetInstance.STATE_PUBLISHED
+    instance.published_points.filter(column__in=[date_col, value_col]).delete()
+
+    if (
+        result.status != PerformanceIndicatorResult.STATUS_SUCCESS
+        or result.numeric_value is None
+    ):
+        instance.row_count = 0
+        instance.error_count = 1
+        instance.last_error_summary = (
+            str(result.trace.get("error"))
+            if isinstance(result.trace, dict) and result.trace.get("error")
+            else f"Resultado {result.status}"
+        )
+        instance.save(update_fields=["state", "row_count", "error_count", "last_error_summary", "updated_at"])
+        return False
+
+    PublishedDataPoint.objects.create(
+        instance=instance,
+        column=date_col,
+        row_index=1,
+        date_value=result.period_end,
+    )
+    PublishedDataPoint.objects.create(
+        instance=instance,
+        column=value_col,
+        row_index=1,
+        numeric_value=float(result.numeric_value),
+    )
+    instance.row_count = 1
+    instance.error_count = 0
+    instance.last_error_summary = ""
+    instance.save(update_fields=["state", "row_count", "error_count", "last_error_summary", "updated_at"])
+    return True
+
+
+def compute_store_and_materialize_indicator(
+    indicator: PerformanceIndicator,
+    window: MonthWindow,
+    *,
+    frequency: str,
+) -> PerformanceIndicatorResult:
+    value, status, trace = compute_indicator(indicator, window, frequency=frequency)
+    result, _ = PerformanceIndicatorResult.objects.update_or_create(
+        indicator=indicator,
+        entity=indicator.entity,
+        period_end=window.period_end,
+        frequency=frequency,
+        defaults={
+            "period_start": window.period_start,
+            "stage": "DRAFT",
+            "status": status,
+            "numeric_value": value,
+            "text_value": "",
+            "trace": trace,
+        },
+    )
+    if (
+        indicator.status == PerformanceIndicator.STATUS_APPROVED
+        and _materialization_frequency_for_indicator(indicator) == frequency
+    ):
+        materialize_indicator_result_to_output(indicator, result)
+    return result
 
 
 def resolve_variable_value_for_stage(

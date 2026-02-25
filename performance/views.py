@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+import re
 
 from django.contrib import messages
+from django.db.models import Max, Min
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -13,6 +15,7 @@ import json
 from audit.utils import record_action
 
 from accounts.decorators import admin_required
+from ingest.models import PublishedDataPoint
 from performance.models import (
     FREQ_DAILY,
     FREQ_MONTHLY,
@@ -24,6 +27,7 @@ from performance.models import (
     PerformanceVariableMapping,
 )
 from performance.services import MonthWindow, compute_indicator, evaluate_expression, month_window, shift_months
+from performance.services import compute_store_and_materialize_indicator
 from schemas.models import ColumnDef, DatasetType
 from structure.models import Entity
 
@@ -159,6 +163,43 @@ def _parse_expression_tokens(raw: str | None) -> list[str]:
     return tokens
 
 
+_EXPR_TOKEN_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*|\d+(?:\.\d+)?|[()+\-*/]")
+
+
+def _tokenize_expression_text(raw: str | None) -> list[str]:
+    text = (raw or "").strip()
+    if not text:
+        return []
+    compact = text.replace(" ", "")
+    tokens = _EXPR_TOKEN_RE.findall(compact)
+    if "".join(tokens) != compact:
+        return []
+    return tokens
+
+
+def _alpha_token(index_zero_based: int) -> str:
+    # 0 -> A, 25 -> Z, 26 -> AA
+    n = int(index_zero_based)
+    token = ""
+    while True:
+        n, rem = divmod(n, 26)
+        token = chr(65 + rem) + token
+        if n == 0:
+            break
+        n -= 1
+    return token
+
+
+def _next_alias_token(existing_tokens: set[str]) -> str:
+    normalized = {str(t).upper() for t in existing_tokens}
+    idx = 0
+    while True:
+        candidate = _alpha_token(idx)
+        if candidate not in normalized:
+            return candidate
+        idx += 1
+
+
 def _build_indicator_key(entity: Entity, label: str) -> str:
     base = slugify(f"{entity.code}-{label}")[:70].strip("-")
     if not base:
@@ -170,6 +211,22 @@ def _build_indicator_key(entity: Entity, label: str) -> str:
         suffix = f"-{counter}"
         key = f"{base[: max(1, 80 - len(suffix))]}{suffix}"
     return key
+
+
+def _mark_indicator_draft(indicator: PerformanceIndicator) -> None:
+    update_fields: list[str] = []
+    if indicator.status != PerformanceIndicator.STATUS_DRAFT:
+        indicator.status = PerformanceIndicator.STATUS_DRAFT
+        update_fields.append("status")
+    if indicator.approved_at is not None:
+        indicator.approved_at = None
+        update_fields.append("approved_at")
+    if indicator.approved_by_id is not None:
+        indicator.approved_by = None
+        update_fields.append("approved_by")
+    if update_fields:
+        update_fields.append("updated_at")
+        indicator.save(update_fields=update_fields)
 
 
 
@@ -227,9 +284,14 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
     if not entity:
         messages.error(request, "No existe la entidad seleccionada.")
         return redirect("home")
-    formulas_qs = PerformanceIndicator.objects.filter(entity=entity).order_by("label")
-    formula_id = request.POST.get("formula_id") or request.GET.get("formula_id")
-    indicator = formulas_qs.filter(id=formula_id).first() if formula_id else formulas_qs.first()
+    formulas_qs = PerformanceIndicator.objects.filter(entity=entity, is_active=True).order_by("label")
+    formula_id = request.POST.get("formula_id") if request.method == "POST" else request.GET.get("formula_id")
+    if formula_id is None:
+        formula_id = request.GET.get("formula_id")
+    if formula_id == "":
+        indicator = None
+    else:
+        indicator = formulas_qs.filter(id=formula_id).first() if formula_id else formulas_qs.first()
     action = request.POST.get("action") if request.method == "POST" else None
     recalculate = request.GET.get("recalculate") == "1"
     if action == "create_formula":
@@ -266,9 +328,21 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         indicator = None
     if action == "update_formula" and indicator:
         label = (request.POST.get("label") or "").strip()
-        description = (request.POST.get("description") or "").strip()
-        unit = (request.POST.get("unit") or "").strip()
-        frequency = _parse_frequency(request.POST.get("frequency"))
+        description = (
+            (request.POST.get("description") or "").strip()
+            if "description" in request.POST
+            else indicator.description
+        )
+        unit = (
+            (request.POST.get("unit") or "").strip()
+            if "unit" in request.POST
+            else indicator.unit
+        )
+        frequency = (
+            _parse_frequency(request.POST.get("frequency"))
+            if "frequency" in request.POST
+            else indicator.frequency
+        )
         if label:
             indicator.label = label
         indicator.description = description
@@ -276,6 +350,7 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         indicator.unit = unit
         indicator.frequency = frequency
         indicator.save(update_fields=["label", "description", "formula_text", "unit", "frequency", "updated_at"])
+        _mark_indicator_draft(indicator)
         record_action(
             "OTHER",
             request=request,
@@ -299,20 +374,15 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         if not column:
             messages.error(request, "Seleccione una columna valida.")
         else:
-            existing_tokens = set(
-                indicator.inputs.filter(is_active=True).values_list("token", flat=True)
-            )
-            token_idx = 1
-            token = f"v{token_idx}"
-            while token in existing_tokens:
-                token_idx += 1
-                token = f"v{token_idx}"
+            existing_tokens = set(indicator.inputs.filter(is_active=True).values_list("token", flat=True))
+            token = _next_alias_token(existing_tokens)
             PerformanceIndicatorInput.objects.create(
                 indicator=indicator,
                 token=token,
                 column=column,
                 label=column.label,
             )
+            _mark_indicator_draft(indicator)
             record_action(
                 "OTHER",
                 request=request,
@@ -330,6 +400,7 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         input_obj = indicator.inputs.filter(id=input_id).first()
         if input_obj:
             input_obj.delete()
+            _mark_indicator_draft(indicator)
             record_action(
                 "OTHER",
                 request=request,
@@ -367,11 +438,18 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
             inp.column = column or inp.column
             inp.aggregation = aggregation
             inp.transform = transform
-            inp.transform_value = float(transform_value_raw) if transform_value_raw else None
-            inp.offset_periods = int(offset_raw) if offset_raw else 0
+            try:
+                inp.transform_value = float(transform_value_raw) if transform_value_raw else None
+                inp.offset_periods = int(offset_raw) if offset_raw else 0
+            except ValueError:
+                messages.error(request, "Valores numericos invalidos en transformacion u offset.")
+                return redirect(
+                    f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
+                )
             inp.save(
                 update_fields=["column", "aggregation", "transform", "transform_value", "offset_periods", "updated_at"]
             )
+            _mark_indicator_draft(indicator)
             record_action(
                 "OTHER",
                 request=request,
@@ -384,10 +462,21 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
             f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
         )
     if action == "save_formula" and indicator:
-        tokens = _parse_expression_tokens(request.POST.get("expression_tokens"))
+        manual_expression = (request.POST.get("expression_manual") or "").strip()
+        manual_expression_rhs = manual_expression.split("=", 1)[1].strip() if "=" in manual_expression else manual_expression
+        tokens = (
+            _tokenize_expression_text(manual_expression_rhs)
+            if manual_expression
+            else _parse_expression_tokens(request.POST.get("expression_tokens"))
+        )
         inputs = list(indicator.inputs.filter(is_active=True).values_list("token", flat=True))
         allowed_tokens = set(inputs)
         allowed_ops = {"+", "-", "*", "/", "(", ")"}
+        if manual_expression and not tokens:
+            messages.error(request, "Formula invalida. Usa solo tokens (A, B, C...), numeros y operadores + - * / ( ).")
+            return redirect(
+                f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
+            )
         invalid = []
         for tok in tokens:
             if tok in allowed_ops:
@@ -407,8 +496,9 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
                 messages.error(request, f"Expresion invalida: {err}")
             else:
                 indicator.expression = tokens
-                indicator.expression_text = " ".join(tokens)
+                indicator.expression_text = manual_expression or " ".join(tokens)
                 indicator.save(update_fields=["expression", "expression_text", "updated_at"])
+                _mark_indicator_draft(indicator)
                 record_action(
                     "OTHER",
                     request=request,
@@ -421,6 +511,131 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         return redirect(
             f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}&recalculate=1"
         )
+    if action == "approve_formula" and indicator:
+        active_inputs = list(indicator.inputs.filter(is_active=True))
+        if not active_inputs:
+            messages.error(request, "La formula debe tener al menos una variable antes de aprobar.")
+        elif not indicator.expression:
+            messages.error(request, "La formula debe tener una expresion guardada antes de aprobar.")
+        else:
+            materialize_frequency = _parse_frequency(
+                request.POST.get("materialize_frequency") or indicator.frequency
+            )
+            if materialize_frequency not in {FREQ_DAILY, FREQ_MONTHLY}:
+                messages.error(
+                    request,
+                    "Por ahora la aprobacion/materializacion solo soporta frecuencias diaria o mensual.",
+                )
+            else:
+                start_date, end_date = _get_date_range(
+                    materialize_frequency,
+                    request.POST.get("date_start"),
+                    request.POST.get("date_end"),
+                )
+                periods_to_process, _, _ = _build_periods(materialize_frequency, start_date, end_date)
+                indicator.status = PerformanceIndicator.STATUS_APPROVED
+                indicator.approved_at = timezone.now()
+                indicator.approved_by = request.user
+                indicator.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
+
+                success_count = 0
+                not_calculable_count = 0
+                error_count = 0
+                for period_start, period_end in periods_to_process:
+                    result = compute_store_and_materialize_indicator(
+                        indicator,
+                        MonthWindow(period_start, period_end),
+                        frequency=materialize_frequency,
+                    )
+                    if result.status == PerformanceIndicatorResult.STATUS_SUCCESS:
+                        success_count += 1
+                    elif result.status == PerformanceIndicatorResult.STATUS_NOT_CALCULABLE:
+                        not_calculable_count += 1
+                    else:
+                        error_count += 1
+
+                indicator.refresh_from_db(fields=[
+                    "output_dataset_type_id",
+                    "output_value_column_id",
+                    "output_date_column_id",
+                ])
+                details = (
+                    f"Formula aprobada y materializada ({materialize_frequency}) "
+                    f"ok={success_count}, no_calculable={not_calculable_count}, error={error_count}"
+                )
+                if indicator.output_dataset_type_id:
+                    details += f", dataset={indicator.output_dataset_type_id}"
+                record_action(
+                    "OTHER",
+                    request=request,
+                    module="performance",
+                    object_repr=f"{entity.code}:{indicator.key}",
+                    details=details,
+                )
+                dataset_msg = (
+                    f" Dataset derivado ID {indicator.output_dataset_type_id} actualizado."
+                    if indicator.output_dataset_type_id
+                    else ""
+                )
+                messages.success(
+                    request,
+                    (
+                        "Formula aprobada. "
+                        f"Resultados: {success_count} exitosos, {not_calculable_count} no calculables, {error_count} con error."
+                        + dataset_msg
+                    ),
+                )
+        redirect_url = (
+            f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}"
+            f"&frequency={request.POST.get('materialize_frequency') or indicator.frequency}"
+            f"&date_start={request.POST.get('date_start') or ''}"
+            f"&date_end={request.POST.get('date_end') or ''}"
+            "&recalculate=1"
+        )
+        return redirect(redirect_url)
+    if action == "delete_formula" and indicator:
+        deleted_label = indicator.label
+        deleted_key = indicator.key
+        indicator.is_active = False
+        if indicator.status != PerformanceIndicator.STATUS_ARCHIVED:
+            indicator.status = PerformanceIndicator.STATUS_ARCHIVED
+            indicator.save(update_fields=["is_active", "status", "updated_at"])
+        else:
+            indicator.save(update_fields=["is_active", "updated_at"])
+        record_action(
+            "OTHER",
+            request=request,
+            module="performance",
+            object_repr=f"{entity.code}:{deleted_key}",
+            details="Formula archivada/eliminada desde UI (soft delete)",
+        )
+        messages.success(request, f"Formula '{deleted_label}' eliminada.")
+        return redirect(
+            f"/performance/formulas/?entity_id={entity.id}&frequency={request.POST.get('frequency') or FREQ_MONTHLY}"
+            f"&date_start={request.POST.get('date_start') or ''}&date_end={request.POST.get('date_end') or ''}"
+        )
+    if action == "clear_formula" and indicator:
+        indicator.inputs.all().delete()
+        indicator.expression = []
+        indicator.expression_text = ""
+        indicator.description = ""
+        indicator.formula_text = ""
+        indicator.unit = ""
+        indicator.save(update_fields=["expression", "expression_text", "description", "formula_text", "unit", "updated_at"])
+        _mark_indicator_draft(indicator)
+        record_action(
+            "OTHER",
+            request=request,
+            module="performance",
+            object_repr=f"{entity.code}:{indicator.key}",
+            details="Formula limpiada desde UI (variables/expresion/campos auxiliares)",
+        )
+        messages.success(request, "Formula limpiada.")
+        return redirect(
+            f"/performance/formulas/?entity_id={entity.id}&formula_id={indicator.id}"
+            f"&frequency={request.POST.get('frequency') or FREQ_MONTHLY}"
+            f"&date_start={request.POST.get('date_start') or ''}&date_end={request.POST.get('date_end') or ''}"
+        )
     frequency = _parse_frequency(request.GET.get("frequency") or (indicator.frequency if indicator else None))
     start_date, end_date = _get_date_range(
         frequency, request.GET.get("date_start"), request.GET.get("date_end")
@@ -431,6 +646,7 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
     if indicator:
         periods, chart_labels, chart_title = _build_periods(frequency, start_date, end_date)
     chart_values: list[float | None] = []
+    preview_rows: list[dict] = []
     if indicator and periods:
         period_ends = [p[1] for p in periods]
         results_qs = PerformanceIndicatorResult.objects.filter(
@@ -466,6 +682,15 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         for period_end in period_ends:
             res = existing.get(period_end)
             chart_values.append(res.numeric_value if res else None)
+        for idx, period_end in enumerate(period_ends):
+            res = existing.get(period_end)
+            preview_rows.append(
+                {
+                    "label": chart_labels[idx] if idx < len(chart_labels) else period_end.strftime("%Y-%m-%d"),
+                    "status": res.status if res else "NO_DATA",
+                    "value": (res.numeric_value if res and res.status == PerformanceIndicatorResult.STATUS_SUCCESS else None),
+                }
+            )
     column_options = list(
         ColumnDef.objects.filter(
             dataset_type__entity=entity,
@@ -475,6 +700,20 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         )
         .select_related("dataset_type")
         .order_by("dataset_type__name", "display_order", "label", "name")
+    )
+    published_points_qs = PublishedDataPoint.objects.filter(instance__entity=entity)
+    published_range = published_points_qs.aggregate(
+        min_period=Min("instance__period"),
+        max_period=Max("instance__period"),
+    )
+    entity_published_frequencies = sorted(
+        {
+            f
+            for f in published_points_qs.values_list(
+                "instance__dataset_type__validation_frequency", flat=True
+            ).distinct()
+            if f
+        }
     )
     inputs = (
         list(
@@ -501,5 +740,9 @@ def formula_builder(request: HttpRequest) -> HttpResponse:
         "chart_labels_json": json.dumps(chart_labels),
         "chart_values_json": json.dumps(chart_values),
         "expression_tokens_json": json.dumps(indicator.expression if indicator else []),
+        "preview_rows": preview_rows,
+        "entity_published_min_period": published_range.get("min_period"),
+        "entity_published_max_period": published_range.get("max_period"),
+        "entity_published_frequencies": entity_published_frequencies,
     }
     return render(request, "performance/formulas.html", context)

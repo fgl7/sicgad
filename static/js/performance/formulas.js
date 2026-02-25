@@ -18,10 +18,11 @@ document.addEventListener('DOMContentLoaded', function () {
       formatter: function (params) {
         let res = `<div class="font-bold mb-1">${params[0].name}</div>`;
         params.forEach(item => {
+          const displayValue = item.value == null ? 'N/D' : item.value.toLocaleString();
           res += `<div class="flex items-center gap-2">
                         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${item.color}"></span>
                         <span class="text-slate-400">${item.seriesName}:</span>
-                        <span class="font-mono text-emerald-400">${item.value.toLocaleString()}</span>
+                        <span class="font-mono text-emerald-400">${displayValue}</span>
                     </div>`;
         });
         return res;

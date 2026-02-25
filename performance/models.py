@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.db import models
 
 from schemas.models import ColumnDef, DatasetType
@@ -134,6 +135,20 @@ class PerformanceVariableMapping(models.Model):
 
 
 class PerformanceIndicator(models.Model):
+    STATUS_DRAFT = "DRAFT"
+    STATUS_IN_REVIEW = "IN_REVIEW"
+    STATUS_APPROVED = "APPROVED"
+    STATUS_REJECTED = "REJECTED"
+    STATUS_ARCHIVED = "ARCHIVED"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Borrador"),
+        (STATUS_IN_REVIEW, "En revision"),
+        (STATUS_APPROVED, "Aprobado"),
+        (STATUS_REJECTED, "Rechazado"),
+        (STATUS_ARCHIVED, "Archivado"),
+    ]
+
     """
     Definición de indicador (catálogo).
 
@@ -171,6 +186,44 @@ class PerformanceIndicator(models.Model):
     expression_text = models.TextField(
         blank=True,
         help_text="Expresión legible para el usuario (generada desde el builder).",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_DRAFT,
+        help_text="Estado del ciclo de vida de la formula.",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_performance_indicators",
+    )
+    output_dataset_type = models.ForeignKey(
+        DatasetType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="derived_performance_indicators",
+        help_text="Dataset derivado creado para publicar resultados de esta formula.",
+    )
+    output_value_column = models.ForeignKey(
+        ColumnDef,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Columna numerica del resultado derivado.",
+    )
+    output_date_column = models.ForeignKey(
+        ColumnDef,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        help_text="Columna fecha del resultado derivado.",
     )
     variables = models.ManyToManyField(
         PerformanceVariable,

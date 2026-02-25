@@ -2,6 +2,259 @@
   min-height: 400px;
 }
 
+.performance-formulas-page {
+  --perf-panel-bg: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.85));
+  --perf-border: rgba(148, 163, 184, 0.14);
+}
+
+.perf-builder-split {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1100px) {
+  .perf-builder-split {
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 1.15fr);
+    align-items: start;
+  }
+}
+
+.perf-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  background:
+    radial-gradient(circle at 12% 15%, rgba(16, 185, 129, 0.12), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(59, 130, 246, 0.18), transparent 50%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.75), rgba(2, 6, 23, 0.82));
+}
+
+.perf-flow-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.perf-flow-pill {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 0.9rem;
+  padding: 0.65rem 0.75rem;
+  min-height: 56px;
+}
+
+.perf-flow-pill strong {
+  display: block;
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.perf-flow-pill span {
+  display: block;
+  margin-top: 0.2rem;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+
+.perf-step-card {
+  position: relative;
+  border: 1px solid var(--perf-border);
+  background: var(--perf-panel-bg);
+  border-radius: 1.35rem;
+  box-shadow: 0 18px 40px -28px rgba(2, 6, 23, 0.85);
+}
+
+.perf-step-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 1.35rem 0 0 1.35rem;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.95), rgba(59, 130, 246, 0.65));
+  opacity: 0.8;
+}
+
+.perf-step-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.perf-step-headline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.perf-step-index {
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  background: rgba(16, 185, 129, 0.08);
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.perf-step-title {
+  margin: 0;
+  color: #f8fafc;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.perf-step-help {
+  margin: 0.18rem 0 0;
+  color: #94a3b8;
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.perf-step-tip {
+  border: 1px dashed rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: 0.9rem;
+  padding: 0.6rem 0.75rem;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.perf-step-tip strong {
+  color: #f8fafc;
+}
+
+.perf-step-divider {
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.perf-section-label {
+  color: #94a3b8;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.perf-empty-state {
+  border: 1px dashed rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.28);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.perf-empty-state h4 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.perf-empty-state p {
+  margin: 0.45rem 0 0;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.perf-dataset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.perf-dataset-card {
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.32);
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.perf-dataset-card h5 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 0.78rem;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.perf-dataset-card p {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  line-height: 1.15;
+}
+
+.perf-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.perf-badge {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.45);
+  color: #cbd5e1;
+  padding: 0.18rem 0.48rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.perf-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1024px) {
+  .perf-flow-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .perf-dataset-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .perf-flow-list {
+    grid-template-columns: 1fr;
+  }
+
+  .performance-formulas-chart {
+    min-height: 320px;
+  }
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

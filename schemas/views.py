@@ -51,7 +51,7 @@ def schema_list(request):
     user = request.user
     is_admin = _is_admin_user(user)
 
-    datasets = DatasetType.objects.select_related("entity__category__subsector__sector").order_by(
+    datasets = DatasetType.objects.filter(is_active=True).select_related("entity__category__subsector__sector").order_by(
         "entity__name",
         "name",
         "-version",

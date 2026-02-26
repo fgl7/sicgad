@@ -29,7 +29,7 @@
 
 html {
     font-size: 16px;
-    scrollbar-gutter: stable;
+    scrollbar-gutter: auto;
 }
 
 body {
@@ -46,14 +46,32 @@ body {
     overflow-x: hidden;
 }
 
+/* App pages use an internal scrolling pane (.route-main-pane), so disable root scrolling
+   to avoid double scrollbars and width flicker between routes. */
+body.saas-hybrid {
+    overflow-y: hidden;
+}
+
 .app-shell,
 .app-shell * {
     box-sizing: border-box;
 }
 
+.app-shell {
+    height: 100vh;
+    overflow: hidden;
+}
+
 .app-shell .flex-1,
 .app-shell main {
     min-width: 0;
+}
+
+.route-main-pane {
+    /* Keep width stable across pages without reserving an extra visual gutter strip */
+    overflow-y: scroll;
+    overflow-x: hidden;
+    scrollbar-gutter: auto;
 }
 
 .saas-hybrid .grid > * {

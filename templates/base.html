@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="{% static 'css/fonts_local.css' %}?v=1" />
   <link rel="stylesheet" href="{% static 'css/tailwind.generated.css' %}?v=1" />
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
-  <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=4" />
+  <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=6" />
   <!-- HTMX -->
   <script src="{% static 'vendor/htmx-2.0.3.min.js' %}"></script>
   <!-- Alpine.js -->
@@ -188,13 +188,13 @@
       </div>
     </div>
 
-    <div class="flex min-h-screen w-full max-w-full relative z-10 overflow-x-hidden">
+    <div class="flex h-screen min-h-screen w-full max-w-full relative z-10 overflow-hidden">
       {% if is_authority_viewer or is_external_monthly_viewer %}
       {% include "partials/sidebar_authority_mhe.html" %}
       {% else %}
       {% include "partials/sidebar.html" %}
       {% endif %}
-      <div class="route-main-pane flex-1 min-w-0 flex flex-col">
+      <div class="route-main-pane flex-1 min-w-0 min-h-0 h-screen flex flex-col overflow-y-auto">
         {% include "partials/topbar.html" %}
         <main class="flex-1 min-w-0 p-3 sm:p-4 lg:p-6 relative z-10">
           {% block content %}{% endblock %}

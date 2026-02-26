@@ -1,8 +1,8 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'css/performance/formulas.css' %}?v=6" />
+  <link rel="stylesheet" href="{% static 'css/performance/formulas.css' %}?v=7" />
 {% endblock %}
 
 {% block content %}
@@ -15,11 +15,22 @@
                 <h2 class="text-2xl font-header font-black text-white tracking-tight">Creaci&oacute;n de formulas</h2>
                 <p class="text-[12px] text-slate-400 mt-1">Selecciona entidad, define variables, escribe la f&oacute;rmula, revisa preview y aprueba para materializar.</p>
             </div>
-            {% if indicator %}
-            <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest {% if indicator.status == 'APPROVED' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% elif indicator.status == 'DRAFT' %}bg-amber-500/10 text-amber-300 border border-amber-500/20{% else %}bg-slate-800 text-slate-300 border border-white/5{% endif %}">
-                {{ indicator.status }}
-            </span>
-            {% endif %}
+            <div class="flex items-center gap-2">
+                {% if indicator %}
+                <a href="/performance/formulas/?entity_id={{ entity.id }}&new_formula=1"
+                   class="px-3 py-1.5 rounded-lg border border-cyan-400/20 bg-cyan-400/10 text-cyan-200 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                    Nueva formula
+                </a>
+                <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest {% if indicator.status == 'APPROVED' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% elif indicator.status == 'DRAFT' %}bg-amber-500/10 text-amber-300 border border-amber-500/20{% else %}bg-slate-800 text-slate-300 border border-white/5{% endif %}">
+                    {{ indicator.status }}
+                </span>
+                {% else %}
+                <a href="/performance/formulas/?entity_id={{ entity.id }}&new_formula=1"
+                   class="px-3 py-1.5 rounded-lg border border-cyan-400/20 bg-cyan-400/10 text-cyan-200 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                    Nueva formula
+                </a>
+                {% endif %}
+            </div>
         </div>
 
         <div class="grid lg:grid-cols-12 gap-4">
@@ -36,6 +47,9 @@
                     <input type="hidden" name="description" value="">
                     {% endif %}
                     <input type="hidden" name="entity_id" value="{{ entity.id }}">
+                    <input type="hidden" name="frequency" value="{{ frequency }}">
+                    <input type="hidden" name="date_start" value="{{ date_start }}">
+                    <input type="hidden" name="date_end" value="{{ date_end }}">
                     <label class="text-white text-[11px] font-semibold block">Nombre de la formula</label>
                     <input type="text" name="label" value="{% if indicator %}{{ indicator.label }}{% endif %}"
                            class="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-white/10 text-white text-sm font-semibold"
@@ -57,7 +71,9 @@
                     <input type="hidden" name="date_start" value="{{ date_start }}">
                     <input type="hidden" name="date_end" value="{{ date_end }}">
                     <label class="text-white text-[11px] font-semibold block">Entidad</label>
-                    <select name="entity_id" class="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-white/10 text-white text-sm font-semibold">
+                    <select name="entity_id"
+                            onchange="this.form.submit()"
+                            class="w-full px-3 py-2 rounded-xl bg-slate-950/70 border border-white/10 text-white text-sm font-semibold">
                         {% for e in entities %}
                         <option value="{{ e.id }}" {% if e.id == entity.id %}selected{% endif %}>{{ e.code|default:e.name }} - {{ e.name }}</option>
                         {% endfor %}
@@ -83,9 +99,6 @@
                                 {% endif %}
                             </p>
                         </div>
-                    </div>
-                    <div class="flex justify-end">
-                        <button type="submit" class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Actualizar entidad</button>
                     </div>
                 </form>
             </div>
@@ -120,7 +133,11 @@
                     <input type="hidden" name="action" value="add_input">
                     <input type="hidden" name="entity_id" value="{{ entity.id }}">
                     <input type="hidden" name="formula_id" value="{{ indicator.id }}">
+                    <input type="hidden" name="frequency" value="{{ frequency }}">
+                    <input type="hidden" name="date_start" value="{{ date_start }}">
+                    <input type="hidden" name="date_end" value="{{ date_end }}">
                     <select name="column_id" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-sm font-semibold">
+                        <option value="">Selecciona una columna...</option>
                         {% for group in grouped_column_options %}
                         <optgroup label="{{ group.grouper.name }} ({{ group.grouper.validation_frequency }})">
                             {% for col in group.list %}
@@ -128,15 +145,15 @@
                             {% endfor %}
                         </optgroup>
                         {% empty %}
-                        <option value="">No hay columnas disponibles</option>
+                        <option value="">No hay columnas numericas disponibles</option>
                         {% endfor %}
                     </select>
-                    <button type="submit" class="px-3 py-2 rounded-xl bg-blue-500/80 text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Agregar m&aacute;s</button>
+                    <button type="submit" class="px-3 py-2 rounded-xl bg-blue-500/80 text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Agregar</button>
                 </form>
 
                 <div class="space-y-2 max-h-[260px] overflow-y-auto custom-scrollbar pr-1">
                     {% for input in inputs %}
-                    <form method="post" class="rounded-xl border border-white/10 bg-slate-950/40 p-2.5 space-y-2">
+                    <form method="post" class="rounded-xl border border-white/10 bg-slate-950/40 p-2 space-y-2">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="save_input">
                         <input type="hidden" name="entity_id" value="{{ entity.id }}">
@@ -146,7 +163,21 @@
                         <input type="hidden" name="offset_periods" value="{{ input.offset_periods }}">
                         <input type="hidden" name="transform" value="{{ input.transform }}">
                         <input type="hidden" name="transform_value" value="{{ input.transform_value|default_if_none:'' }}">
-                        <div class="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
+                        <input type="hidden" name="frequency" value="{{ frequency }}">
+                        <input type="hidden" name="date_start" value="{{ date_start }}">
+                        <input type="hidden" name="date_end" value="{{ date_end }}">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 rounded-md border border-blue-400/30 bg-blue-500/10 text-blue-200 font-black text-sm">{{ input.token }}</span>
+                                <span class="text-slate-500 font-black text-sm">=</span>
+                                <span class="text-[10px] text-slate-500 uppercase tracking-widest">Variable</span>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button type="submit" name="action" value="save_input" class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-white text-[10px] font-black uppercase tracking-widest">Guardar</button>
+                                <button type="submit" name="action" value="remove_input" class="px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-200 text-[10px] font-black uppercase tracking-widest">Eliminar</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1">
                             <select name="column_id" class="w-full min-w-0 px-3 py-2 rounded-lg bg-slate-900 border border-white/5 text-white text-sm">
                                 {% for group in grouped_column_options %}
                                 <optgroup label="{{ group.grouper.name }}">
@@ -156,16 +187,10 @@
                                 </optgroup>
                                 {% endfor %}
                             </select>
-                            <span class="text-blue-300 font-black text-xl">=</span>
-                            <span class="text-white font-bold text-xl min-w-[1.4rem] text-center">{{ input.token }}</span>
-                        </div>
-                        <div class="flex justify-end gap-2">
-                            <button type="submit" name="action" value="save_input" class="px-3 py-1.5 rounded-lg border border-white/10 bg-white/10 text-white text-[10px] font-black uppercase tracking-widest">Guardar</button>
-                            <button type="submit" name="action" value="remove_input" class="px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-200 text-[10px] font-black uppercase tracking-widest">Eliminar</button>
                         </div>
                     </form>
                     {% empty %}
-                    <div class="rounded-xl border border-white/10 bg-slate-950/40 p-4 text-xs text-slate-500">Agrega variables para asignar alias (A, B, C...).</div>
+                    <div class="rounded-xl border border-white/10 bg-slate-950/40 p-4 text-xs text-slate-500">Agrega variables desde el selector superior para asignar alias (A, B, C...).</div>
                     {% endfor %}
                 </div>
             </div>
@@ -175,7 +200,14 @@
             <div class="min-w-0">
                 <div class="flex items-center justify-between gap-2 mb-3">
                     <h3 class="text-white text-sm font-bold">Formula:</h3>
-                    <span class="text-[10px] text-slate-500">Escribir con A, B, C...</span>
+                    <div class="flex items-center gap-2 flex-wrap justify-end">
+                        {% if formula_input_frequency %}
+                        <span class="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border border-cyan-400/20 bg-cyan-400/10 text-cyan-200">
+                            Frecuencia detectada: {{ formula_input_frequency }}
+                        </span>
+                        {% endif %}
+                        <span class="text-[10px] text-slate-500">Escribir con A, B, C...</span>
+                    </div>
                 </div>
 
                 <form method="post" id="formula-builder-form" class="space-y-3">
@@ -183,6 +215,9 @@
                     <input type="hidden" name="action" value="save_formula">
                     <input type="hidden" name="entity_id" value="{{ entity.id }}">
                     <input type="hidden" name="formula_id" value="{{ indicator.id }}">
+                    <input type="hidden" name="frequency" value="{{ frequency }}">
+                    <input type="hidden" name="date_start" value="{{ date_start }}">
+                    <input type="hidden" name="date_end" value="{{ date_end }}">
                     <input type="hidden" name="expression_tokens" id="expression-tokens" value="{{ expression_tokens_json|escape }}">
                     <input type="hidden" name="expression_text" id="expression-text">
 
@@ -225,19 +260,44 @@
             <span class="text-[10px] text-slate-500">{{ date_start }} → {{ date_end }}</span>
         </div>
 
+        {% if indicator and formula_input_frequency %}
+        <div class="mb-3 rounded-xl border border-cyan-400/15 bg-cyan-400/5 px-3 py-2 text-xs text-cyan-100">
+            Preview en <span class="font-black">{{ formula_input_frequency }}</span>.
+            {% if preview_common_periods_count %}
+                Periodos comunes con datos completos: <span class="font-black">{{ preview_common_periods_count }}</span>.
+            {% endif %}
+            {% if preview_skipped_no_common_data %}
+                Periodos omitidos por falta de solapamiento completo: <span class="font-black">{{ preview_skipped_no_common_data }}</span>.
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if formula_input_frequency_error %}
+        <div class="mb-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+            {{ formula_input_frequency_error }}
+        </div>
+        {% elif indicator and inputs and not preview_common_periods_count %}
+        <div class="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+            No hay periodos con datos completos compartidos entre todas las variables en el rango seleccionado.
+            Ajusta variables o el rango para generar el preview.
+        </div>
+        {% endif %}
+
         <div class="rounded-2xl border border-blue-500/25 bg-black/30 p-4">
-            {% if indicator %}
+            {% if indicator and preview_common_periods_count %}
             <div id="chart" class="w-full h-[260px] performance-formulas-chart"
                  data-labels="{{ chart_labels_json|escapejs }}"
                  data-values="{{ chart_values_json|escapejs }}"
                  data-series-name="Resultado Final"></div>
+            {% elif indicator %}
+            <div class="h-[260px] flex items-center justify-center text-slate-500 text-sm">Sin datos comunes para graficar en el preview.</div>
             {% else %}
             <div class="h-[260px] flex items-center justify-center text-slate-500 text-sm">Selecciona o crea una f&oacute;rmula para ver resultados.</div>
             {% endif %}
         </div>
 
         <div class="mt-3 rounded-xl border border-white/10 bg-slate-950/35 p-3">
-            <div class="max-h-[180px] overflow-auto custom-scrollbar">
+            <div class="overflow-x-auto overflow-y-auto custom-scrollbar perf-preview-table-scroll" style="max-height: 320px;">
                 <table class="w-full text-xs">
                     <thead>
                         <tr class="text-slate-500 border-b border-white/5">
@@ -254,7 +314,15 @@
                             <td class="py-2 text-slate-400">{{ row.status }}</td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="3" class="py-3 text-slate-500">Sin preview para el rango seleccionado.</td></tr>
+                        <tr>
+                            <td colspan="3" class="py-3 text-slate-500">
+                                {% if indicator and inputs and not formula_input_frequency_error %}
+                                    Sin preview calculable para el rango/solapamiento seleccionado.
+                                {% else %}
+                                    Sin preview para el rango seleccionado.
+                                {% endif %}
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -273,7 +341,9 @@
                 <input type="hidden" name="date_end" value="{{ date_end }}">
                 <button type="submit" class="px-6 py-2 rounded-xl bg-orange-500/20 border border-orange-500/25 text-orange-200 text-sm">Cancelar</button>
             </form>
-            <form method="post">
+            <form method="post"
+                  data-formula-approve-form
+                  data-formula-approve-progress-url="{% url 'performance:formula_approve_progress' indicator.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="approve_formula">
                 <input type="hidden" name="entity_id" value="{{ entity.id }}">
@@ -281,7 +351,7 @@
                 <input type="hidden" name="materialize_frequency" value="{{ frequency }}">
                 <input type="hidden" name="date_start" value="{{ date_start }}">
                 <input type="hidden" name="date_end" value="{{ date_end }}">
-                <button type="submit" class="px-6 py-2 rounded-xl bg-emerald-700/60 border border-emerald-500/25 text-emerald-100 text-sm">Aprobar formula</button>
+                <button type="submit" data-formula-approve-btn class="px-6 py-2 rounded-xl bg-emerald-700/60 border border-emerald-500/25 text-emerald-100 text-sm">Aprobar formula</button>
             </form>
             {% endif %}
         </div>
@@ -308,8 +378,10 @@
                         <td class="py-2">
                             <div class="flex flex-wrap gap-2">
                                 <a href="/performance/formulas/?entity_id={{ entity.id }}&formula_id={{ f.id }}&frequency={{ frequency }}&date_start={{ date_start }}&date_end={{ date_end }}"
+                                   class="px-3 py-1.5 rounded-lg border border-cyan-400/20 bg-cyan-400/10 text-cyan-200 text-[10px] font-black uppercase tracking-widest">Ver</a>
+                                <a href="/performance/formulas/?entity_id={{ entity.id }}&formula_id={{ f.id }}&frequency={{ frequency }}&date_start={{ date_start }}&date_end={{ date_end }}"
                                    class="px-3 py-1.5 rounded-lg border border-white/10 bg-slate-900 text-slate-200 text-[10px] font-black uppercase tracking-widest">Editar</a>
-                                <form method="post" onsubmit="return confirm('¿Eliminar la fórmula {{ f.label|escapejs }}?');">
+                                <form method="post" data-formula-delete-form data-formula-label="{{ f.label|escape }}">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="delete_formula">
                                     <input type="hidden" name="entity_id" value="{{ entity.id }}">
@@ -330,10 +402,308 @@
         </div>
     </section>
 </div>
+
+<div id="formula-approve-modal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+    <div class="relative h-full w-full flex items-center justify-center p-4">
+        <div class="w-full max-w-md rounded-xl border border-emerald-500/30 bg-slate-900 shadow-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between gap-3">
+                <div class="inline-flex items-center gap-2 text-emerald-200 text-sm font-semibold">
+                    <span class="inline-block w-3.5 h-3.5 border-2 border-emerald-300 border-t-transparent rounded-full animate-spin"></span>
+                    <span id="formula-approve-status-text">Aprobando formula...</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="formula-approve-stage" class="hidden px-2 py-0.5 rounded-md text-[10px] font-semibold"></span>
+                    <span id="formula-approve-percent" class="text-xs font-semibold text-emerald-200">0%</span>
+                </div>
+            </div>
+            <div class="w-full h-2 rounded bg-slate-800/80 overflow-hidden">
+                <div id="formula-approve-progress" class="h-full w-0 bg-emerald-400 transition-all duration-150"></div>
+            </div>
+            <p id="formula-approve-detail-text" class="text-[11px] text-emerald-100">Calculando y materializando resultados. Por favor espera...</p>
+        </div>
+    </div>
+</div>
+
+<div id="formula-delete-modal" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" data-formula-delete-cancel></div>
+    <div class="relative h-full w-full flex items-center justify-center p-4">
+        <div class="w-full max-w-md rounded-xl border border-red-500/30 bg-slate-900 shadow-2xl p-4 space-y-3">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h4 class="text-red-100 text-sm font-black uppercase tracking-widest">Eliminar formula</h4>
+                    <p class="text-xs text-slate-300 mt-1">
+                        Esta accion archivara la formula y ocultara su esquema derivado (si aplica).
+                    </p>
+                </div>
+                <button type="button"
+                        class="px-2 py-1 rounded-lg border border-white/10 bg-white/5 text-slate-300 text-xs"
+                        data-formula-delete-cancel>
+                    Cerrar
+                </button>
+            </div>
+            <div class="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2">
+                <p class="text-[11px] text-red-100">
+                    ¿Eliminar la formula <span id="formula-delete-name" class="font-black"></span>?
+                </p>
+            </div>
+            <div class="flex items-center justify-end gap-2">
+                <button type="button"
+                        class="px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-slate-200 text-xs font-black uppercase tracking-widest"
+                        data-formula-delete-cancel>
+                    Cancelar
+                </button>
+                <button type="button"
+                        id="formula-delete-confirm-btn"
+                        class="px-4 py-2 rounded-xl border border-red-500/25 bg-red-500/15 text-red-100 text-xs font-black uppercase tracking-widest">
+                    Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <script src="{% static 'js/performance/formulas.js' %}?v=2"></script>
+  <script src="{% static 'js/performance/formulas.js' %}?v=3"></script>
   <script src="{% static 'js/performance/formula_builder.js' %}?v=2"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const form = document.querySelector("[data-formula-approve-form]");
+      const modal = document.getElementById("formula-approve-modal");
+      const percentEl = document.getElementById("formula-approve-percent");
+      const progressEl = document.getElementById("formula-approve-progress");
+      const statusTextEl = document.getElementById("formula-approve-status-text");
+      const detailTextEl = document.getElementById("formula-approve-detail-text");
+      const stageEl = document.getElementById("formula-approve-stage");
+      if (!form || !modal || !percentEl || !progressEl) {
+        return;
+      }
+
+      // Move modal to <body> so fixed positioning is relative to the viewport.
+      // This avoids clipping/offset issues when the page content sits inside a transformed container.
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+
+      const submitBtn = form.querySelector("[data-formula-approve-btn]");
+      let submitting = false;
+      let pollTimer = null;
+      let progressUrl = "";
+
+      function setProgress(value) {
+        const v = Math.max(0, Math.min(100, Number(value) || 0));
+        percentEl.textContent = `${Math.round(v)}%`;
+        progressEl.style.width = `${v}%`;
+      }
+
+      function setStage(payload) {
+        if (!stageEl) return;
+        const idx = Number(payload && payload.stage_index);
+        const total = Number(payload && payload.stage_total);
+        const label = payload && payload.stage_label ? String(payload.stage_label) : "";
+        const status = payload && payload.status ? String(payload.status).toUpperCase() : "";
+        stageEl.className = "px-2 py-0.5 rounded-md text-[10px] font-semibold";
+        if (!idx || !total) {
+          stageEl.classList.add("hidden");
+          stageEl.textContent = "";
+          return;
+        }
+        if (status === "FAILED") {
+          stageEl.classList.add("border", "border-red-400/30", "bg-red-400/10", "text-red-100");
+        } else if (status === "DONE") {
+          stageEl.classList.add("border", "border-emerald-400/30", "bg-emerald-400/10", "text-emerald-100");
+        } else if (idx >= 3) {
+          stageEl.classList.add("border", "border-cyan-400/30", "bg-cyan-400/10", "text-cyan-100");
+        } else {
+          stageEl.classList.add("border", "border-sky-400/30", "bg-sky-400/10", "text-sky-100");
+        }
+        stageEl.textContent = `Etapa ${idx}/${total}${label ? " - " + label : ""}`;
+        stageEl.classList.remove("hidden");
+      }
+
+      function stopPolling() {
+        if (pollTimer) {
+          window.clearTimeout(pollTimer);
+          pollTimer = null;
+        }
+      }
+
+      function pollProgress() {
+        if (!submitting || !progressUrl) return;
+        fetch(progressUrl, {
+          credentials: "same-origin",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
+          }
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error("No se pudo consultar el progreso.");
+            return response.json();
+          })
+          .then((payload) => {
+            if (payload && typeof payload.percent === "number") setProgress(payload.percent);
+            if (payload && payload.message && detailTextEl) detailTextEl.textContent = payload.message;
+            setStage(payload || {});
+            if (payload && (payload.status === "DONE" || payload.status === "FAILED")) {
+              stopPolling();
+              return;
+            }
+            pollTimer = window.setTimeout(pollProgress, 700);
+          })
+          .catch(() => {
+            if (!submitting) return;
+            pollTimer = window.setTimeout(pollProgress, 1200);
+          });
+      }
+
+      function resetUi() {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.classList.remove("opacity-70", "cursor-not-allowed");
+          submitBtn.textContent = "Aprobar formula";
+        }
+        submitting = false;
+      }
+
+      form.addEventListener("submit", function (event) {
+        if (submitting) {
+          event.preventDefault();
+          return;
+        }
+        event.preventDefault();
+        submitting = true;
+        progressUrl = form.getAttribute("data-formula-approve-progress-url") || "";
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.classList.add("opacity-70", "cursor-not-allowed");
+          submitBtn.textContent = "Procesando...";
+        }
+        if (statusTextEl) statusTextEl.textContent = "Aprobando formula...";
+        if (detailTextEl) detailTextEl.textContent = "Preparando aprobacion y materializacion...";
+        setProgress(1);
+        setStage({ stage_index: 1, stage_total: 4, stage_label: "Preparacion", status: "RUNNING" });
+        modal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+        stopPolling();
+        if (progressUrl) pollProgress();
+
+        const submitUrl = form.getAttribute("action") || window.location.href;
+        fetch(submitUrl, {
+          method: "POST",
+          body: new FormData(form),
+          credentials: "same-origin",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json"
+          }
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error("No se pudo aprobar la formula.");
+            const contentType = response.headers.get("content-type") || "";
+            if (contentType.indexOf("application/json") === -1) {
+              return { ok: true, redirect_url: window.location.href, message: "Aprobacion procesada." };
+            }
+            return response.json();
+          })
+          .then((payload) => {
+            stopPolling();
+            setProgress(100);
+            setStage(payload || { stage_index: 4, stage_total: 4, stage_label: "Completado", status: "DONE" });
+            if (statusTextEl) statusTextEl.textContent = "Aprobacion completada. Redirigiendo...";
+            if (detailTextEl) detailTextEl.textContent = (payload && payload.message) ? payload.message : "Proceso completado.";
+            const redirectUrl = (payload && payload.redirect_url) ? payload.redirect_url : window.location.href;
+            window.setTimeout(function () {
+              window.location.href = redirectUrl;
+            }, 180);
+          })
+          .catch((error) => {
+            console.error(error);
+            stopPolling();
+            setProgress(100);
+            setStage({ stage_index: 4, stage_total: 4, stage_label: "Error", status: "FAILED" });
+            if (statusTextEl) statusTextEl.textContent = "No se pudo aprobar la formula.";
+            if (detailTextEl) detailTextEl.textContent = "Intenta nuevamente desde el builder.";
+            resetUi();
+            window.setTimeout(function () {
+              modal.classList.add("hidden");
+              document.body.classList.remove("overflow-hidden");
+            }, 800);
+          });
+      });
+    });
+  </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const deleteForms = document.querySelectorAll("[data-formula-delete-form]");
+      const modal = document.getElementById("formula-delete-modal");
+      const nameEl = document.getElementById("formula-delete-name");
+      const confirmBtn = document.getElementById("formula-delete-confirm-btn");
+      const cancelEls = document.querySelectorAll("[data-formula-delete-cancel]");
+      const approveModal = document.getElementById("formula-approve-modal");
+      if (!deleteForms.length || !modal || !nameEl || !confirmBtn) {
+        return;
+      }
+
+      if (modal.parentElement !== document.body) {
+        document.body.appendChild(modal);
+      }
+
+      let activeDeleteForm = null;
+
+      function unlockBodyIfNoOtherModal() {
+        const approveVisible = !!(approveModal && !approveModal.classList.contains("hidden"));
+        if (!approveVisible) {
+          document.body.classList.remove("overflow-hidden");
+        }
+      }
+
+      function closeDeleteModal() {
+        modal.classList.add("hidden");
+        activeDeleteForm = null;
+        unlockBodyIfNoOtherModal();
+      }
+
+      function openDeleteModal(formEl) {
+        activeDeleteForm = formEl;
+        const label = (formEl.getAttribute("data-formula-label") || "").trim();
+        nameEl.textContent = label ? `"${label}"` : "seleccionada";
+        modal.classList.remove("hidden");
+        document.body.classList.add("overflow-hidden");
+      }
+
+      deleteForms.forEach(function (formEl) {
+        formEl.addEventListener("submit", function (event) {
+          event.preventDefault();
+          openDeleteModal(formEl);
+        });
+      });
+
+      cancelEls.forEach(function (el) {
+        el.addEventListener("click", function () {
+          closeDeleteModal();
+        });
+      });
+
+      confirmBtn.addEventListener("click", function () {
+        if (!activeDeleteForm) {
+          closeDeleteModal();
+          return;
+        }
+        const formToSubmit = activeDeleteForm;
+        activeDeleteForm = null;
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add("opacity-70", "cursor-not-allowed");
+        formToSubmit.submit();
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+          closeDeleteModal();
+        }
+      });
+    });
+  </script>
 {% endblock %}

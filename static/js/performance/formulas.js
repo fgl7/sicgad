@@ -1,9 +1,34 @@
 document.addEventListener('DOMContentLoaded', function () {
   const chartDom = document.getElementById('chart');
   if (!chartDom) return;
+  if (typeof echarts === 'undefined') return;
 
-  const labels = JSON.parse(chartDom.getAttribute('data-labels') || '[]');
-  const values = JSON.parse(chartDom.getAttribute('data-values') || '[]');
+  const parseJsonAttr = (raw) => {
+    const source = raw || '[]';
+    try {
+      return JSON.parse(source);
+    } catch (_) {
+      // json.dumps can emit NaN/Infinity if upstream values are non-finite.
+      const sanitized = source
+        .replace(/\bNaN\b/g, 'null')
+        .replace(/\b-Infinity\b/g, 'null')
+        .replace(/\bInfinity\b/g, 'null');
+      try {
+        return JSON.parse(sanitized);
+      } catch (_) {
+        return [];
+      }
+    }
+  };
+
+  const labelsRaw = parseJsonAttr(chartDom.getAttribute('data-labels'));
+  const valuesRaw = parseJsonAttr(chartDom.getAttribute('data-values'));
+  const labels = Array.isArray(labelsRaw) ? labelsRaw : [];
+  const values = (Array.isArray(valuesRaw) ? valuesRaw : []).map((v) => {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  });
   const seriesName = chartDom.getAttribute('data-series-name') || 'Valor';
 
   const myChart = echarts.init(chartDom);

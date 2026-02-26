@@ -91,12 +91,18 @@ Flujo resumido:
 3. Admin aprueba/rechaza.
 4. Certificacion mensual la crea admin (derivada de un dataset diario).
 5. La certificacion mensual creada por admin nace `APPROVED` y `is_active=True`.
+6. Los datasets derivados de formulas de desempeno (`performance`) se desactivan
+   (`is_active=False`) cuando la formula es archivada/eliminada desde UI (soft delete),
+   para que no sigan apareciendo como esquemas activos.
 
 Vistas clave:
 - `schemas/views.py`
 - `templates/schemas/schema_list.html`
 - `templates/schemas/schema_edit.html`
 - `templates/schemas/schema_detail.html`
+
+Nota operativa:
+- La lista de esquemas muestra solo `DatasetType` activos (`is_active=True`).
 
 ## 6. Carga de datos (ingest)
 Modelos en `ingest/models.py`:
@@ -206,18 +212,29 @@ Modelos y servicios clave:
 Estado implementado (MVP funcional):
 - Builder por entidad en `/performance/formulas/` (solo admin).
 - Variables seleccionadas desde `ColumnDef` de `DatasetType` `APPROVED` y activos de la entidad.
+- Para el builder de formulas, las variables elegibles se filtran a columnas numericas (`INTEGER`, `FLOAT`).
+  - No se muestran columnas no numericas (ej. `DATE` como `fecha`) en el selector de variables.
+- Validacion de consistencia de periodicidad entre variables:
+  - no permite mezclar columnas `DAILY`, `WEEKLY`, `MONTHLY`, etc. en una misma formula
+  - si hay mezcla, bloquea guardado/aprobacion con mensaje de error
 - Formula editable por texto (tokens tipo `A`, `B`, `C` + operadores `+ - * / ( )`).
+- Soporta expresiones manuales tipo `(B/A)*100` usando aliases definidos en Variables.
 - Preview de resultados:
   - grafico simple
   - tabla compacta (`periodo`, `valor`, `estado`)
+  - usa solo periodos comunes con datos completos entre todas las variables (interseccion real)
+  - rango mostrado se deriva del historico comun publicado (no solo del rango por defecto reciente)
 - Flujo de aprobacion:
   - valida que existan variables y expresion
+  - valida periodicidad homogenea y alinea frecuencia de materializacion con la detectada
   - aprueba formula (`PerformanceIndicator.status`)
   - materializa resultados en base de datos como dataset derivado
+  - soporta progreso visual real (AJAX + polling) para procesos largos de materializacion
 - Materializacion crea/actualiza:
   - `DatasetType` derivado asociado a la formula
   - columnas de salida (valor y fecha/periodo segun implementacion actual)
   - `DatasetInstance` + `PublishedDataPoint`
+  - en dataset derivado, la fecha materializada del resultado corresponde al `period_end` del periodo calculado
 - Recalculo automatico:
   - al publicarse datos de origen (ingest/validation), formulas `APPROVED` pueden recalcularse y rematerializarse automaticamente.
 
@@ -236,7 +253,11 @@ UX actual (iteracion en curso en `templates/performance/formulas.html`):
   - nombre de formula (editable mientras no este aprobada)
   - selector de entidad
   - esquemas relacionados (referencia visual)
+- El selector de entidad aplica cambios automaticamente al cambiar (GET); se elimino boton separado `Actualizar entidad`.
 - Variables y Formula en cards separados (lado a lado) para evitar compresion/apilado.
+- Card de Variables compactado:
+  - selector con placeholder (`Selecciona una columna...`)
+  - cards de variable con layout compacto (alias + acciones + selector de columna) para reducir espacio vacio
 - Resumen informativo de entidad:
   - periodicidades con datos publicados
   - rango de fechas con datos publicados (min/max por `PublishedDataPoint`)
@@ -245,15 +266,39 @@ UX actual (iteracion en curso en `templates/performance/formulas.html`):
   - guardar formula
   - cancelar/limpiar todo
   - aprobar formula (materializa directamente)
+- Al aprobar (proceso largo):
+  - modal de progreso con porcentaje real, etapa y mensaje de avance (fetch + polling)
+- Tras aprobacion exitosa:
+  - el builder vuelve limpio (misma entidad, sin formula seleccionada) para crear una nueva formula
+- Accion explicita `Nueva formula` en cabecera para limpiar builder y mantener entidad actual.
 - Lista de formulas creadas con acciones:
+  - ver (carga formula + preview/grafico/tabla)
   - editar
-  - eliminar (soft delete / archived)
+  - eliminar (soft delete / archived) con modal de confirmacion estilizado (sin `confirm()` nativo)
+- Preview de tabla con scroll vertical dedicado (para historicos largos) y scrollbar visual mejorado.
+- Indicadores visuales de preview:
+  - badge de frecuencia detectada
+  - aviso con conteo de periodos comunes y omitidos por falta de solapamiento
 
 Notas operativas / limitaciones actuales:
-- El calculo/preview sigue usando rango de fechas/frecuencia en backend para procesamiento y grafico.
-- La UX se esta moviendo a flujo "crear columna calculada para todo el historico + nuevos datos futuros"; por eso la seleccion visible de periodicidad/fechas se redujo en cabecera.
+- El calculo/preview usa frecuencia/rango de trabajo en backend, pero el rango efectivo se recorta
+  al historico comun publicado entre variables (periodos con datos completos).
+- Flujo UX objetivo del builder: "crear columna calculada para todo el historico + nuevos datos futuros".
+- Para evitar confusion con ese flujo objetivo, el card de formula no expone selector visible de periodicidad/rango; el backend conserva esos parametros de trabajo para preview/aprobacion.
+- Acciones POST del builder (guardar nombre, variables, expresion) preservan el contexto de preview (`frequency`, `date_start`, `date_end`) via params ocultos/redirects.
 - Aprobacion/materializacion soportada de forma controlada para `DAILY` y `MONTHLY` (alineacion con consumo en KPIs).
+- El preview puede calcular por otras frecuencias (`WEEKLY`, `YEARLY`) segun implementacion backend, pero la materializacion sigue restringida a `DAILY`/`MONTHLY`.
 - Cobertura automatizada de `performance` sigue baja (tests pendientes).
+
+Rendimiento y UX reciente (`performance/formulas`):
+- Apertura desde sidebar mas rapida:
+  - el builder no autoselecciona formula ni recalcula preview pesado al entrar.
+- Accion `Ver` reutiliza resultados guardados (`PerformanceIndicatorResult`) cuando no se pide recalc.
+- Cambios de variables (agregar/guardar/eliminar) evitan recalc completo si aun no existe expresion.
+- Fast path de preview por expresion:
+  - precarga batch de `PublishedDataPoint` para variables fuente
+  - calculo en memoria
+  - persistencia de preview con `bulk_create` / `bulk_update` (evita `update_or_create` por periodo)
 
 Mantenimiento / migraciones recientes:
 - Migracion de workflow de `PerformanceIndicator` (campos de aprobacion/materializacion).
@@ -317,6 +362,7 @@ Sidebar:
 Topbar base:
 - `templates/partials/topbar.html`
 - estilo actual con clase `topbar-flat` (sin esquinas redondeadas / 90 grados)
+- altura fija (no variable por contenido) para mantener consistencia visual entre paginas
 
 Plantillas publicas y base visual:
 - `templates/landing.html` y `templates/registration/login.html` fueron unificadas para extender `templates/base.html`.
@@ -328,6 +374,10 @@ Plantillas publicas y base visual:
   - otros bloques auxiliares de estilo/transicion
 - Se movieron fondos decorativos `position: fixed` (landing/login) fuera de `.app-shell` para evitar recortes visuales cuando hay `transform` durante transiciones.
 - Transicion de rutas unificada en `base.html` con estilo `fade-through` neutro (sin "flash" azul).
+- Layout interno con scroll contenido en `.route-main-pane`:
+  - sidebar y topbar se mantienen visualmente fijos
+  - `body` sin scroll vertical en paginas internas (`saas-hybrid`) para evitar doble scrollbar
+  - se usa un unico scrollbar del panel principal
 
 Nota: Auditoria esta visible para usuarios autenticados segun reglas actuales de navegacion.
 
@@ -416,10 +466,12 @@ Funciona y se usa activamente:
 - Modulo `performance/formulas` con MVP funcional para admin:
   - creacion de formulas por entidad
   - seleccion de columnas desde esquemas aprobados
+  - validacion de periodicidad homogenea entre variables (sin mezcla `DAILY/MONTHLY`)
   - expresion manual con aliases (`A`, `B`, `C`)
-  - preview (grafico + tabla)
-  - aprobacion y materializacion a dataset derivado en BD
+  - preview (grafico + tabla) sobre periodos comunes con datos completos
+  - aprobacion y materializacion a dataset derivado en BD con progreso visual real
   - auto-recalculo/rematerializacion para formulas aprobadas al publicarse datos fuente
+  - acciones `Ver` y `Nueva formula`, limpieza del builder tras aprobacion exitosa
 - Landing institucional con CTA de acceso refinado (una sola flecha) y favicon visible.
 - Favicon del sistema generado desde `static/escudo.png` y enlazado en `base`, `landing` y `registration/login`.
 - Mitigacion de microparpadeo (FOUC) en plantillas standalone (`templates/base.html`, `templates/landing.html`, `templates/registration/login.html`)
@@ -428,8 +480,8 @@ Funciona y se usa activamente:
   - landing -> login con overlay/fade en `templates/landing.html` + `static/css/landing.css`
   - transicion global de entrada/salida en `templates/base.html` para navegacion full-page
     con exclusiones para HTMX/links especiales y opt-out via `data-no-route-transition`
-- Estabilizacion visual de ancho por paginas con/sin scroll vertical via `scrollbar-gutter: stable`
-  en `static/css/sicgad_theme.css`.
+- Estabilizacion visual de navegacion con scroll interno del panel principal (`.route-main-pane`)
+  y bloqueo de scroll del `body` en paginas internas para evitar doble scrollbar.
 
 Requiere refactor planificado:
 - Extender pruebas de regresion para cubrir flujos refactorizados a `entity`.
@@ -454,6 +506,7 @@ Requiere refactor planificado:
 7. Si se toca UX de cuentas, validar formulario crear/editar usuario y creacion de memberships esperados.
 8. Si se toca UX global / navegacion (`templates/base.html`, `templates/landing.html`, `templates/registration/login.html`):
    - probar paginas con y sin scroll vertical (sin salto visual notable)
+   - confirmar que exista un solo scrollbar visible en paginas internas (sin doble barra viewport/panel)
    - probar links normales, links con query params, `target="_blank"` y formularios POST (logout)
    - confirmar que HTMX/Alpine no se vean interceptados por la transicion
    - usar `data-no-route-transition` en enlaces con JS propio si fuera necesario

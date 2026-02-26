@@ -2,10 +2,19 @@
     --primary-glow: conic-gradient(from 180deg at 50% 50%, #2563eb 0deg, #38bdf8 160deg, #2563eb 360deg);
 }
 
-body {
-    overflow: hidden;
-    font-family: 'Source Sans 3', sans-serif;
-}
+body {
+    overflow: hidden;
+    font-family: 'Source Sans 3', sans-serif;
+}
+
+/* Override shared app layout rules used by internal pages (.app-shell height:100vh) */
+/* so the login content can remain vertically centered inside the standalone page. */
+.app-shell {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+}
 
 .glow-sphere {
     position: absolute;

@@ -49,7 +49,7 @@
 </section>
 
 <section class="glass-effect mb-6 p-4 sm:p-6 relative overflow-hidden">
-    <div class="grid gap-6 md:grid-cols-12">
+    <div class="grid gap-4 md:grid-cols-12">
         <div class="md:col-span-8 lg:col-span-9 xl:col-span-10 min-w-0">
             <div id="kpi-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-3 sm:p-4 overflow-hidden relative min-w-0">
                 <button id="kpi-chart-presentation-btn" type="button"
@@ -60,9 +60,9 @@
                 <div id="kpi-chart" class="w-full kpi-chart-canvas"></div>
             </div>
         </div>
-        <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 min-w-0 space-y-6 text-sm">
+        <div id="kpi-chart-controls-panel" class="md:col-span-4 lg:col-span-3 xl:col-span-2 min-w-0 text-sm flex flex-col gap-2.5 min-h-0 overflow-hidden">
             <div>
-                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de grafico</label>
+                <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de grafico</label>
                 <select id="kpi-chart-type-select" class="w-full">
                     <option value="line">Linea suave</option>
                     <option value="bar">Barras</option>
@@ -70,55 +70,73 @@
                 </select>
             </div>
             <div>
-                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje X</label>
+                <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje X</label>
                 <select id="kpi-x-field-select" class="w-full"></select>
             </div>
             <div>
-                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Presentacion</label>
+                <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Presentacion</label>
                 <label
-                    class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-slate-200 cursor-pointer">
+                    class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] text-slate-200 cursor-pointer">
                     <span class="font-medium">Modo ejecutivo</span>
                     <input id="kpi-executive-mode-toggle" type="checkbox"
                         class="size-4 rounded border-slate-600 bg-black/40 text-cyan-400 focus:ring-cyan-500/20" />
                 </label>
             </div>
-            <div>
-                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores (Eje Y)</label>
+            <div data-kpi-y-field-section class="flex min-h-0 flex-col">
+                <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores (Eje Y)</label>
                 <div id="kpi-y-field-box"
-                    class="rounded-xl border border-white/10 bg-black/20 p-3 grid gap-2.5 max-h-64 overflow-auto text-[11px]">
+                    class="rounded-xl border border-white/10 bg-black/20 p-2.5 grid gap-2 overflow-y-auto overflow-x-hidden text-[11px] min-h-0">
                 </div>
+            </div>
+            <div>
+                <button id="kpi-table-modal-open-btn" type="button"
+                    class="w-full h-10 rounded-xl border border-white/10 bg-black/20 text-slate-200 text-[11px] font-semibold hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    Mostrar tabla
+                </button>
             </div>
         </div>
     </div>
 </section>
 
-<section class="glass-effect p-4 sm:p-6 text-sm">
-    <div class="rounded-2xl border border-white/5 bg-black/20 p-5">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-            <h2 class="text-base font-bold text-white tracking-tight flex items-center gap-2 font-heading">
-                <span class="w-1.5 h-6 bg-amber-500 rounded-full"></span>
-                Detalle de Datos Publicados
-            </h2>
-            <div class="flex flex-wrap items-center gap-3">
-                <button id="kpi-export-csv" type="button"
-                    class="px-4 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    disabled>
-                    CSV
-                </button>
-                <button id="kpi-export-excel" type="button"
-                    class="px-4 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px] hover:bg-emerald-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    disabled>
-                    EXCEL
-                </button>
+<div id="kpi-table-modal" class="fixed inset-0 z-[100050] hidden" aria-hidden="true">
+    <div id="kpi-table-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex min-h-full items-center justify-center p-3 sm:p-6">
+        <div id="kpi-table-modal-panel"
+            class="w-full max-w-6xl rounded-2xl border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/40">
+            <div class="flex items-center justify-between gap-3 border-b border-white/10 px-4 sm:px-5 py-3">
+                <h3 class="text-sm sm:text-base font-bold text-white font-heading">Detalle de Datos Publicados</h3>
+                <div class="flex items-center gap-2">
+                    <button id="kpi-export-csv" type="button"
+                        class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled>
+                        CSV
+                    </button>
+                    <button id="kpi-export-excel" type="button"
+                        class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-bold text-[10px] hover:bg-emerald-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled>
+                        EXCEL
+                    </button>
+                    <button id="kpi-table-modal-close-btn" type="button"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-slate-300 hover:bg-white/5 transition-colors"
+                        aria-label="Cerrar tabla">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 sm:p-5">
+                <div id="kpi-table-container"
+                    class="max-h-[70vh] overflow-auto border border-white/5 rounded-xl bg-transparent transition-all"></div>
             </div>
         </div>
-        <div id="kpi-table-container"
-            class="max-h-96 overflow-auto border border-white/5 rounded-xl bg-transparent transition-all"></div>
     </div>
-</section>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="{% static 'js/kpis_charts.js' %}?v=21"></script>
+<script src="{% static 'js/kpis_charts.js' %}?v=31"></script>
 {% endblock %}
+
+

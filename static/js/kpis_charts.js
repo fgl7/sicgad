@@ -12,9 +12,33 @@ document.addEventListener("DOMContentLoaded", function () {
   const chartStage = document.getElementById("kpi-chart-stage");
   const presentationButton = document.getElementById("kpi-chart-presentation-btn");
   const authorityCards = document.getElementById("authority-kpi-cards");
+  const chartControlsPanel = document.getElementById("kpi-chart-controls-panel");
+  const yFieldSection = document.querySelector("[data-kpi-y-field-section]");
+  const kpiTableSection = document.getElementById("kpi-table-section");
+  const kpiTableCard = document.getElementById("kpi-table-card");
+  const kpiTableHeader = document.getElementById("kpi-table-header");
   const tableContainer = document.getElementById("kpi-table-container");
+  const kpiTableModalOpenButton = document.getElementById("kpi-table-modal-open-btn");
+  const kpiTableModal = document.getElementById("kpi-table-modal");
+  const kpiTableModalBackdrop = document.getElementById("kpi-table-modal-backdrop");
+  const kpiTableModalCloseButton = document.getElementById("kpi-table-modal-close-btn");
+  const tableToggleButton = document.getElementById("kpi-table-toggle-btn");
   const exportCsvButton = document.getElementById("kpi-export-csv");
   const exportExcelButton = document.getElementById("kpi-export-excel");
+  const relatedPerformanceSection = document.getElementById("related-performance-section");
+  const relatedPerformanceHelp = document.getElementById("related-performance-help");
+  const relatedPerformanceIndicatorSelect = document.getElementById("related-performance-indicator-select");
+  const relatedPerformanceFrequencyBadge = document.getElementById("related-performance-frequency-badge");
+  const relatedPerformanceChartTypeSelect = document.getElementById("related-performance-chart-type-select");
+  const relatedPerformanceChartContainer = document.getElementById("related-performance-chart");
+  const relatedPerformanceEmpty = document.getElementById("related-performance-empty");
+  const relatedPerformanceTableModalOpenButton = document.getElementById("related-performance-table-modal-open-btn");
+  const relatedPerformanceTableModal = document.getElementById("related-performance-table-modal");
+  const relatedPerformanceTableModalBackdrop = document.getElementById("related-performance-table-modal-backdrop");
+  const relatedPerformanceTableModalCloseButton = document.getElementById("related-performance-table-modal-close-btn");
+  const relatedPerformanceTableContainer = document.getElementById("related-performance-table-container");
+  const relatedPerformanceExportCsv = document.getElementById("related-performance-export-csv");
+  const relatedPerformanceExportExcel = document.getElementById("related-performance-export-excel");
   const isAuthorityView = Boolean(authorityCards);
 
   if (
@@ -35,7 +59,12 @@ document.addEventListener("DOMContentLoaded", function () {
   if (window.echarts) {
     chart = echarts.init(chartContainer);
   }
+  let relatedPerformanceChart = null;
   const baseChartHeight = chartContainer.style.height || `${Math.max(chartContainer.clientHeight, 320)}px`;
+  const relatedPerformanceBaseChartHeight =
+    relatedPerformanceChartContainer && relatedPerformanceChartContainer.style.height
+      ? relatedPerformanceChartContainer.style.height
+      : `${Math.max(relatedPerformanceChartContainer ? relatedPerformanceChartContainer.clientHeight : 0, 300)}px`;
   let presentationHintTimer = null;
   let wasPresentationFullscreen = false;
 
@@ -93,11 +122,19 @@ document.addEventListener("DOMContentLoaded", function () {
   let currentColumns = [];
   let availableDateColumn = null;
   let tableExpanded = false;
+  let isKpiTableModalOpen = false;
+  let isRelatedPerformanceTableModalOpen = false;
+  let isKpiTableHidden = false;
   const filterBounds = { start: null, end: null };
   const url = new URL(window.location.href);
   const TABLE_RENDER_LIMIT = 300;
   let xlsxLoaderPromise = null;
   const KPI_EXECUTIVE_MODE_STORAGE_KEY = "sicgad_kpi_executive_mode";
+  const KPI_TABLE_HIDDEN_STORAGE_KEY = "sicgad_kpi_table_hidden";
+  let relatedPerformanceIndicators = [];
+  let relatedPerformancePayload = null;
+  let relatedPerformanceRequestSeq = 0;
+  let relatedPerformanceCurrentFrequency = "MONTHLY";
 
   function getStoredExecutiveMode() {
     try {
@@ -161,7 +198,102 @@ document.addEventListener("DOMContentLoaded", function () {
       if (chart) {
         chart.resize();
       }
+      syncKpiControlsPanelHeight();
     });
+  }
+
+  function syncKpiControlsPanelHeight() {
+    if (!chartControlsPanel || !chartStage) {
+      return;
+    }
+    const isDesktop = window.matchMedia ? window.matchMedia("(min-width: 768px)").matches : window.innerWidth >= 768;
+    if (!isDesktop || isChartStageFullscreen()) {
+      chartControlsPanel.style.height = "";
+      chartControlsPanel.style.maxHeight = "";
+      return;
+    }
+    const stageHeight = Math.round(chartStage.getBoundingClientRect().height || 0);
+    if (stageHeight <= 0) {
+      return;
+    }
+    chartControlsPanel.style.height = `${stageHeight}px`;
+    chartControlsPanel.style.maxHeight = `${stageHeight}px`;
+    syncYFieldBoxHeight();
+  }
+
+  function syncYFieldBoxHeight() {
+    if (!chartControlsPanel || !yFieldBox || !yFieldSection) {
+      return;
+    }
+    const isDesktop = window.matchMedia ? window.matchMedia("(min-width: 768px)").matches : window.innerWidth >= 768;
+    if (!isDesktop) {
+      yFieldBox.style.maxHeight = "";
+      yFieldBox.style.height = "";
+      return;
+    }
+
+    const panelHeight = Math.round(chartControlsPanel.getBoundingClientRect().height || 0);
+    if (panelHeight <= 0) {
+      return;
+    }
+
+    const children = Array.from(chartControlsPanel.children || []).filter(function (el) {
+      return el && el.nodeType === 1;
+    });
+    const panelStyles = window.getComputedStyle ? window.getComputedStyle(chartControlsPanel) : null;
+    const gap = panelStyles ? parseFloat(panelStyles.rowGap || panelStyles.gap || "0") || 0 : 0;
+    function getVerticalMargins(el) {
+      if (!window.getComputedStyle || !el) {
+        return 0;
+      }
+      const styles = window.getComputedStyle(el);
+      const mt = parseFloat(styles.marginTop || "0") || 0;
+      const mb = parseFloat(styles.marginBottom || "0") || 0;
+      return mt + mb;
+    }
+
+    let otherHeight = 0;
+    children.forEach(function (child) {
+      if (child === yFieldSection) {
+        return;
+      }
+      otherHeight += Math.ceil(child.getBoundingClientRect().height || 0) + Math.ceil(getVerticalMargins(child));
+    });
+
+    const gapsTotal = children.length > 1 ? gap * (children.length - 1) : 0;
+    const labelEl = yFieldSection.querySelector("label");
+    let labelHeight = 0;
+    if (labelEl) {
+      const labelRect = labelEl.getBoundingClientRect();
+      const labelStyles = window.getComputedStyle ? window.getComputedStyle(labelEl) : null;
+      const marginBottom = labelStyles ? parseFloat(labelStyles.marginBottom || "0") || 0 : 0;
+      labelHeight = Math.ceil(labelRect.height || 0) + marginBottom;
+    }
+    const ySectionStyles = window.getComputedStyle ? window.getComputedStyle(yFieldSection) : null;
+    const ySectionChrome = ySectionStyles
+      ? (parseFloat(ySectionStyles.paddingTop || "0") || 0) +
+        (parseFloat(ySectionStyles.paddingBottom || "0") || 0) +
+        (parseFloat(ySectionStyles.borderTopWidth || "0") || 0) +
+        (parseFloat(ySectionStyles.borderBottomWidth || "0") || 0)
+      : 0;
+    const ySectionMargins = Math.ceil(getVerticalMargins(yFieldSection));
+
+    const available = Math.floor(
+      panelHeight - otherHeight - gapsTotal - labelHeight - ySectionChrome - ySectionMargins
+    );
+    if (available <= 0) {
+      yFieldBox.style.maxHeight = "";
+      yFieldBox.style.height = "";
+      return;
+    }
+
+    // Fit content when there are few indicators; use scroll only when content exceeds panel space.
+    const contentHeight = Math.ceil(yFieldBox.scrollHeight || 0);
+    const minHeight = 96;
+    const minTarget = Math.min(minHeight, available);
+    const target = Math.max(minTarget, Math.min(contentHeight, available));
+    yFieldBox.style.maxHeight = `${target}px`;
+    yFieldBox.style.height = contentHeight > target ? `${target}px` : "auto";
   }
 
   function ensurePresentationHintElement() {
@@ -232,6 +364,7 @@ document.addEventListener("DOMContentLoaded", function () {
     } else if (!inPresentation) {
       hidePresentationHint();
     }
+    syncKpiControlsPanelHeight();
     resizeChartSoon();
   }
 
@@ -384,6 +517,7 @@ document.addEventListener("DOMContentLoaded", function () {
       xFieldSelect.value = defaults.x;
     }
     renderYFieldOptions(columns, defaults.y || []);
+    syncYFieldBoxHeight();
   }
 
   function renderYFieldOptions(columns, defaultY) {
@@ -437,6 +571,7 @@ document.addEventListener("DOMContentLoaded", function () {
       wrapper.appendChild(span);
       yFieldBox.appendChild(wrapper);
     });
+    syncYFieldBoxHeight();
   }
 
   function setFilterBounds(startValue, endValue) {
@@ -766,7 +901,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function applyDateFilter() {
-    if (!dateStartInput || !dateEndInput || !availableDateColumn) {
+    if (!dateStartInput || !dateEndInput) {
       return;
     }
     const startValue = dateStartInput.value || null;
@@ -775,10 +910,33 @@ document.addEventListener("DOMContentLoaded", function () {
       endValue = startValue;
       dateEndInput.value = endValue;
     }
-    setFilterBounds(startValue, endValue);
-    updateChart();
-    if (currentData) {
-      renderTable(currentData, getFilteredRows(currentData.rows || []));
+    if (availableDateColumn) {
+      setFilterBounds(startValue, endValue);
+      updateChart();
+      if (currentData) {
+        renderTable(currentData, getFilteredRows(currentData.rows || []));
+      }
+    }
+    const relatedVisible =
+      relatedPerformanceSection && !relatedPerformanceSection.classList.contains("hidden");
+    if (hasRelatedPerformanceUi() && relatedVisible) {
+      loadRelatedPerformanceData();
+    }
+  }
+
+  function getStoredKpiTableHidden() {
+    try {
+      return window.localStorage.getItem(KPI_TABLE_HIDDEN_STORAGE_KEY) === "1";
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function setStoredKpiTableHidden(hidden) {
+    try {
+      window.localStorage.setItem(KPI_TABLE_HIDDEN_STORAGE_KEY, hidden ? "1" : "0");
+    } catch (_err) {
+      // ignore storage restrictions
     }
   }
 
@@ -1162,6 +1320,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function updateExportState(rows) {
     const hasRows = rows && rows.length;
+    if (kpiTableModalOpenButton) {
+      kpiTableModalOpenButton.disabled = !hasRows;
+    }
     if (exportCsvButton) {
       exportCsvButton.disabled = !hasRows;
     }
@@ -1377,6 +1538,646 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 
+  function applyKpiTableVisibility(hidden) {
+    // Backward-compatible no-op for older templates that still use inline table toggling.
+    isKpiTableHidden = Boolean(hidden);
+    if (!tableContainer) {
+      return;
+    }
+    if (!kpiTableSection && !tableToggleButton && kpiTableModal) {
+      tableContainer.classList.remove("hidden");
+      tableContainer.style.maxHeight = "";
+      tableContainer.style.borderWidth = "";
+      tableContainer.style.marginTop = "";
+      return;
+    }
+    tableContainer.classList.toggle("hidden", isKpiTableHidden);
+    if (isKpiTableHidden) {
+      tableContainer.style.maxHeight = "0";
+      tableContainer.style.borderWidth = "0";
+      tableContainer.style.marginTop = "0";
+    } else {
+      tableContainer.style.maxHeight = "";
+      tableContainer.style.borderWidth = "";
+      tableContainer.style.marginTop = "";
+    }
+    if (kpiTableHeader) {
+      kpiTableHeader.style.marginBottom = isKpiTableHidden ? "0" : "";
+      kpiTableHeader.style.gap = isKpiTableHidden ? "0.5rem" : "";
+    }
+    if (kpiTableCard) {
+      kpiTableCard.style.padding = isKpiTableHidden ? "0.75rem 1rem" : "";
+    }
+    if (kpiTableSection) {
+      kpiTableSection.style.padding = isKpiTableHidden ? "0.75rem" : "";
+    }
+    if (tableToggleButton) {
+      tableToggleButton.textContent = isKpiTableHidden ? "Mostrar tabla" : "Ocultar tabla";
+    }
+    setStoredKpiTableHidden(isKpiTableHidden);
+  }
+
+  function openKpiTableModal() {
+    if (!kpiTableModal || !kpiTableModalOpenButton || kpiTableModalOpenButton.disabled) {
+      return;
+    }
+    kpiTableModal.classList.remove("hidden");
+    kpiTableModal.setAttribute("aria-hidden", "false");
+    isKpiTableModalOpen = true;
+    document.body.classList.add("overflow-hidden");
+    window.setTimeout(function () {
+      if (kpiTableModalCloseButton) {
+        kpiTableModalCloseButton.focus();
+      }
+    }, 0);
+  }
+
+  function closeKpiTableModal() {
+    if (!kpiTableModal) {
+      return;
+    }
+    kpiTableModal.classList.add("hidden");
+    kpiTableModal.setAttribute("aria-hidden", "true");
+    isKpiTableModalOpen = false;
+    if (!isRelatedPerformanceTableModalOpen) {
+      document.body.classList.remove("overflow-hidden");
+    }
+  }
+
+  function openRelatedPerformanceTableModal() {
+    if (
+      !relatedPerformanceTableModal ||
+      !relatedPerformanceTableModalOpenButton ||
+      relatedPerformanceTableModalOpenButton.disabled
+    ) {
+      return;
+    }
+    relatedPerformanceTableModal.classList.remove("hidden");
+    relatedPerformanceTableModal.setAttribute("aria-hidden", "false");
+    isRelatedPerformanceTableModalOpen = true;
+    document.body.classList.add("overflow-hidden");
+    window.setTimeout(function () {
+      if (relatedPerformanceTableModalCloseButton) {
+        relatedPerformanceTableModalCloseButton.focus();
+      }
+    }, 0);
+  }
+
+  function closeRelatedPerformanceTableModal() {
+    if (!relatedPerformanceTableModal) {
+      return;
+    }
+    relatedPerformanceTableModal.classList.add("hidden");
+    relatedPerformanceTableModal.setAttribute("aria-hidden", "true");
+    isRelatedPerformanceTableModalOpen = false;
+    if (!isKpiTableModalOpen) {
+      document.body.classList.remove("overflow-hidden");
+    }
+  }
+
+  function resizeRelatedPerformanceChartSoon() {
+    if (!relatedPerformanceChartContainer) {
+      return;
+    }
+    window.requestAnimationFrame(function () {
+      const chartRef = ensureRelatedPerformanceChart();
+      if (!chartRef) {
+        return;
+      }
+      chartRef.resize();
+      window.requestAnimationFrame(function () {
+        const lateChartRef = ensureRelatedPerformanceChart();
+        if (lateChartRef) {
+          lateChartRef.resize();
+        }
+      });
+    });
+    window.setTimeout(function () {
+      const delayedChartRef = ensureRelatedPerformanceChart();
+      if (delayedChartRef) {
+        delayedChartRef.resize();
+      }
+    }, 80);
+  }
+
+  function ensureRelatedPerformanceChart(forceReinit) {
+    if (!window.echarts || !relatedPerformanceChartContainer) {
+      return null;
+    }
+    const containerWidth = Math.round(
+      relatedPerformanceChartContainer.getBoundingClientRect
+        ? relatedPerformanceChartContainer.getBoundingClientRect().width || 0
+        : relatedPerformanceChartContainer.clientWidth || 0
+    );
+    const needsInit = !relatedPerformanceChart || forceReinit;
+    if (containerWidth <= 0 && needsInit) {
+      return relatedPerformanceChart || null;
+    }
+    const looksCollapsed =
+      relatedPerformanceChart &&
+      containerWidth > 240 &&
+      typeof relatedPerformanceChart.getWidth === "function" &&
+      relatedPerformanceChart.getWidth() > 0 &&
+      relatedPerformanceChart.getWidth() < Math.floor(containerWidth * 0.6);
+
+    if (needsInit || looksCollapsed) {
+      if (relatedPerformanceChart) {
+        try {
+          relatedPerformanceChart.dispose();
+        } catch (_err) {
+          // ignore dispose errors and re-init
+        }
+      }
+      relatedPerformanceChart = echarts.init(relatedPerformanceChartContainer);
+    }
+    return relatedPerformanceChart;
+  }
+
+  function handleGlobalKeydown(event) {
+    if (!event) {
+      return;
+    }
+    if (event.key === "Escape") {
+      if (isRelatedPerformanceTableModalOpen) {
+        closeRelatedPerformanceTableModal();
+        return;
+      }
+      if (isKpiTableModalOpen) {
+        closeKpiTableModal();
+      }
+    }
+  }
+
+  function hasRelatedPerformanceUi() {
+    return Boolean(
+      relatedPerformanceSection &&
+      relatedPerformanceIndicatorSelect &&
+      relatedPerformanceChartTypeSelect &&
+      relatedPerformanceTableContainer
+    );
+  }
+
+  function getRelatedPerformanceSelectedIndicator() {
+    const id = Number(relatedPerformanceIndicatorSelect && relatedPerformanceIndicatorSelect.value);
+    if (!id) {
+      return null;
+    }
+    return relatedPerformanceIndicators.find((item) => item.id === id) || null;
+  }
+
+  function setRelatedPerformanceExportState(rows) {
+    const hasRows = Boolean(rows && rows.length);
+    if (relatedPerformanceTableModalOpenButton) {
+      relatedPerformanceTableModalOpenButton.disabled = !hasRows;
+    }
+    if (relatedPerformanceExportCsv) {
+      relatedPerformanceExportCsv.disabled = !hasRows;
+    }
+    if (relatedPerformanceExportExcel) {
+      relatedPerformanceExportExcel.disabled = !hasRows;
+    }
+  }
+
+  function renderRelatedPerformanceTable(payload) {
+    if (!relatedPerformanceTableContainer) {
+      return;
+    }
+    relatedPerformanceTableContainer.innerHTML = "";
+
+    const rows = payload && Array.isArray(payload.rows) ? payload.rows : [];
+    if (!rows.length) {
+      const empty = document.createElement("div");
+      empty.className = "p-3 text-[11px] text-slate-400";
+      empty.textContent = "No hay datos para mostrar.";
+      relatedPerformanceTableContainer.appendChild(empty);
+      setRelatedPerformanceExportState([]);
+      return;
+    }
+
+    const table = document.createElement("table");
+    table.className = "w-full text-left border-collapse";
+
+    const thead = document.createElement("thead");
+    thead.className = "bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest";
+    const headRow = document.createElement("tr");
+    ["Periodo", "Valor", "Estado"].forEach(function (label) {
+      const th = document.createElement("th");
+      th.className = "px-6 py-4";
+      th.textContent = label;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+
+    const tbody = document.createElement("tbody");
+    tbody.className = "text-sm";
+    rows.forEach(function (row) {
+      const tr = document.createElement("tr");
+      tr.className = "border-t border-white/5 hover:bg-white/[0.02] transition-colors";
+
+      const tdPeriod = document.createElement("td");
+      tdPeriod.className = "px-6 py-4 text-slate-300 whitespace-nowrap";
+      tdPeriod.textContent = row.period_end || "-";
+      tr.appendChild(tdPeriod);
+
+      const tdValue = document.createElement("td");
+      tdValue.className = "px-6 py-4 text-slate-300 whitespace-nowrap";
+      tdValue.textContent =
+        row.value == null || !Number.isFinite(Number(row.value))
+          ? "-"
+          : Number(row.value).toFixed(2);
+      tr.appendChild(tdValue);
+
+      const tdStatus = document.createElement("td");
+      tdStatus.className = "px-6 py-4 text-slate-300 whitespace-nowrap";
+      tdStatus.textContent = row.status || "-";
+      tr.appendChild(tdStatus);
+
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    relatedPerformanceTableContainer.appendChild(table);
+    setRelatedPerformanceExportState(rows);
+  }
+
+  function hideRelatedPerformanceSection() {
+    if (!hasRelatedPerformanceUi()) {
+      return;
+    }
+    relatedPerformanceIndicators = [];
+    relatedPerformancePayload = null;
+    relatedPerformanceRequestSeq += 1;
+    setRelatedPerformanceFrequencyDisplay("MONTHLY");
+    if (relatedPerformanceSection) {
+      relatedPerformanceSection.classList.add("hidden");
+    }
+    closeRelatedPerformanceTableModal();
+    if (relatedPerformanceIndicatorSelect) {
+      relatedPerformanceIndicatorSelect.innerHTML = "";
+    }
+    if (relatedPerformanceChart) {
+      relatedPerformanceChart.clear();
+    }
+    if (relatedPerformanceEmpty) {
+      relatedPerformanceEmpty.classList.add("hidden");
+    }
+    renderRelatedPerformanceTable({ rows: [] });
+  }
+
+  function buildRelatedPerformanceIndicatorLabel(indicator) {
+    if (!indicator) {
+      return "Formula";
+    }
+    const prefix = indicator.entity_code ? `[${indicator.entity_code}] ` : "";
+    return `${prefix}${indicator.label || indicator.key || "Formula"}`;
+  }
+
+  function normalizeRelatedPerformanceFrequency(value) {
+    const raw = String(value || "").toUpperCase();
+    return raw === "DAILY" ? "DAILY" : "MONTHLY";
+  }
+
+  function formatRelatedPerformanceFrequencyLabel(value) {
+    const freq = normalizeRelatedPerformanceFrequency(value);
+    return freq === "DAILY" ? "Diaria" : "Mensual";
+  }
+
+  function setRelatedPerformanceFrequencyDisplay(value) {
+    relatedPerformanceCurrentFrequency = normalizeRelatedPerformanceFrequency(value);
+    if (!relatedPerformanceFrequencyBadge) {
+      return;
+    }
+    relatedPerformanceFrequencyBadge.textContent = formatRelatedPerformanceFrequencyLabel(
+      relatedPerformanceCurrentFrequency
+    );
+  }
+
+  function populateRelatedPerformanceIndicators(indicators) {
+    if (!relatedPerformanceIndicatorSelect) {
+      return;
+    }
+    relatedPerformanceIndicatorSelect.innerHTML = "";
+    (indicators || []).forEach(function (indicator, index) {
+      const opt = document.createElement("option");
+      opt.value = String(indicator.id);
+      opt.textContent = buildRelatedPerformanceIndicatorLabel(indicator);
+      relatedPerformanceIndicatorSelect.appendChild(opt);
+      if (index === 0) {
+        relatedPerformanceIndicatorSelect.value = String(indicator.id);
+      }
+    });
+  }
+
+  function buildRelatedPerformanceChartOption(payload) {
+    if (!payload || !Array.isArray(payload.rows) || !payload.rows.length) {
+      return null;
+    }
+
+    const validRows = payload.rows.filter(function (row) {
+      return row && row.period_end;
+    });
+    if (!validRows.length) {
+      return null;
+    }
+
+    const labels = validRows.map(function (row) { return row.period_end; });
+    const values = validRows.map(function (row) {
+      return row.value == null || !Number.isFinite(Number(row.value)) ? null : Number(row.value);
+    });
+    const chartType = (relatedPerformanceChartTypeSelect && relatedPerformanceChartTypeSelect.value) || "line";
+    const seriesType = chartType === "bar" ? "bar" : "line";
+    const granularity = inferDateGranularity(labels);
+    const color = "#22d3ee";
+    const indicator = payload.indicator || {};
+
+    return {
+      animationDurationUpdate: 220,
+      animationEasingUpdate: "cubicOut",
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: "rgba(15, 23, 42, 0.95)",
+        borderColor: "rgba(34, 211, 238, 0.2)",
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: [10, 12],
+        textStyle: { color: "#f8fafc", fontSize: 12, fontFamily: "Lexend" },
+        formatter: function (params) {
+          const item = Array.isArray(params) ? params[0] : params;
+          if (!item) return "";
+          const numericValue = item.value == null || !Number.isFinite(Number(item.value)) ? null : Number(item.value);
+          const unit = indicator.unit ? ` ${indicator.unit}` : "";
+          return (
+            `<div style="font-family:Lexend, sans-serif;">` +
+            `<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#67e8f9;opacity:.9;margin-bottom:2px;">Periodo</div>` +
+            `<div style="font-size:13px;font-weight:700;color:#f8fafc;">${formatDateLong(item.axisValue)}</div>` +
+            `<div style="display:flex;justify-content:space-between;gap:12px;margin-top:6px;">` +
+            `<span style="color:#cbd5e1;">Valor</span>` +
+            `<span style="font-weight:700;color:#fff;">${formatMetricValue(numericValue)}${unit}</span>` +
+            `</div>` +
+            `</div>`
+          );
+        },
+      },
+      grid: { left: 56, right: 18, top: 40, bottom: 64, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: labels,
+        boundaryGap: seriesType === "bar",
+        axisLine: { lineStyle: { color: "rgba(148,163,184,0.18)" } },
+        axisTick: { show: false },
+        axisLabel: {
+          color: "#94a3b8",
+          fontSize: 10,
+          margin: 10,
+          hideOverlap: true,
+          formatter: function (value) {
+            return formatDateShort(value, granularity);
+          },
+        },
+      },
+      yAxis: {
+        type: "value",
+        name: indicator.unit ? `(${indicator.unit})` : "Valores",
+        nameGap: 18,
+        nameTextStyle: { color: "#94a3b8", fontSize: 10, fontWeight: 600, padding: [0, 0, 8, 0] },
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: {
+          color: "#94a3b8",
+          fontSize: 10,
+          formatter: function (value) {
+            return formatMetricValue(value);
+          },
+        },
+        splitLine: {
+          show: true,
+          lineStyle: { color: "rgba(148,163,184,0.1)", type: [4, 4] },
+        },
+      },
+      dataZoom: [
+        { type: "inside", xAxisIndex: 0, start: 0, end: 100 },
+        {
+          type: "slider",
+          xAxisIndex: 0,
+          height: 36,
+          bottom: 0,
+          showDetail: false,
+          brushSelect: false,
+          borderRadius: 10,
+          backgroundColor: "rgba(15,23,42,0.42)",
+          handleStyle: { color: "#22d3ee", borderColor: "#1e293b" },
+          fillerColor: "rgba(34,211,238,0.08)",
+          borderColor: "rgba(255,255,255,0.03)",
+          labelFormatter: function (value) { return formatDateShort(value, granularity); },
+        },
+      ],
+      series: [
+        {
+          name: indicator.label || indicator.key || "Formula",
+          type: seriesType,
+          data: values,
+          smooth: seriesType === "line",
+          showSymbol: seriesType === "line" && labels.length <= 48,
+          symbolSize: 5,
+          connectNulls: false,
+          lineStyle: { width: 3, color: color },
+          itemStyle: {
+            color:
+              seriesType === "bar"
+                ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: "#22d3eedd" },
+                    { offset: 1, color: "#0891b2aa" },
+                  ])
+                : color,
+            borderRadius: seriesType === "bar" ? [7, 7, 0, 0] : 0,
+          },
+          areaStyle:
+            seriesType === "line"
+              ? {
+                  opacity: 0.14,
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: "#22d3ee66" },
+                    { offset: 1, color: "#22d3ee00" },
+                  ]),
+                }
+              : undefined,
+        },
+      ],
+    };
+  }
+
+  function renderRelatedPerformancePayload(payload) {
+    relatedPerformancePayload = payload || null;
+    if (payload && payload.frequency) {
+      setRelatedPerformanceFrequencyDisplay(payload.frequency);
+    }
+    const rows = payload && Array.isArray(payload.rows) ? payload.rows : [];
+    const hasRows = rows.some(function (row) {
+      return row && row.value != null && Number.isFinite(Number(row.value));
+    });
+
+    const relatedChart = ensureRelatedPerformanceChart();
+    if (relatedChart && relatedPerformanceChartContainer) {
+      relatedPerformanceChartContainer.style.height = relatedPerformanceBaseChartHeight;
+      const option = buildRelatedPerformanceChartOption(payload);
+      if (option && hasRows) {
+        relatedChart.setOption(option, true);
+      } else {
+        relatedChart.clear();
+      }
+      relatedChart.resize();
+      resizeRelatedPerformanceChartSoon();
+    }
+
+    if (relatedPerformanceEmpty) {
+      relatedPerformanceEmpty.classList.toggle("hidden", hasRows);
+    }
+    renderRelatedPerformanceTable(payload);
+
+    const indicator = payload && payload.indicator ? payload.indicator : getRelatedPerformanceSelectedIndicator();
+    if (relatedPerformanceHelp) {
+      relatedPerformanceHelp.textContent = indicator
+        ? `Formula seleccionada: ${buildRelatedPerformanceIndicatorLabel(indicator)}`
+        : "Se muestra cuando el dataset seleccionado participa en una formula aprobada.";
+    }
+  }
+
+  function currentRelatedPerformanceRangeParams() {
+    const params = new URLSearchParams();
+    if (dateStartInput && dateStartInput.value) {
+      params.set("date_start", dateStartInput.value);
+    }
+    if (dateEndInput && dateEndInput.value) {
+      params.set("date_end", dateEndInput.value);
+    }
+    return params;
+  }
+
+  function loadRelatedPerformanceData() {
+    if (!hasRelatedPerformanceUi() || !relatedPerformanceIndicators.length) {
+      return;
+    }
+    const indicator = getRelatedPerformanceSelectedIndicator();
+    if (!indicator) {
+      hideRelatedPerformanceSection();
+      return;
+    }
+
+    const seq = ++relatedPerformanceRequestSeq;
+    const params = currentRelatedPerformanceRangeParams();
+    params.set("frequency", normalizeRelatedPerformanceFrequency(relatedPerformanceCurrentFrequency));
+
+    fetch(`/kpis/performance-data/${encodeURIComponent(indicator.id)}/?${params.toString()}`)
+      .then(function (resp) {
+        if (!resp.ok) {
+          throw new Error("Error al cargar formula relacionada");
+        }
+        return resp.json();
+      })
+      .then(function (payload) {
+        if (seq !== relatedPerformanceRequestSeq) {
+          return;
+        }
+        if (relatedPerformanceSection) {
+          relatedPerformanceSection.classList.remove("hidden");
+        }
+        resizeRelatedPerformanceChartSoon();
+        renderRelatedPerformancePayload(payload);
+      })
+      .catch(function (err) {
+        console.error(err);
+        if (seq !== relatedPerformanceRequestSeq) {
+          return;
+        }
+        renderRelatedPerformancePayload({ indicator: indicator, rows: [] });
+      });
+  }
+
+  function syncRelatedPerformanceFromDatasetPayload(datasetPayload) {
+    if (!hasRelatedPerformanceUi()) {
+      return;
+    }
+    const indicators = Array.isArray(datasetPayload && datasetPayload.related_performance_indicators)
+      ? datasetPayload.related_performance_indicators
+      : [];
+
+    if (!indicators.length) {
+      hideRelatedPerformanceSection();
+      return;
+    }
+
+    relatedPerformanceIndicators = indicators.slice();
+    populateRelatedPerformanceIndicators(relatedPerformanceIndicators);
+
+    const first = relatedPerformanceIndicators[0];
+    if (first) {
+      setRelatedPerformanceFrequencyDisplay(first.frequency);
+    }
+    if (relatedPerformanceSection) {
+      relatedPerformanceSection.classList.remove("hidden");
+    }
+    loadRelatedPerformanceData();
+  }
+
+  function buildRelatedPerformanceExportRows() {
+    const payload = relatedPerformancePayload;
+    if (!payload || !Array.isArray(payload.rows)) {
+      return { columns: [], rows: [] };
+    }
+    const rows = payload.rows.map(function (row) {
+      return [row.period_end || "", row.value != null ? row.value : "", row.status || ""];
+    });
+    return {
+      columns: ["Periodo", "Valor", "Estado"],
+      rows: rows,
+    };
+  }
+
+  function buildRelatedPerformanceExportBaseName() {
+    const indicator = getRelatedPerformanceSelectedIndicator() || (relatedPerformancePayload && relatedPerformancePayload.indicator);
+    const freq = normalizeRelatedPerformanceFrequency(relatedPerformanceCurrentFrequency);
+    const indicatorName = sanitizeFileName((indicator && (indicator.label || indicator.key)) || "formula");
+    const entityCode = sanitizeFileName((indicator && indicator.entity_code) || (currentData && currentData.dataset && currentData.dataset.entity_code) || "");
+    const range = [dateStartInput && dateStartInput.value, dateEndInput && dateEndInput.value].filter(Boolean).join("_a_");
+    return ["sicgad", entityCode, "formula", indicatorName, freq.toLowerCase(), sanitizeFileName(range)]
+      .filter(Boolean)
+      .join("_");
+  }
+
+  function exportRelatedPerformanceCsvFile() {
+    const data = buildRelatedPerformanceExportRows();
+    if (!data.rows.length) {
+      return;
+    }
+    const header = data.columns.map((col) => escapeCsv(col)).join(",");
+    const lines = data.rows.map(function (row) {
+      return row.map(escapeCsv).join(",");
+    });
+    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    downloadBlob(blob, `${buildRelatedPerformanceExportBaseName()}.csv`);
+  }
+
+  function exportRelatedPerformanceExcelFile() {
+    const data = buildRelatedPerformanceExportRows();
+    if (!data.rows.length) {
+      return;
+    }
+    ensureXlsxLoaded()
+      .then(function () {
+        if (!window.XLSX) {
+          throw new Error("XLSX no disponible para exportar.");
+        }
+        const worksheet = window.XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
+        const workbook = window.XLSX.utils.book_new();
+        window.XLSX.utils.book_append_sheet(workbook, worksheet, "Formula");
+        window.XLSX.writeFile(workbook, `${buildRelatedPerformanceExportBaseName()}.xlsx`);
+      })
+      .catch(function (err) {
+        console.error(err);
+      });
+  }
+
   function updateChart(rowsOverride) {
     if (!chart || !currentData) {
       return;
@@ -1400,11 +2201,13 @@ document.addEventListener("DOMContentLoaded", function () {
       if (chart) {
         chart.clear();
       }
+      closeKpiTableModal();
       updateAuthorityCards(null, []);
       if (tableContainer) {
         tableContainer.innerHTML = "";
       }
       updateExportState([]);
+      hideRelatedPerformanceSection();
       return;
     }
 
@@ -1425,9 +2228,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const filteredRows = getFilteredRows(data.rows || []);
         updateChart(filteredRows);
         renderTable(data, filteredRows);
+        syncKpiControlsPanelHeight();
+        syncRelatedPerformanceFromDatasetPayload(data);
       })
       .catch((err) => {
         console.error(err);
+        hideRelatedPerformanceSection();
       });
   }
 
@@ -1459,12 +2265,65 @@ document.addEventListener("DOMContentLoaded", function () {
   if (exportExcelButton) {
     exportExcelButton.addEventListener("click", exportExcel);
   }
+  if (kpiTableModalOpenButton) {
+    kpiTableModalOpenButton.addEventListener("click", openKpiTableModal);
+  }
+  if (kpiTableModalCloseButton) {
+    kpiTableModalCloseButton.addEventListener("click", closeKpiTableModal);
+  }
+  if (kpiTableModalBackdrop) {
+    kpiTableModalBackdrop.addEventListener("click", closeKpiTableModal);
+  }
+  if (relatedPerformanceTableModalOpenButton) {
+    relatedPerformanceTableModalOpenButton.addEventListener("click", openRelatedPerformanceTableModal);
+  }
+  if (relatedPerformanceTableModalCloseButton) {
+    relatedPerformanceTableModalCloseButton.addEventListener("click", closeRelatedPerformanceTableModal);
+  }
+  if (relatedPerformanceTableModalBackdrop) {
+    relatedPerformanceTableModalBackdrop.addEventListener("click", closeRelatedPerformanceTableModal);
+  }
+  if (tableToggleButton) {
+    tableToggleButton.addEventListener("click", function () {
+      applyKpiTableVisibility(!isKpiTableHidden);
+    });
+  }
+  if (relatedPerformanceIndicatorSelect) {
+    relatedPerformanceIndicatorSelect.addEventListener("change", function () {
+      const selected = getRelatedPerformanceSelectedIndicator();
+      if (selected) {
+        setRelatedPerformanceFrequencyDisplay(selected.frequency);
+      }
+      loadRelatedPerformanceData();
+    });
+  }
+  if (relatedPerformanceChartTypeSelect) {
+    relatedPerformanceChartTypeSelect.addEventListener("change", function () {
+      renderRelatedPerformancePayload(relatedPerformancePayload);
+    });
+  }
+  if (relatedPerformanceExportCsv) {
+    relatedPerformanceExportCsv.addEventListener("click", exportRelatedPerformanceCsvFile);
+  }
+  if (relatedPerformanceExportExcel) {
+    relatedPerformanceExportExcel.addEventListener("click", exportRelatedPerformanceExcelFile);
+  }
   if (presentationButton) {
     presentationButton.addEventListener("click", togglePresentationMode);
   }
   document.addEventListener("fullscreenchange", syncChartPresentationUi);
   document.addEventListener("webkitfullscreenchange", syncChartPresentationUi);
-  window.addEventListener("resize", resizeChartSoon);
+  document.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener("resize", function () {
+    resizeChartSoon();
+    if (relatedPerformanceChart) {
+      window.requestAnimationFrame(function () {
+        relatedPerformanceChart.resize();
+      });
+    }
+    syncKpiControlsPanelHeight();
+    syncYFieldBoxHeight();
+  });
 
   const appliedFromUrl = applyDatasetFromUrl();
   if (!appliedFromUrl && !instanceSelect.value) {
@@ -1476,7 +2335,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
   setDatasetInUrl(instanceSelect.value);
+  if (tableToggleButton) {
+    applyKpiTableVisibility(getStoredKpiTableHidden());
+  } else {
+    updateExportState([]);
+  }
+  setRelatedPerformanceFrequencyDisplay("MONTHLY");
+  hideRelatedPerformanceSection();
   loadInstanceData();
   syncChartPresentationUi();
+  syncKpiControlsPanelHeight();
+  syncYFieldBoxHeight();
 
 });

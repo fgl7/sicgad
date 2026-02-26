@@ -534,7 +534,11 @@ def _materialization_frequency_for_indicator(indicator: PerformanceIndicator) ->
 
 def _derived_dataset_name(indicator: PerformanceIndicator) -> str:
     base_label = (indicator.label or indicator.key or "formula").strip()
-    return f"Desempeno derivado {base_label} ({indicator.key})"[:255]
+    if not base_label:
+        base_label = "formula"
+    if base_label.lower().startswith("formula-"):
+        return base_label[:255]
+    return f"formula-{base_label}"[:255]
 
 
 def ensure_indicator_output_dataset(

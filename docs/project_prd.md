@@ -195,6 +195,14 @@ Reglas en backend:
 
 Detalle de series:
 - Los datos publicados y validados convergen en la misma base logica (`PublishedDataPoint`) y se consumen desde alli para charts/tablas.
+- En `charts/charts_authority/charts_external`, el selector principal prioriza datasets fuente con datos y excluye datasets derivados de formulas (`performance`) para evitar duplicidad en consumo.
+- Si el dataset seleccionado participa en una formula `APPROVED`, `charts.html` y `charts_authority.html` muestran un bloque contextual de "formula relacionada" dentro del mismo card del chart principal:
+  - segundo chart de formula debajo del chart principal
+  - panel derecho propio (formula, tipo de grafico, frecuencia informativa)
+  - frecuencia mostrada como texto (sin selector desplegable)
+- `charts_external.html` (visualizador externo mensual) no expone bloque de formula relacionada.
+- Las tablas de detalle del KPI principal y de la formula relacionada se abren via boton `Mostrar tabla` en modales con export `CSV/EXCEL`.
+- El panel derecho del chart principal usa ajuste dinamico de altura + scroll interno en `Indicadores (Eje Y)` para preservar visibilidad del boton de tabla.
 
 ### Modulo de desempeno / formulas (admin)
 Objetivo funcional actual:
@@ -232,6 +240,7 @@ Estado implementado (MVP funcional):
   - soporta progreso visual real (AJAX + polling) para procesos largos de materializacion
 - Materializacion crea/actualiza:
   - `DatasetType` derivado asociado a la formula
+  - nombre visible corto del derivado con formato `formula-<nombre_formula>` (evita nombres largos en lista de esquemas)
   - columnas de salida (valor y fecha/periodo segun implementacion actual)
   - `DatasetInstance` + `PublishedDataPoint`
   - en dataset derivado, la fecha materializada del resultado corresponde al `period_end` del periodo calculado
@@ -332,9 +341,8 @@ Rendimiento y UX reciente (charts):
   - abre fullscreen del chart
   - redimensiona ECharts al entrar/salir
   - ubicacion visual ajustada al extremo derecho superior del stage para no tapar info del chart
-- En `kpis/charts.html` existe selector global `Operativo/Presentacion` que sincroniza modo visual entre chart principal y chart de desempeno.
-- El selector global de charts persiste en `localStorage` (`sicgad_charts_global_view_mode`).
-- Accion `Restaurar vista` (en `kpis/charts.html`) devuelve ambos charts a modo operativo y cierra fullscreen si estaba activo.
+- En la UI actual no hay selector global `Operativo/Presentacion`; el control visible es local al chart principal.
+- `charts_authority.html` fue alineado estructuralmente con `charts.html` en el bloque de charts para reducir divergencias visuales del panel derecho.
 - Al entrar a fullscreen, cada chart muestra ayuda breve: `Presiona Esc para salir de presentacion`.
 
 ## 9. Sidebar y contexto global
@@ -373,7 +381,9 @@ Plantillas publicas y base visual:
   - `system_messages`
   - otros bloques auxiliares de estilo/transicion
 - Se movieron fondos decorativos `position: fixed` (landing/login) fuera de `.app-shell` para evitar recortes visuales cuando hay `transform` durante transiciones.
+- `static/css/login.css` aplica override local de `.app-shell` en login para evitar que reglas internas (`height:100vh` / `overflow:hidden`) rompan el centrado vertical.
 - Transicion de rutas unificada en `base.html` con estilo `fade-through` neutro (sin "flash" azul).
+- En transiciones `pane-only/query`, la animacion se aplica al contenido (`.route-content-pane`) y no al contenedor con topbar, evitando parpadeo visual del topbar.
 - Layout interno con scroll contenido en `.route-main-pane`:
   - sidebar y topbar se mantienen visualmente fijos
   - `body` sin scroll vertical en paginas internas (`saas-hybrid`) para evitar doble scrollbar
@@ -463,6 +473,11 @@ Funciona y se usa activamente:
 - Redireccion de `/home/` a `/kpis/` para visualizadores puros.
 - Limpieza inmediata post-publicacion/materializacion + limpieza periodica por retencion en media.
 - KPIs de dataset con ventana temporal reciente (3 meses) cuando aplica columna fecha.
+- Charts KPI (admin y autoridad MHE) con bloque contextual de formula relacionada cuando el dataset fuente participa en una formula aprobada:
+  - segundo chart dentro del mismo card del KPI principal
+  - panel derecho propio con frecuencia informativa
+  - tablas de detalle (KPI principal y formula) en modales con export `CSV/EXCEL`
+- Selector principal de KPIs excluye datasets derivados de formulas para mantener el consumo sobre datasets fuente.
 - Modulo `performance/formulas` con MVP funcional para admin:
   - creacion de formulas por entidad
   - seleccion de columnas desde esquemas aprobados
@@ -470,6 +485,7 @@ Funciona y se usa activamente:
   - expresion manual con aliases (`A`, `B`, `C`)
   - preview (grafico + tabla) sobre periodos comunes con datos completos
   - aprobacion y materializacion a dataset derivado en BD con progreso visual real
+  - nombre corto de dataset derivado materializado (`formula-<nombre_formula>`)
   - auto-recalculo/rematerializacion para formulas aprobadas al publicarse datos fuente
   - acciones `Ver` y `Nueva formula`, limpieza del builder tras aprobacion exitosa
 - Landing institucional con CTA de acceso refinado (una sola flecha) y favicon visible.
@@ -527,3 +543,94 @@ Requiere refactor planificado:
 ---
 
 Este documento reemplaza versiones anteriores mas generales. Esta escrito para operar y evolucionar el estado real actual del proyecto, no el diseno ideal historico.
+
+## 17. Modulo `projects` (estado investigado y direccion acordada)
+Estado actual (hallazgos):
+- La app Django `projects` existe y esta instalada en `config/settings.py`.
+- Tiene implementacion real (no stub): modelos, formularios, vistas, admin y templates:
+  - `projects/models.py`
+  - `projects/forms.py`
+  - `projects/views.py`
+  - `projects/urls.py`
+  - `projects/admin.py`
+  - `templates/projects/*`
+- Incluye:
+  - CRUD de `Project` (admin operativo)
+  - CRUD de `ProjectReportConfig` (admin operativo)
+  - `report_list` / `report_detail` para usuarios autenticados con scope por memberships
+- `report_detail` consume datos desde `DatasetInstance` / `PublishedDataPoint` y muestra curva programada vs ejecutada + resumen de proyecto.
+
+Problemas de integracion detectados:
+- La app `projects` NO esta montada en rutas principales (`config/urls.py` no incluye `path("projects/", include("projects.urls"))`).
+- `projects` NO aparece en el sidebar base ni en el sidebar de autoridad:
+  - `templates/partials/sidebar.html`
+  - `templates/partials/sidebar_authority_mhe.html`
+- Resultado: aunque exista codigo funcional, el modulo no esta expuesto en la navegacion principal.
+
+Riesgos/observaciones de permisos detectados (importante):
+- El acceso a `report_list/report_detail` usa `Membership` por `entity` (bien), pero hay huecos de permisos en escenarios de roles mixtos.
+- Riesgo de borradores (`source=draft`):
+  - hoy se habilita por tener cualquier rol `LOADER` o `VALIDATOR` activo, aunque el acceso al proyecto venga por otro rol (ej. `VIEWER` en otra entidad).
+  - caso critico a cubrir: usuario con `VIEWER(entity A)` + `LOADER(entity B)` podria ver borradores de un proyecto de A.
+- Riesgo de scope de datasets:
+  - `ProjectReportConfig` valida principalmente por categoria del proyecto.
+  - Falta endurecer regla para exigir que los datasets configurados pertenezcan a entidades incluidas en `project.entities`.
+- `projects/tests.py` esta vacio (sin pruebas automatizadas de permisos/roles).
+
+Decision arquitectonica acordada (para reconstruccion):
+- NO convertir `Project` en un nuevo nivel oficial de `structure` por ahora.
+- Mantener dominio principal del sistema en `Entity`.
+- Reconstruir `projects` como modulo de negocio anclado a `Entity`/`Category` (opcion 3):
+  - `Project` sigue siendo objeto de negocio (no nivel estructural)
+  - permisos y alcance se resuelven via `Membership` por entidad
+  - integracion con datasets/ingest/validation existentes
+
+Lineamientos de reconstruccion de `projects` (opcion 3):
+- Mantener jerarquia oficial:
+  - `Sector > Subsector > Category > Entity`
+- `Project`:
+  - pertenece a una `Category`
+  - se asocia a una o varias `Entity` de esa categoria
+- Endurecer validaciones:
+  - todas las `entities` del proyecto deben pertenecer a `Project.category`
+  - datasets de `ProjectReportConfig` deben pertenecer a entidades incluidas en `project.entities`
+- Endurecer permisos:
+  - acceso a reportes por interseccion real `Membership.entity` vs `Project.entities`
+  - visibilidad de `draft` por rol + entidad efectiva del proyecto (no por rol global mezclado)
+- Integracion UX/navegacion:
+  - exponer `projects` en `config/urls.py`
+  - agregar entradas de sidebar segun rol/scope
+  - admin: gestion de proyectos + configuracion de reportes
+  - loader/validator/viewer: acceso a reportes (segun memberships)
+
+Simulacion funcional objetivo (flujo total resumido):
+1. Admin crea/ajusta niveles (`Sector/Subsector/Category/Entity`) en `structure`.
+2. Admin crea usuarios y `Membership` por `Entity` (`ADMIN`, `LOADER`, `VALIDATOR`, `VIEWER`).
+3. Loader/Admin crea y aprueba esquemas (`DatasetType`) por entidad para:
+   - resumen de proyecto
+   - curva programada
+   - curva ejecutada (semanal o mensual)
+4. Admin crea `Project` (catalogo de negocio) con:
+   - `category`
+   - `entities` de esa categoria
+   - metadatos estaticos (nombre, fechas, ubicacion, ejecutor, presupuesto)
+5. Admin crea `ProjectReportConfig` vinculando datasets validos del proyecto.
+6. Loader carga datos en `ingest` para los datasets del proyecto.
+7. Validator aprueba/publica en `validation`; se materializan `PublishedDataPoint`.
+8. Usuarios con scope (admin/loader/validator/viewer) acceden a `projects:report_list`.
+9. En `projects:report_detail`:
+   - `VIEWER` ve solo `published`
+   - `LOADER/VALIDATOR` (con entidad efectiva del proyecto) pueden ver `draft`
+   - `ADMIN` ve todo
+10. Operacion continua semanal/mensual:
+   - carga -> validacion -> publicacion -> consulta ejecutiva del reporte
+
+Casos de prueba prioritarios para proxima implementacion:
+- `VIEWER(entity A)` solo ve reportes de proyectos con `entities` que incluyan A.
+- `LOADER(entity A)` / `VALIDATOR(entity A)` pueden ver `draft` solo en proyectos de A.
+- `VIEWER(A) + LOADER(B)` NO debe ver `draft` de proyectos de A por el rol `LOADER` de B.
+- `VIEWER global (entity=None)` comportamiento explicitamente definido y probado.
+- Configuracion invalida de reporte (dataset de entidad fuera de `project.entities`) debe bloquearse.
+
+Nota operativa:
+- Antes de reconstruir `projects`, conservar este modulo como "parcialmente integrado" (codigo util pero no expuesto) para evitar abrir permisos inseguros por error al solo agregar rutas/sidebar sin endurecer validaciones.

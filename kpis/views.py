@@ -244,6 +244,7 @@ def charts(request):
 
     datasets = DatasetType.objects.select_related("entity")
     datasets = _apply_membership_scope(user, is_admin, datasets)
+    datasets = datasets.exclude(derived_performance_indicators__isnull=False)
     if is_external_monthly_viewer:
         datasets = datasets.filter(validation_frequency=DatasetType.MONTHLY)
     authority_tree_datasets = datasets
@@ -308,13 +309,6 @@ def charts(request):
     can_see_drafts = (is_admin or is_loader or is_validator) and not is_viewer
 
     performance_indicators = PerformanceIndicator.objects.none()
-    if is_admin:
-        performance_indicators = (
-            PerformanceIndicator.objects.select_related("entity")
-            .filter(is_active=True, results__isnull=False)
-            .distinct()
-            .order_by("entity__code", "label", "key")
-        )
 
     template_name = "kpis/charts.html"
     if is_external_monthly_viewer:
@@ -386,7 +380,8 @@ def dataset_data(request, dataset_id: int):
 
     cache_key = None
     if source == "published":
-        cache_key = f"kpis:dataset-data:published:v2:{dataset.id}"
+        allow_related_performance = not is_external_monthly_viewer
+        cache_key = f"kpis:dataset-data:published:v3:{dataset.id}:rp{1 if allow_related_performance else 0}"
         cached_payload = cache.get(cache_key)
         if cached_payload is not None:
             return JsonResponse(cached_payload)
@@ -569,6 +564,36 @@ def dataset_data(request, dataset_id: int):
         "rows": rows,
     }
 
+    related_performance_indicators = []
+    if not is_external_monthly_viewer:
+        related_qs = (
+            PerformanceIndicator.objects.select_related("entity")
+            .filter(
+                entity_id=dataset.entity_id,
+                is_active=True,
+                status=PerformanceIndicator.STATUS_APPROVED,
+                inputs__column__dataset_type_id=dataset.id,
+                inputs__is_active=True,
+                results__isnull=False,
+            )
+            .distinct()
+            .order_by("label", "key")
+        )
+        related_performance_indicators = [
+            {
+                "id": ind.id,
+                "key": ind.key,
+                "label": ind.label or ind.key,
+                "unit": ind.unit or "",
+                "entity_code": ind.entity.code if ind.entity_id else "",
+                "entity_name": ind.entity.name if ind.entity_id else "",
+                "frequency": ind.frequency,
+            }
+            for ind in related_qs
+        ]
+
+    data["related_performance_indicators"] = related_performance_indicators
+
     if cache_key:
         cache.set(cache_key, data, timeout=180)
 
@@ -579,14 +604,33 @@ def dataset_data(request, dataset_id: int):
 def performance_data(request, indicator_id: int):
     user = request.user
     is_admin, is_loader, is_validator, is_viewer = _get_role_flags(user)
-
-    if not is_admin:
-        raise Http404
-
-    indicator = get_object_or_404(PerformanceIndicator.objects.select_related("entity"), pk=indicator_id)
+    viewer_profile_type = _get_viewer_profile_type(user)
+    is_external_monthly_viewer = (
+        is_viewer
+        and viewer_profile_type == AccountProfile.VIEWER_EXTERNAL_MONTHLY
+        and not is_admin
+        and not is_loader
+        and not is_validator
+    )
 
     if not (is_admin or is_loader or is_validator or is_viewer):
         raise Http404
+    if is_external_monthly_viewer:
+        raise Http404
+
+    indicator = get_object_or_404(
+        PerformanceIndicator.objects.select_related("entity"),
+        pk=indicator_id,
+        is_active=True,
+        status=PerformanceIndicator.STATUS_APPROVED,
+    )
+
+    if not is_admin:
+        memberships = Membership.objects.filter(user=user, is_active=True)
+        entity_ids = list(memberships.exclude(entity__isnull=True).values_list("entity_id", flat=True))
+        has_global = memberships.filter(entity__isnull=True).exists()
+        if not (has_global or (entity_ids and indicator.entity_id in entity_ids)):
+            raise Http404
 
     frequency = (request.GET.get("frequency") or PerformanceIndicatorResult.FREQ_MONTHLY).upper()
     if frequency not in (

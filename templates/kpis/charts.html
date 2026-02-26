@@ -50,35 +50,9 @@
     </div>
 </section>
 
-{% if performance_indicators %}
-<section class="glass-effect mb-6 px-4 sm:px-5 py-3 relative overflow-hidden">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <p class="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Modo global de visualizaci&oacute;n</p>
-            <p class="text-xs text-slate-300">Sincroniza la presentaci&oacute;n visual del chart principal y el chart de desempe&ntilde;o.</p>
-        </div>
-        <div class="w-full sm:w-auto sm:min-w-[250px] min-w-0">
-            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading text-[11px]">
-                Vista de charts
-            </label>
-            <div class="flex items-center gap-2">
-                <select id="charts-global-view-mode-select" class="w-full h-10">
-                    <option value="operativo">Operativo</option>
-                    <option value="presentacion">Presentaci&oacute;n</option>
-                </select>
-                <button id="charts-global-reset-view-btn" type="button"
-                    class="h-10 px-3 rounded-lg border border-white/10 bg-black/20 text-slate-200 text-[11px] font-semibold hover:bg-white/5 transition-colors whitespace-nowrap">
-                    Restaurar vista
-                </button>
-            </div>
-        </div>
-    </div>
-</section>
-{% endif %}
-
 <section class="glass-effect mb-6 p-4 sm:p-6 relative overflow-hidden">
     <div class="pointer-events-none absolute -bottom-20 -right-16 h-44 w-44 rounded-full bg-blue-500/10 blur-3xl"></div>
-    <div class="grid gap-6 md:grid-cols-12">
+    <div class="grid gap-4 md:grid-cols-12">
         <div class="md:col-span-8 lg:col-span-9 xl:col-span-10 min-w-0">
             <div id="kpi-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-3 sm:p-4 overflow-hidden relative min-w-0">
                 <button id="kpi-chart-presentation-btn" type="button"
@@ -89,9 +63,9 @@
                 <div id="kpi-chart" class="w-full kpi-chart-canvas"></div>
             </div>
         </div>
-        <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 min-w-0 space-y-6 text-sm">
+        <div id="kpi-chart-controls-panel" class="md:col-span-4 lg:col-span-3 xl:col-span-2 min-w-0 text-sm flex flex-col gap-2.5 min-h-0 overflow-hidden">
             <div>
-                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de
+                <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de
                     gr&aacute;fico</label>
                 <select id="kpi-chart-type-select" class="w-full">
                     <option value="line">L&iacute;nea suave</option>
@@ -100,245 +74,164 @@
                 </select>
             </div>
             <div>
-                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje
+                <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Eje
                     X</label>
                 <select id="kpi-x-field-select" class="w-full"></select>
             </div>
             <div>
-                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Presentaci&oacute;n</label>
+                <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Presentaci&oacute;n</label>
                 <label
-                    class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-slate-200 cursor-pointer">
+                    class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] text-slate-200 cursor-pointer">
                     <span class="font-medium">Modo ejecutivo</span>
                     <input id="kpi-executive-mode-toggle" type="checkbox"
                         class="size-4 rounded border-slate-600 bg-black/40 text-cyan-400 focus:ring-cyan-500/20" />
                 </label>
             </div>
-            <div>
-                <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores
+            <div data-kpi-y-field-section class="flex min-h-0 flex-col">
+                <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores
                     (Eje Y)</label>
                 <div id="kpi-y-field-box"
-                    class="rounded-xl border border-white/10 bg-black/20 p-3 grid gap-2.5 max-h-64 overflow-auto text-[11px]">
+                    class="rounded-xl border border-white/10 bg-black/20 p-2.5 grid gap-2 overflow-y-auto overflow-x-hidden text-[11px] min-h-0">
                 </div>
             </div>
-        </div>
-    </div>
-</section>
-
-{% if performance_indicators %}
-<section class="glass-effect mb-6 px-4 sm:px-6 py-4 relative overflow-hidden">
-    <div class="grid gap-6 text-xs md:grid-cols-12">
-        <div class="md:col-span-4 lg:col-span-4 min-w-0">
-            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Indicadores de
-                desempe&ntilde;o</label>
-            <div id="performance-indicator-box"
-                class="rounded-xl border border-white/10 bg-black/20 p-3 grid gap-2.5 max-h-32 overflow-auto text-[11px]">
-                {% for ind in performance_indicators %}
-                <label
-                    class="flex items-center gap-3 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer group">
-                    <input type="checkbox" value="{{ ind.id }}"
-                        class="size-4 rounded-md border-slate-600 bg-black/40 text-amber-500 focus:ring-amber-500/20" {% if forloop.first %}checked{% endif %} />
-                    <span class="font-medium">[{{ ind.entity.code|default:ind.entity.name }}] {{ ind.label }}</span>
-                </label>
-                {% endfor %}
-            </div>
-        </div>
-        <div class="md:col-span-2 min-w-0">
-            <label
-                class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Visualizaci&oacute;n</label>
-            <select id="performance-chart-type-select" class="w-full">
-                <option value="line">Tendencia (L&iacute;nea)</option>
-                <option value="bar">Comparativa (Barras)</option>
-                <option value="stacked_bar">Composici&oacute;n</option>
-            </select>
-            <label
-                class="mt-3 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] text-slate-200 cursor-pointer">
-                <span class="font-medium">Modo ejecutivo</span>
-                <input id="performance-executive-mode-toggle" type="checkbox"
-                    class="size-4 rounded border-slate-600 bg-black/40 text-amber-500 focus:ring-amber-500/20" />
-            </label>
-        </div>
-        <div class="md:col-span-2 min-w-0">
-            <label
-                class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Granularidad</label>
-            <select id="performance-frequency-select" class="w-full">
-                <option value="MONTHLY">Vista Mensual</option>
-                <option value="DAILY">Vista Diaria</option>
-            </select>
-        </div>
-        <div class="md:col-span-4 lg:col-span-4 min-w-0">
-            <label class="block mb-2 text-slate-400 font-semibold uppercase tracking-wider font-heading">Periodo de
-                an&aacute;lisis</label>
-            <div class="flex flex-col gap-3 sm:flex-row">
-                <div class="flex-1">
-                    <input type="date" id="performance-date-start" class="w-full" />
-                </div>
-                <div class="flex-1">
-                    <input type="date" id="performance-date-end" class="w-full" />
-                </div>
-                <button id="performance-date-apply" class="btn-primary" type="button">
-                    Aplicar
+            <div>
+                <button id="kpi-table-modal-open-btn" type="button"
+                    class="w-full h-10 rounded-xl border border-white/10 bg-black/20 text-slate-200 text-[11px] font-semibold hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    Mostrar tabla
                 </button>
             </div>
         </div>
+
+        <div id="related-performance-section" class="mt-3 border-t border-white/5 pt-4 text-sm hidden md:col-span-12" style="grid-column: 1 / -1;">
+            <div class="grid gap-4 md:grid-cols-12">
+                <div class="md:col-span-8 lg:col-span-9 xl:col-span-10 min-w-0">
+                    <div id="related-performance-chart-stage" class="w-full rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-3 sm:p-4 overflow-hidden relative min-w-0">
+                        <div id="related-performance-chart" class="w-full performance-chart-canvas"></div>
+                    </div>
+                    <div id="related-performance-empty" class="mt-3 text-[11px] text-slate-500 italic hidden text-center">
+                        No se encontraron resultados de la f&oacute;rmula para el periodo seleccionado.
+                    </div>
+                </div>
+                <div class="md:col-span-4 lg:col-span-3 xl:col-span-2 min-w-0 text-sm flex flex-col gap-2.5 min-h-0 overflow-hidden">
+                    <div>
+                        <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">F&oacute;rmula</label>
+                        <select id="related-performance-indicator-select" class="w-full h-10"></select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Tipo de gr&aacute;fico</label>
+                        <select id="related-performance-chart-type-select" class="w-full h-10">
+                            <option value="line">L&iacute;nea</option>
+                            <option value="bar">Barras</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Frecuencia</label>
+                        <p id="related-performance-frequency-info" class="min-h-10 flex items-center text-sm text-slate-200">
+                            <span id="related-performance-frequency-badge" class="font-semibold text-cyan-200">
+                                --
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <button id="related-performance-table-modal-open-btn" type="button"
+                            class="w-full h-10 rounded-xl border border-white/10 bg-black/20 text-slate-200 text-[11px] font-semibold hover:bg-white/5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                            Mostrar tabla
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 min-w-0 border-t border-white/5 pt-2.5">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 class="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2 font-heading">
+                        <span class="w-1.5 h-5 bg-cyan-400 rounded-full"></span>
+                        Gr&aacute;fico de F&oacute;rmula Relacionada
+                    </h2>
+                    <p id="related-performance-help"
+                        class="max-w-full sm:max-w-[70%] rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] text-slate-400 truncate">
+                        Se muestra cuando el dataset seleccionado participa en una f&oacute;rmula aprobada.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
-<section class="glass-effect mb-6 p-4 sm:p-6">
-    <div id="performance-chart-stage" class="rounded-2xl border border-cyan-400/20 bg-black/20 shadow-inner p-3 sm:p-4 overflow-hidden relative min-w-0">
-        <button id="performance-chart-presentation-btn" type="button"
-            style="right: 0.75rem; top: 0.75rem;"
-            class="absolute z-10 px-3 py-1.5 rounded-lg border border-amber-300/20 bg-slate-950/75 text-amber-200 text-[10px] font-semibold tracking-wide uppercase hover:bg-slate-900/90 hover:border-amber-300/35 transition-colors">
-            Presentaci&oacute;n
-        </button>
-        <div id="performance-chart" class="w-full performance-chart-canvas"></div>
-    </div>
-    <div id="performance-chart-empty" class="mt-4 text-[11px] text-slate-500 italic hidden text-center">
-        No se encontraron registros de desempe&ntilde;o para el periodo seleccionado.
-    </div>
-</section>
-{% endif %}
-
-<section class="glass-effect p-4 sm:p-6 text-sm">
-    <div class="grid gap-6 lg:grid-cols-12">
-        <div
-            class="{% if performance_indicators %}lg:col-span-6{% else %}lg:col-span-12{% endif %} min-w-0 rounded-2xl border border-white/5 bg-black/20 p-4 sm:p-5">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-                <h2 class="text-base font-bold text-white tracking-tight flex items-center gap-2 font-heading">
-                    <span class="w-1.5 h-6 bg-amber-500 rounded-full"></span>
-                    Detalle de Datos
-                </h2>
-                <div class="flex flex-wrap items-center gap-3">
+<div id="kpi-table-modal" class="fixed inset-0 z-[100050] hidden" aria-hidden="true">
+    <div id="kpi-table-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex min-h-full items-center justify-center p-3 sm:p-6">
+        <div id="kpi-table-modal-panel"
+            class="w-full max-w-6xl rounded-2xl border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/40">
+            <div class="flex items-center justify-between gap-3 border-b border-white/10 px-4 sm:px-5 py-3">
+                <h3 class="text-sm sm:text-base font-bold text-white font-heading">Detalle de Datos</h3>
+                <div class="flex items-center gap-2">
                     <button id="kpi-export-csv" type="button"
-                        class="px-4 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                         disabled>
                         CSV
                     </button>
                     <button id="kpi-export-excel" type="button"
-                        class="px-4 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px] hover:bg-emerald-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-bold text-[10px] hover:bg-emerald-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                         disabled>
                         EXCEL
                     </button>
+                    <button id="kpi-table-modal-close-btn" type="button"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-slate-300 hover:bg-white/5 transition-colors"
+                        aria-label="Cerrar tabla">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
-            <div id="kpi-table-container"
-                class="max-h-96 overflow-auto border border-white/5 rounded-xl bg-transparent transition-all">
+            <div class="p-4 sm:p-5">
+                <div id="kpi-table-container"
+                    class="max-h-[70vh] overflow-auto border border-white/5 rounded-xl bg-transparent transition-all"></div>
             </div>
         </div>
-
-        {% if performance_indicators %}
-        <div class="rounded-xl border border-white/5 bg-black/20 p-3 lg:col-span-3 min-w-0">
-            <h2 class="text-sm font-semibold text-slate-300 mb-2 font-heading">Desempe&ntilde;o diario</h2>
-            <div id="performance-table-daily"
-                class="max-h-80 overflow-auto border border-white/5 rounded-lg bg-transparent"></div>
-        </div>
-
-        <div class="rounded-xl border border-white/5 bg-black/20 p-3 lg:col-span-3 min-w-0">
-            <h2 class="text-sm font-semibold text-slate-300 mb-2 font-heading">Desempe&ntilde;o mensual</h2>
-            <div id="performance-table-monthly"
-                class="max-h-80 overflow-auto border border-white/5 rounded-lg bg-transparent"></div>
-        </div>
-        {% endif %}
     </div>
-</section>
+</div>
+
+<div id="related-performance-table-modal" class="fixed inset-0 z-[100051] hidden" aria-hidden="true">
+    <div id="related-performance-table-modal-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative z-10 flex min-h-full items-center justify-center p-3 sm:p-6">
+        <div id="related-performance-table-modal-panel"
+            class="w-full max-w-5xl rounded-2xl border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/40">
+            <div class="flex items-center justify-between gap-3 border-b border-white/10 px-4 sm:px-5 py-3">
+                <h3 class="text-sm sm:text-base font-bold text-white font-heading">Detalle de la F&oacute;rmula</h3>
+                <div class="flex items-center gap-2">
+                    <button id="related-performance-export-csv" type="button"
+                        class="px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-bold text-[10px] hover:bg-indigo-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled>
+                        CSV
+                    </button>
+                    <button id="related-performance-export-excel" type="button"
+                        class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-bold text-[10px] hover:bg-emerald-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        disabled>
+                        EXCEL
+                    </button>
+                    <button id="related-performance-table-modal-close-btn" type="button"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-slate-300 hover:bg-white/5 transition-colors"
+                        aria-label="Cerrar tabla de formula">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 sm:p-5">
+                <div id="related-performance-table-container"
+                    class="max-h-[70vh] overflow-auto border border-white/5 rounded-xl bg-transparent transition-all"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="{% static 'js/kpis_charts.js' %}?v=21"></script>
-{% if performance_indicators %}
-<script src="{% static 'js/performance_charts.js' %}?v=8"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const globalSelect = document.getElementById('charts-global-view-mode-select');
-    const resetViewButton = document.getElementById('charts-global-reset-view-btn');
-    const kpiToggle = document.getElementById('kpi-executive-mode-toggle');
-    const performanceToggle = document.getElementById('performance-executive-mode-toggle');
-    const GLOBAL_VIEW_MODE_STORAGE_KEY = 'sicgad_charts_global_view_mode';
-
-    if (!globalSelect || !kpiToggle || !performanceToggle) {
-        return;
-    }
-
-    function getStoredGlobalMode() {
-        try {
-            const value = window.localStorage.getItem(GLOBAL_VIEW_MODE_STORAGE_KEY);
-            return value === 'presentacion' || value === 'operativo' ? value : null;
-        } catch (_err) {
-            return null;
-        }
-    }
-
-    function setStoredGlobalMode(value) {
-        try {
-            window.localStorage.setItem(GLOBAL_VIEW_MODE_STORAGE_KEY, value);
-        } catch (_err) {
-            // ignore storage restrictions
-        }
-    }
-
-    function setToggle(toggle, checked) {
-        if (!toggle || toggle.checked === checked) {
-            return;
-        }
-        toggle.checked = checked;
-        toggle.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    function exitFullscreenIfNeeded() {
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            return;
-        }
-        try {
-            if (typeof document.exitFullscreen === 'function') {
-                document.exitFullscreen();
-                return;
-            }
-            if (typeof document.webkitExitFullscreen === 'function') {
-                document.webkitExitFullscreen();
-            }
-        } catch (_err) {
-            // ignore fullscreen API errors
-        }
-    }
-
-    function syncGlobalSelectFromToggles() {
-        if (kpiToggle.checked && performanceToggle.checked) {
-            globalSelect.value = 'presentacion';
-            setStoredGlobalMode('presentacion');
-            return;
-        }
-        globalSelect.value = 'operativo';
-        setStoredGlobalMode('operativo');
-    }
-
-    globalSelect.addEventListener('change', function () {
-        const useExecutive = globalSelect.value === 'presentacion';
-        setStoredGlobalMode(globalSelect.value);
-        setToggle(kpiToggle, useExecutive);
-        setToggle(performanceToggle, useExecutive);
-    });
-
-    if (resetViewButton) {
-        resetViewButton.addEventListener('click', function () {
-            globalSelect.value = 'operativo';
-            globalSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            exitFullscreenIfNeeded();
-        });
-    }
-
-    kpiToggle.addEventListener('change', syncGlobalSelectFromToggles);
-    performanceToggle.addEventListener('change', syncGlobalSelectFromToggles);
-
-    const storedMode = getStoredGlobalMode();
-    if (storedMode === 'presentacion' || storedMode === 'operativo') {
-        globalSelect.value = storedMode;
-        const useExecutive = storedMode === 'presentacion';
-        setToggle(kpiToggle, useExecutive);
-        setToggle(performanceToggle, useExecutive);
-    } else {
-        syncGlobalSelectFromToggles();
-    }
-});
-</script>
-{% endif %}
+<script src="{% static 'js/kpis_charts.js' %}?v=31"></script>
 {% endblock %}
+
+

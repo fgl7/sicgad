@@ -15,6 +15,7 @@
     {% url 'home' as home_url %}
     {% url 'kpis_charts' as kpis_url %}
     {% url 'audit:log_list' as audit_url %}
+    {% url 'projects:report_list' as project_reports_url %}
     <div class="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-4 mb-2">Navegación jerárquica</div>
     <div class="space-y-1.5">
       {% if authority_viewer_has_global_scope %}
@@ -93,6 +94,14 @@
         {% endfor %}
       {% endif %}
     </div>
+
+    <a href='{{ project_reports_url }}'
+      class='sidebar-link flex items-center gap-3 px-3 py-2.5 mt-6 transition-all group {% if request.path == project_reports_url or '/projects/reports/' in request.path and '/projects/reports/configs/' not in request.path %}active{% endif %}'>
+      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-6a2 2 0 012-2h6m0 0l-3-3m3 3l-3 3M5 3h9a2 2 0 012 2v3M5 21h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+      </svg>
+      <span class="font-medium">Reportes de Proyectos</span>
+    </a>
 
     <a href='{{ audit_url }}'
       class='sidebar-link flex items-center gap-3 px-3 py-2.5 mt-6 transition-all group {% if request.path|slice:":7" == "/audit/" %}active{% endif %}'>

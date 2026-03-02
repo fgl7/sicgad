@@ -5,190 +5,301 @@
 
 {% block content %}
 <div class="space-y-6 fade-in">
-    <!-- Analysis Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
-        <div class="flex gap-4 items-center">
-            <div class="w-16 h-16 rounded-[2rem] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+    <div class="glass-card rounded-[2rem] p-5 border-white/5 bg-white/[0.02]">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+            <div class="space-y-2">
+                <p class="text-[10px] font-black uppercase tracking-[0.35em] {% if report_variant == 'agreement' %}text-sky-400{% else %}text-emerald-400{% endif %}">
+                    {% if report_variant == "agreement" %}Convenios Estratégicos{% else %}Seguimiento de Proyectos{% endif %}
+                </p>
+                <h1 class="text-2xl md:text-3xl font-header font-black text-white tracking-tight">{{ project.name }}</h1>
+                <p class="text-sm text-slate-400">{{ config.name }}</p>
+                {% if report_date %}
+                <p class="text-[11px] text-slate-500 uppercase tracking-widest">Corte: {{ report_date|date:"d/m/Y" }}</p>
+                {% endif %}
             </div>
-            <div>
-                <p class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.4em] mb-1">INTELIGENCIA DE PROYECTOS</p>
-                <h2 class="text-3xl font-header font-black text-white tracking-tighter leading-none">{{ project.name }}</h2>
-                <p class="text-slate-500 text-sm font-medium mt-1">{{ config.name }}</p>
-            </div>
-        </div>
 
-        <!-- Dynamic Controls -->
-        <div class="glass-card rounded-[2rem] p-4 border-white/5 bg-white/[0.01]">
-            <form method="get" class="flex flex-wrap items-center gap-4">
-                <div class="flex flex-col gap-1">
+            <form method="get" class="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                <div class="space-y-1">
                     <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Gestión</label>
-                    <input type="number" name="year" value="{{ year }}" min="2000" max="2100" class="w-24 px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
+                    <input type="number" name="year" value="{{ year }}" min="2000" max="2100" class="w-full px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
                 </div>
                 {% if executed_week_options %}
-                <div class="flex flex-col gap-1">
+                <div class="space-y-1">
                     <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Semana Operativa</label>
-                    <select name="week" class="px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
+                    <select name="week" class="w-full px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
                         {% for option in executed_week_options %}
-                            <option value="{{ option.id }}" {% if option.id == selected_week_id %}selected{% endif %}>{{ option.label|default:option.date }}</option>
+                        <option value="{{ option.id }}" {% if option.id == selected_week_id %}selected{% endif %}>{{ option.label }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 {% endif %}
-                <div class="flex flex-col gap-1">
-                    <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Filtro de Datos</label>
-                    <select name="source" class="px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
-                        <option value="published" {% if source == "published" %}selected{% endif %}>Oficial (Publicado)</option>
-                        {% if can_see_drafts %}<option value="draft" {% if source == "draft" %}selected{% endif %}>Preventivo (Borrador)</option>{% endif %}
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest pl-1">Fuente</label>
+                    <select name="source" class="w-full px-4 py-2 rounded-xl bg-slate-900 border border-white/5 text-white text-xs font-bold">
+                        <option value="published" {% if source == "published" %}selected{% endif %}>Oficial</option>
+                        {% if can_see_drafts %}
+                        <option value="draft" {% if source == "draft" %}selected{% endif %}>Borrador</option>
+                        {% endif %}
                     </select>
                 </div>
-                <button type="submit" class="btn-primary px-6 py-2 rounded-xl glow-emerald text-[10px] font-black uppercase tracking-widest h-[38px] mt-4">Actualizar Vista</button>
+                <div class="flex items-end">
+                    <button type="submit" class="btn-primary glow-emerald w-full px-5 py-2 text-[10px] font-black uppercase tracking-widest">Actualizar</button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- Summary Performance Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="glass-card rounded-3xl p-6 border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent space-y-4">
-            <div class="flex justify-between items-start">
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Inversión MMBs</p>
-                <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-            </div>
-            <div>
-                <p class="text-3xl font-header font-black text-white tracking-tighter">{{ summary.budget_mmbs|floatformat:2|default:"0.00" }}</p>
-                <p class="text-[10px] font-bold text-slate-600 uppercase mt-1">Presupuesto Referencial</p>
-            </div>
-        </div>
-
-        <div class="glass-card rounded-3xl p-6 border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent space-y-4">
-            <div class="flex justify-between items-start">
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ejecución Física</p>
-                <div class="p-2 rounded-xl bg-sky-500/10 text-sky-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg></div>
-            </div>
-            <div>
-                <p class="text-3xl font-header font-black text-white tracking-tighter">{{ summary.execution_physical_pct|floatformat:2|default:"0" }} <span class="text-lg text-sky-500/60">%</span></p>
-                <p class="text-[10px] font-bold text-slate-600 uppercase mt-1">Avance Real Consolidado</p>
-            </div>
-        </div>
-
-        <div class="glass-card rounded-3xl p-6 border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent space-y-4 border-l-4 border-l-emerald-500/30">
-            <div class="flex justify-between items-start">
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ejecución Financiera</p>
-                <div class="p-2 rounded-xl bg-amber-500/10 text-amber-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div>
-            </div>
-            <div>
-                <p class="text-3xl font-header font-black text-white tracking-tighter">{{ summary.execution_financial_mmbs|floatformat:2|default:"0.00" }}</p>
-                <p class="text-[10px] font-bold text-slate-600 uppercase mt-1">Gasto Acumulado MMBs</p>
-            </div>
-        </div>
-
-        <div class="glass-card rounded-3xl p-6 border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent space-y-4 border-l-4 border-l-sky-500/30">
-            <div class="flex justify-between items-start">
-                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Programado G-{{ year }}</p>
-                <div class="p-2 rounded-xl bg-slate-800 text-slate-400"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>
-            </div>
-            <div>
-                <p class="text-3xl font-header font-black text-white tracking-tighter">{{ summary.execution_programmed_mmbs|floatformat:2|default:"0.00" }}</p>
-                <p class="text-[10px] font-bold text-slate-600 uppercase mt-1">Previsión Institucional</p>
-            </div>
-        </div>
+    {% if configured_report_variant != "auto" and configured_report_variant != report_variant %}
+    <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 text-xs text-amber-100">
+        La variante configurada es <span class="font-black uppercase">{{ configured_report_variant }}</span>, pero aun no tiene plantilla dedicada.
+        Se esta mostrando temporalmente con el layout base <span class="font-black uppercase">{{ report_variant }}</span>.
     </div>
+    {% endif %}
 
-    <!-- Advanced Analysis Section -->
-    <div class="grid lg:grid-cols-3 gap-6">
-        <!-- Curve S Plot -->
-        <div class="lg:col-span-2 space-y-4">
-             <div class="glass-card rounded-[2.5rem] p-8 border-white/5 bg-white/[0.01] shadow-2xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 p-8">
-                    <div class="flex gap-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-emerald-500 glow-emerald"></div>
-                            <span class="text-[9px] font-black text-slate-500 uppercase">Prog.</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-sky-500 glow-sky"></div>
-                            <span class="text-[9px] font-black text-slate-500 uppercase">Ejec.</span>
-                        </div>
-                    </div>
-                </div>
-                <h3 class="text-xs font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Trayectoria de Inversión (Curva S)
-                </h3>
-                
-                <div id="project-curve-chart" class="w-full" style="height: 400px;"></div>
-                
-                {{ month_labels|json_script:"project-curve-labels" }}
-                {{ program_values|json_script:"project-curve-program" }}
-                {{ executed_values|json_script:"project-curve-executed" }}
-             </div>
-
-             <!-- Qualitative Data Blocks -->
-             <div class="grid md:grid-cols-2 gap-4">
-                <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.01]">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
-                        ESTADO DE SITUACIÓN
-                        <svg class="w-4 h-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    </h4>
-                    <p class="text-xs text-slate-300 leading-relaxed italic border-l-2 border-slate-700 pl-4 py-1">{{ summary.status|default:"Sin descripción cualitativa registrada." }}</p>
-                </div>
-                <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.01]">
-                    <h4 class="text-[10px] font-black text-amber-500/80 uppercase tracking-widest mb-3 flex items-center justify-between">
-                        JUSTIFICACIÓN DESVIACIÓN
-                        <svg class="w-4 h-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.876c.54 0 .899-.596.63-1.026L13.03 4.062a1.012 1.012 0 00-1.817 0l-7.73 13.912c-.269.43-.269.946.063 1.026z"></path></svg>
-                    </h4>
-                    <p class="text-xs text-slate-300 leading-relaxed italic border-l-2 border-amber-500/20 pl-4 py-1">{{ summary.justification|default:"No se reportan desviaciones significativas a la fecha." }}</p>
-                </div>
-             </div>
-        </div>
-
-        <!-- Sidebar Details -->
-        <div class="lg:col-span-1 space-y-4">
-            <div class="glass-card rounded-3xl p-6 border-white/5 bg-slate-900/40 space-y-6">
-                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Cronología Técnica</h3>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span class="text-[10px] font-bold text-slate-600 uppercase">Inicio</span>
-                        <span class="text-xs font-bold text-white font-mono">{{ summary.start_date|date:"d/m/Y"|default:"-" }}</span>
-                    </div>
-                    <div class="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span class="text-[10px] font-bold text-slate-600 uppercase">Conclusión</span>
-                        <span class="text-xs font-bold text-white font-mono">{{ summary.end_date|date:"d/m/Y"|default:"-" }}</span>
-                    </div>
-                    <div class="flex items-center justify-between border-b border-white/5 pb-2">
-                        <span class="text-[10px] font-bold text-slate-600 uppercase">Etapa Actual</span>
-                        <span class="text-xs font-bold text-emerald-400">{{ summary.stage|default:"EN OPERACIÓN" }}</span>
-                    </div>
-                </div>
-
-                <div class="space-y-3 pt-2">
-                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ubicación y Alcance</p>
-                    <div class="p-4 rounded-2xl bg-black/20 text-xs text-slate-400 font-medium italic border border-white/5 leading-relaxed">
-                        {{ summary.location|default:"Localización geográfica no especificada." }}
-                    </div>
-                </div>
-
-                <div class="space-y-3 pt-2">
-                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ejecutor Responsable</p>
-                    <div class="flex items-center gap-3 p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                        <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-black text-emerald-500 border border-emerald-500/20">EJ</div>
-                        <span class="text-xs font-bold text-white truncate">{{ summary.executor|default:"ENTIDAD FISCALIZADORA" }}</span>
-                    </div>
+    {% if report_variant == "agreement" %}
+    <section class="space-y-5">
+        <div class="grid gap-4 lg:grid-cols-12">
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02] lg:col-span-3">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Empresa</p>
+                <div class="text-lg font-header font-black text-white">{{ summary.company|default:"No registrada" }}</div>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02] lg:col-span-3">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Ubicación</p>
+                <div class="space-y-2">
+                    {% for line in location_lines %}
+                    <p class="text-xs text-slate-300 leading-relaxed">{{ line }}</p>
+                    {% empty %}
+                    <p class="text-xs text-slate-500">Sin detalle de ubicación.</p>
+                    {% endfor %}
                 </div>
             </div>
-
-            <div class="glass-card rounded-3xl p-6 border-white/5 bg-emerald-500/5 space-y-4">
-                <h3 class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Mitigación y Acciones</h3>
-                <div class="text-xs text-slate-300 leading-relaxed whitespace-pre-line p-2">
-                    {{ summary.actions|default:"Seguimiento de hitos según planificación original sin acciones preventivas requeridas." }}
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02] lg:col-span-6">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Objeto de los Convenios</p>
+                <div class="space-y-2">
+                    {% for line in agreement_object_lines %}
+                    <p class="text-xs text-slate-300 leading-relaxed">{{ line }}</p>
+                    {% empty %}
+                    <p class="text-xs text-slate-500">Sin objeto cargado.</p>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-    </div>
+
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Suscripción Convenio</p>
+                <p class="text-lg font-header font-black text-white">{{ summary.subscription_date|date:"d/m/Y"|default:summary.subscription_date|default:"-" }}</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Adendas</p>
+                <p class="text-lg font-header font-black text-white">{{ summary.addenda|default:"-" }}</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Plazo de Ejecución</p>
+                <p class="text-sm font-bold text-white leading-relaxed">{{ summary.execution_term|default:"-" }}</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Estado Actual</p>
+                <p class="text-lg font-header font-black text-emerald-400">{{ summary.stage|default:"Sin estado" }}</p>
+            </div>
+        </div>
+
+        <div class="grid gap-5 xl:grid-cols-12">
+            <div class="space-y-5 xl:col-span-5">
+                <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.02]">
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Estado de Situación</p>
+                    <ul class="space-y-3">
+                        {% for line in status_lines %}
+                        <li class="text-xs text-slate-300 leading-relaxed flex gap-3">
+                            <span class="mt-1 h-1.5 w-1.5 rounded-full bg-sky-400 shrink-0"></span>
+                            <span>{{ line }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-xs text-slate-500">Sin novedades reportadas.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.02]">
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Acciones Preventivas</p>
+                    <ul class="space-y-3">
+                        {% for line in actions_lines %}
+                        <li class="text-xs text-slate-300 leading-relaxed flex gap-3">
+                            <span class="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                            <span>{{ line }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-xs text-slate-500">Sin acciones preventivas registradas.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="space-y-5 xl:col-span-7">
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="glass-card rounded-3xl p-5 border-white/5 bg-sky-500/5">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">% Planificado</p>
+                        <p class="text-3xl font-header font-black text-white">{{ summary.planned_pct|floatformat:2|default:"0" }}<span class="text-base text-sky-400/70">%</span></p>
+                    </div>
+                    <div class="glass-card rounded-3xl p-5 border-white/5 bg-emerald-500/5">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">% Ejecutado</p>
+                        <p class="text-3xl font-header font-black text-white">{{ summary.executed_pct|floatformat:2|default:"0" }}<span class="text-base text-emerald-400/70">%</span></p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-[2rem] p-6 border-white/5 bg-white/[0.02]">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado Actual del Convenio</p>
+                            <h3 class="text-lg font-header font-black text-white">Avance comparativo</h3>
+                        </div>
+                        <p class="text-[10px] uppercase tracking-widest text-slate-500">Planificado vs ejecutado</p>
+                    </div>
+                    <div id="project-curve-chart" class="w-full" style="height: 380px;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% else %}
+    <section class="space-y-5">
+        <div class="grid gap-4 lg:grid-cols-12">
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02] lg:col-span-3">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Ubicación</p>
+                <div class="space-y-2">
+                    {% for line in location_lines %}
+                    <p class="text-xs text-slate-300 leading-relaxed">{{ line }}</p>
+                    {% empty %}
+                    <p class="text-xs text-slate-500">Sin ubicación registrada.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02] lg:col-span-2">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Ejecutor</p>
+                <p class="text-lg font-header font-black text-white">{{ summary.executor|default:"No definido" }}</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02] lg:col-span-7">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Descripción del Proyecto</p>
+                <div class="space-y-2">
+                    {% for line in description_lines %}
+                    <p class="text-xs text-slate-300 leading-relaxed">{{ line }}</p>
+                    {% empty %}
+                    <p class="text-xs text-slate-500">Sin descripción ejecutiva.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Presupuesto de Inversión</p>
+                <p class="text-3xl font-header font-black text-white">{{ summary.budget_mmbs|floatformat:2|default:"0.00" }}</p>
+                <p class="text-[10px] text-slate-600 uppercase tracking-widest mt-2">MMBs</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Fecha Inicio</p>
+                <p class="text-2xl font-header font-black text-white">{{ summary.start_date|date:"d/m/Y"|default:"-" }}</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Fecha Conclusión</p>
+                <p class="text-2xl font-header font-black text-white">{{ summary.end_date|date:"d/m/Y"|default:"-" }}</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Etapa Actual</p>
+                <p class="text-xl font-header font-black text-emerald-400">{{ summary.stage|default:"Sin etapa" }}</p>
+            </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-sky-500/5">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Ejecución Física</p>
+                <p class="text-3xl font-header font-black text-white">{{ summary.execution_physical_pct|floatformat:2|default:"0" }}<span class="text-base text-sky-400/70">%</span></p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-amber-500/5">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Ejecución Financiera</p>
+                <p class="text-3xl font-header font-black text-white">{{ summary.execution_financial_mmbs|floatformat:2|default:"0.00" }}</p>
+                <p class="text-[10px] text-slate-600 uppercase tracking-widest mt-2">MMBs</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-emerald-500/5">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Programado Gestión {{ year }}</p>
+                <p class="text-3xl font-header font-black text-white">{{ summary.execution_programmed_mmbs|floatformat:2|default:"0.00" }}</p>
+                <p class="text-[10px] text-slate-600 uppercase tracking-widest mt-2">MMBs</p>
+            </div>
+            <div class="glass-card rounded-3xl p-5 border-white/5 bg-white/[0.02]">
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Ejecutado Gestión {{ year }}</p>
+                <p class="text-3xl font-header font-black text-white">{{ summary.execution_executed_mmbs|floatformat:2|default:"0.00" }}</p>
+                <p class="text-[10px] text-slate-600 uppercase tracking-widest mt-2">MMBs</p>
+            </div>
+        </div>
+
+        <div class="grid gap-5 xl:grid-cols-12">
+            <div class="space-y-5 xl:col-span-5">
+                <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.02]">
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Estado de Situación</p>
+                    <ul class="space-y-3">
+                        {% for line in status_lines %}
+                        <li class="text-xs text-slate-300 leading-relaxed flex gap-3">
+                            <span class="mt-1 h-1.5 w-1.5 rounded-full bg-sky-400 shrink-0"></span>
+                            <span>{{ line }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-xs text-slate-500">Sin estado reportado.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.02]">
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Justificación de la Desviación</p>
+                    <ul class="space-y-3">
+                        {% for line in justification_lines %}
+                        <li class="text-xs text-slate-300 leading-relaxed flex gap-3">
+                            <span class="mt-1 h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                            <span>{{ line }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-xs text-slate-500">Sin justificación registrada.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.02]">
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Acciones Preventivas</p>
+                    <ul class="space-y-3">
+                        {% for line in actions_lines %}
+                        <li class="text-xs text-slate-300 leading-relaxed flex gap-3">
+                            <span class="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                            <span>{{ line }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="text-xs text-slate-500">Sin acciones preventivas registradas.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="xl:col-span-7">
+                <div class="glass-card rounded-[2rem] p-6 border-white/5 bg-white/[0.02] h-full">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+                        <div>
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Curva S</p>
+                            <h3 class="text-lg font-header font-black text-white">Evolución Programada vs Ejecutada</h3>
+                        </div>
+                        <p class="text-[10px] uppercase tracking-widest text-slate-500">Gestión {{ year }}</p>
+                    </div>
+                    <div id="project-curve-chart" class="w-full" style="height: 460px;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    {{ chart_labels|json_script:"project-curve-labels" }}
+    {{ program_values|json_script:"project-curve-program" }}
+    {{ executed_values|json_script:"project-curve-executed" }}
+    {{ chart_kind|json_script:"project-curve-kind" }}
 </div>
 {% endblock %}
 
 {% block extra_js %}
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <script src="{% static 'js/project_report.js' %}?v=1"></script>
+  <script src="{% static 'js/project_report.js' %}?v=2"></script>
 {% endblock %}

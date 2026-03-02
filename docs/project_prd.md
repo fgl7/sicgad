@@ -103,6 +103,12 @@ Vistas clave:
 
 Nota operativa:
 - La lista de esquemas muestra solo `DatasetType` activos (`is_active=True`).
+- Cuando un loader entra a `schemas:schema_create` desde un proyecto/convenio aprobado, el formulario puede venir
+  "sembrado" desde `projects` con:
+  - nombre sugerido (`<proyecto> - resumen`)
+  - entidad preseleccionada (si aplica)
+  - guia operativa visible para crear al menos `resumen`, `curva programada` y `curva ejecutada`
+  - el esquema sigue el workflow normal de `schemas`: loader crea -> loader envia -> admin aprueba/rechaza
 
 ## 6. Carga de datos (ingest)
 Modelos en `ingest/models.py`:
@@ -437,6 +443,7 @@ Definidas en `config/urls.py`:
 - `/performance/`
 - `/structure/`
 - `/kpis/`
+- `/projects/`
 
 ## 13. Deuda tecnica conocida (importante)
 El legado de `plants` fue retirado y el flujo operativo ya esta alineado a `entity`.
@@ -498,6 +505,13 @@ Funciona y se usa activamente:
     con exclusiones para HTMX/links especiales y opt-out via `data-no-route-transition`
 - Estabilizacion visual de navegacion con scroll interno del panel principal (`.route-main-pane`)
   y bloqueo de scroll del `body` en paginas internas para evitar doble scrollbar.
+- Modulo `projects` ya integrado:
+  - rutas activas en `/projects/`
+  - acceso desde sidebar base y sidebar de autoridad/external al visor de reportes
+  - workflow de catalogo: loader crea/edita -> admin aprueba/rechaza
+  - reportes solo visibles para proyectos aprobados
+  - detalle de reportes con variantes `project` y `agreement`
+  - bridge hacia `schemas` desde proyectos aprobados para sembrar creacion de esquemas
 
 Requiere refactor planificado:
 - Extender pruebas de regresion para cubrir flujos refactorizados a `entity`.
@@ -544,93 +558,140 @@ Requiere refactor planificado:
 
 Este documento reemplaza versiones anteriores mas generales. Esta escrito para operar y evolucionar el estado real actual del proyecto, no el diseno ideal historico.
 
-## 17. Modulo `projects` (estado investigado y direccion acordada)
-Estado actual (hallazgos):
-- La app Django `projects` existe y esta instalada en `config/settings.py`.
-- Tiene implementacion real (no stub): modelos, formularios, vistas, admin y templates:
-  - `projects/models.py`
-  - `projects/forms.py`
-  - `projects/views.py`
-  - `projects/urls.py`
-  - `projects/admin.py`
-  - `templates/projects/*`
-- Incluye:
-  - CRUD de `Project` (admin operativo)
-  - CRUD de `ProjectReportConfig` (admin operativo)
-  - `report_list` / `report_detail` para usuarios autenticados con scope por memberships
-- `report_detail` consume datos desde `DatasetInstance` / `PublishedDataPoint` y muestra curva programada vs ejecutada + resumen de proyecto.
+## 17. Modulo `projects` (estado implementado actual)
+Decision arquitectonica vigente:
+- `Project` NO es un nuevo nivel oficial de `structure`.
+- El dominio maestro se mantiene en `Entity`.
+- `projects` opera como modulo de negocio anclado a `Category` + `Entity`, reutilizando `schemas`, `ingest`, `validation` y `PublishedDataPoint`.
 
-Problemas de integracion detectados:
-- La app `projects` NO esta montada en rutas principales (`config/urls.py` no incluye `path("projects/", include("projects.urls"))`).
-- `projects` NO aparece en el sidebar base ni en el sidebar de autoridad:
+Estado de integracion real:
+- La app `projects` esta montada en `config/urls.py` bajo `/projects/`.
+- Hay accesos en:
   - `templates/partials/sidebar.html`
   - `templates/partials/sidebar_authority_mhe.html`
-- Resultado: aunque exista codigo funcional, el modulo no esta expuesto en la navegacion principal.
+- El modulo expone:
+  - catalogo de proyectos/convenios (`project_list`)
+  - alta/edicion/borrado operativo para loaders
+  - revision administrativa (`project_review`)
+  - configuracion de reportes (`ProjectReportConfig`)
+  - `report_list` / `report_detail`
 
-Riesgos/observaciones de permisos detectados (importante):
-- El acceso a `report_list/report_detail` usa `Membership` por `entity` (bien), pero hay huecos de permisos en escenarios de roles mixtos.
-- Riesgo de borradores (`source=draft`):
-  - hoy se habilita por tener cualquier rol `LOADER` o `VALIDATOR` activo, aunque el acceso al proyecto venga por otro rol (ej. `VIEWER` en otra entidad).
-  - caso critico a cubrir: usuario con `VIEWER(entity A)` + `LOADER(entity B)` podria ver borradores de un proyecto de A.
-- Riesgo de scope de datasets:
-  - `ProjectReportConfig` valida principalmente por categoria del proyecto.
-  - Falta endurecer regla para exigir que los datasets configurados pertenezcan a entidades incluidas en `project.entities`.
-- `projects/tests.py` esta vacio (sin pruebas automatizadas de permisos/roles).
-
-Decision arquitectonica acordada (para reconstruccion):
-- NO convertir `Project` en un nuevo nivel oficial de `structure` por ahora.
-- Mantener dominio principal del sistema en `Entity`.
-- Reconstruir `projects` como modulo de negocio anclado a `Entity`/`Category` (opcion 3):
-  - `Project` sigue siendo objeto de negocio (no nivel estructural)
-  - permisos y alcance se resuelven via `Membership` por entidad
-  - integracion con datasets/ingest/validation existentes
-
-Lineamientos de reconstruccion de `projects` (opcion 3):
-- Mantener jerarquia oficial:
-  - `Sector > Subsector > Category > Entity`
+Modelo operativo vigente:
 - `Project`:
   - pertenece a una `Category`
   - se asocia a una o varias `Entity` de esa categoria
-- Endurecer validaciones:
-  - todas las `entities` del proyecto deben pertenecer a `Project.category`
-  - datasets de `ProjectReportConfig` deben pertenecer a entidades incluidas en `project.entities`
-- Endurecer permisos:
-  - acceso a reportes por interseccion real `Membership.entity` vs `Project.entities`
-  - visibilidad de `draft` por rol + entidad efectiva del proyecto (no por rol global mezclado)
-- Integracion UX/navegacion:
-  - exponer `projects` en `config/urls.py`
-  - agregar entradas de sidebar segun rol/scope
-  - admin: gestion de proyectos + configuracion de reportes
-  - loader/validator/viewer: acceso a reportes (segun memberships)
+  - incorpora workflow:
+    - `PENDING`
+    - `APPROVED`
+    - `REJECTED`
+  - guarda metadatos de workflow:
+    - `created_by`
+    - `approved_by`
+    - `approved_at`
+    - `workflow_comment`
+- `ProjectReportConfig`:
+  - referencia datasets validos del proyecto
+  - incluye `report_variant` configurable y extensible
 
-Simulacion funcional objetivo (flujo total resumido):
+Reglas de negocio implementadas:
+- El admin NO crea proyectos/convenios/etc.
+- El admin crea usuarios y memberships operativos (`LOADER`, `VALIDATOR`, etc.).
+- Los loaders crean y editan proyectos/convenios/etc. dentro de su alcance por entidad.
+- Todo proyecto nuevo o modificado por loader vuelve a:
+  - `workflow_status=PENDING`
+  - `is_active=False`
+- El admin aprueba o rechaza el registro.
+- Solo los proyectos `APPROVED` quedan activos para:
+  - aparecer en reportes
+  - ser seleccionables en `ProjectReportConfig`
+  - sembrar la creacion de esquemas relacionados
+
+Seguridad y consistencia ya endurecidas:
+- Todas las `entities` elegidas en `Project` deben pertenecer a `Project.category`.
+- Los datasets de `ProjectReportConfig` deben pertenecer a entidades incluidas en `project.entities`.
+- `report_list` y `report_detail` filtran solo proyectos activos y aprobados.
+- El acceso a un proyecto/reporte se resuelve por interseccion real entre `Membership.entity` y `Project.entities`.
+- La vista de borradores (`source=draft`) ya NO se habilita por rol mezclado fuera de alcance:
+  - `LOADER/VALIDATOR` solo ven `draft` si ese rol aplica a una entidad efectiva del proyecto
+  - caso cubierto: `VIEWER(A) + LOADER(B)` no desbloquea borradores de A
+- `report_detail` ignora instancias legacy fuera del alcance de entidades del proyecto.
+
+Workflow operativo vigente (proyectos/convenios):
 1. Admin crea/ajusta niveles (`Sector/Subsector/Category/Entity`) en `structure`.
-2. Admin crea usuarios y `Membership` por `Entity` (`ADMIN`, `LOADER`, `VALIDATOR`, `VIEWER`).
-3. Loader/Admin crea y aprueba esquemas (`DatasetType`) por entidad para:
-   - resumen de proyecto
-   - curva programada
-   - curva ejecutada (semanal o mensual)
-4. Admin crea `Project` (catalogo de negocio) con:
-   - `category`
-   - `entities` de esa categoria
-   - metadatos estaticos (nombre, fechas, ubicacion, ejecutor, presupuesto)
-5. Admin crea `ProjectReportConfig` vinculando datasets validos del proyecto.
-6. Loader carga datos en `ingest` para los datasets del proyecto.
-7. Validator aprueba/publica en `validation`; se materializan `PublishedDataPoint`.
-8. Usuarios con scope (admin/loader/validator/viewer) acceden a `projects:report_list`.
-9. En `projects:report_detail`:
-   - `VIEWER` ve solo `published`
-   - `LOADER/VALIDATOR` (con entidad efectiva del proyecto) pueden ver `draft`
-   - `ADMIN` ve todo
-10. Operacion continua semanal/mensual:
-   - carga -> validacion -> publicacion -> consulta ejecutiva del reporte
+2. Admin crea usuarios y memberships por `Entity`.
+3. Loader registra un proyecto/convenio/etc. en `projects`.
+4. El registro queda pendiente y sin activacion.
+5. Admin revisa y aprueba/rechaza el registro.
+6. Una vez aprobado, el loader puede iniciar la creacion de esquemas relacionados desde el propio catalogo.
+7. El loader crea los esquemas en `schemas`.
+8. El admin aprueba los esquemas en el workflow normal de `schemas`.
+9. El loader carga datos en `ingest`.
+10. Los validadores designados por admin revisan/publican en `validation`.
+11. El reporte ejecutivo queda disponible para usuarios con scope.
 
-Casos de prueba prioritarios para proxima implementacion:
-- `VIEWER(entity A)` solo ve reportes de proyectos con `entities` que incluyan A.
-- `LOADER(entity A)` / `VALIDATOR(entity A)` pueden ver `draft` solo en proyectos de A.
-- `VIEWER(A) + LOADER(B)` NO debe ver `draft` de proyectos de A por el rol `LOADER` de B.
-- `VIEWER global (entity=None)` comportamiento explicitamente definido y probado.
-- Configuracion invalida de reporte (dataset de entidad fuera de `project.entities`) debe bloquearse.
+Puente `projects` -> `schemas` (implementado):
+- Desde un proyecto aprobado, el loader tiene acceso a `Crear Esquemas`.
+- Ese enlace abre `schemas:schema_create` con contexto sembrado:
+  - nombre sugerido basado en el proyecto
+  - entidad preseleccionada cuando el scope lo permite
+  - bloque visual de guia en `templates/schemas/schema_edit.html`
+- La guia recuerda el patron operativo recomendado:
+  - `resumen`
+  - `curva programada`
+  - `curva ejecutada`
+- Aun con ese sembrado, el esquema sigue el flujo oficial:
+  - loader crea/edita
+  - loader envia a aprobacion
+  - admin aprueba/rechaza
 
-Nota operativa:
-- Antes de reconstruir `projects`, conservar este modulo como "parcialmente integrado" (codigo util pero no expuesto) para evitar abrir permisos inseguros por error al solo agregar rutas/sidebar sin endurecer validaciones.
+Contrato operativo de variantes y datasets (implementacion vigente):
+- `ProjectReportConfig.report_variant` ahora es configurable y extensible:
+  - usar `auto` para deteccion automatica
+  - usar `project` para forzar layout de proyecto
+  - usar `agreement` para forzar layout de convenio
+  - se puede guardar cualquier otro slug futuro; por ahora cae temporalmente al layout base (`project`) hasta que exista plantilla propia
+- Recomendacion de datasets por reporte semanal:
+  - `report_dataset`: resumen ejecutivo / contractual del corte semanal
+  - `curve_program_dataset`: plan base o curva programada
+  - `curve_executed_dataset`: avance ejecutado semanal (o mensual cuando aplique)
+- Contrato recomendado para `report_dataset` en variante `project`:
+  - identificacion y contexto: `ubicacion`, `ejecutor`, `descripcion`, `fecha_inicio`, `fecha_conclusion`, `etapa_actual`
+  - KPIs: `presupuesto_mmbs`, `ejecucion_fisica_pct`, `ejecucion_financiera_mmbs`, `programado_mmbs`, `ejecutado_mmbs`
+  - narrativa: `estado_situacion`, `justificacion_desviacion`, `acciones_preventivas`, `fecha_corte`
+- Contrato recomendado para `report_dataset` en variante `agreement`:
+  - identificacion contractual: `empresa`, `ubicacion`, `objeto_convenio`, `suscripcion_convenio`, `adendas`, `plazo_ejecucion`, `etapa_actual`
+  - KPIs: `porcentaje_planificado`, `porcentaje_ejecutado`, `fecha_corte`
+  - narrativa: `estado_situacion`, `acciones_preventivas`
+- Contrato recomendado para `curve_program_dataset` y `curve_executed_dataset`:
+  - variante `project`:
+    - formato mensual ancho: columnas por mes (`ENE..DIC`) con porcentajes
+    - o formato tabular: columna `mes` + columna numerica (`programado_pct` / `ejecutado_pct`)
+  - variante `agreement`:
+    - formato por hitos: columna categorica (`hito`, `actividad`, `etapa`, `fase`, `indicador`, `concepto`, etc.) + columna numerica (`programado_pct` / `ejecutado_pct`)
+    - fallback minimo: si no hay filas por hitos, el visor usa `porcentaje_planificado` y `porcentaje_ejecutado` del `report_dataset`
+- Flujo semanal recomendado para operacion:
+  1. Crear y aprobar los 3 esquemas por `entity` (`report`, `program`, `executed`).
+  2. Cargar semanalmente el `report_dataset` y el `curve_executed_dataset`.
+  3. Mantener `curve_program_dataset` como carga base (one-time) o actualizarlo cuando cambie la planificacion.
+  4. Enviar a validacion semanal.
+  5. Publicar en `validation` para que el visor consuma `PublishedDataPoint`.
+  6. Usuarios con scope consultan `projects:report_detail` por semana o por gestion.
+
+Cobertura automatizada actual del modulo:
+- Ya existen pruebas en `projects/tests.py` para:
+  - entidades fuera de categoria en `ProjectForm`
+  - bloqueo de datasets fuera de `project.entities`
+  - control de borradores por alcance efectivo
+  - variante `agreement`
+  - fallback para variantes futuras
+  - contencion de instancias legacy fuera de scope
+  - workflow basico loader/admin (crear y aprobar)
+- Ya existe prueba en `schemas/tests.py` para el flujo sembrado desde `projects` hacia `schema_create`.
+
+Pendientes practicos (siguientes iteraciones):
+- Definir y crear los esquemas reales (`DatasetType`/`ColumnDef`) para:
+  - resumen de proyecto
+  - resumen de convenio
+  - curvas programada/ejecutada
+- Alinear los aliases del visor 1:1 con los nombres reales de columnas que se adopten.
+- Hacer pruebas manuales de extremo a extremo con datos reales semanales.

@@ -21,6 +21,8 @@
     {% url 'accounts:institution_list' as institutions_url %}
     {% url 'audit:log_list' as audit_url %}
     {% url 'performance:formulas' as performance_url %}
+    {% url 'projects:report_list' as project_reports_url %}
+    {% url 'projects:project_list' as project_admin_url %}
 
     {% if not is_viewer or is_admin or is_loader or is_validator %}
     <div class="text-xs font-bold uppercase tracking-widest text-slate-400 px-3 mt-4 mb-2">General</div>
@@ -101,6 +103,24 @@
       <span class="font-medium">KPIs / Gráficos</span>
     </a>
 
+    <a href='{{ project_reports_url }}'
+      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path == project_reports_url or '/projects/reports/' in request.path and '/projects/reports/configs/' not in request.path %}active{% endif %}'>
+      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-6a2 2 0 012-2h6m0 0l-3-3m3 3l-3 3M5 3h9a2 2 0 012 2v3M5 21h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+      </svg>
+      <span class="font-medium">Reportes de Proyectos</span>
+    </a>
+
+    {% if is_loader and not is_admin %}
+    <a href='{{ project_admin_url }}'
+      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path == project_admin_url or '/projects/create/' in request.path or '/projects/' in request.path and '/projects/reports/' not in request.path %}active{% endif %}'>
+      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 3v4m10-4v4M5 21h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2zm4-7h6m-6 4h6"></path>
+      </svg>
+      <span class="font-medium">Registrar Proyectos</span>
+    </a>
+    {% endif %}
+
     {% if is_admin %}
     <a href='{{ performance_url }}'
       class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path|slice:":12" == "/performance/" %}active{% endif %}'>
@@ -138,6 +158,14 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"/>
       </svg>
       <span class="font-medium">Instituciones</span>
+    </a>
+
+    <a href='{{ project_admin_url }}'
+      class='sidebar-link flex items-center gap-3 px-3 py-2.5 transition-all group {% if request.path == project_admin_url or '/projects/create/' in request.path or '/projects/reports/configs/' in request.path or '/projects/' in request.path and '/projects/reports/' not in request.path %}active{% endif %}'>
+      <svg class="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 3v4m10-4v4M5 21h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2zm4-7h6m-6 4h6"></path>
+      </svg>
+      <span class="font-medium">Proyectos</span>
     </a>
     {% endif %}
 

@@ -1,18 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}{% if project %}Editar Proyecto{% else %}Nuevo Proyecto{% endif %} - SICGAD{% endblock %}
+{% block title %}{% if project %}Editar Registro{% else %}Nuevo Registro{% endif %} - SICGAD{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto fade-in space-y-6">
     <div class="flex items-center justify-between mb-2">
         <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">{% if project %}Editar Proyecto{% else %}Nuevo Proyecto de Inversión{% endif %}</h2>
-            <p class="text-slate-500 text-sm">Configuración de parámetros y seguimiento operativo del proyecto.</p>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">{% if project %}Actualizar Proyecto / Convenio{% else %}Registrar Proyecto / Convenio{% endif %}</h2>
+            <p class="text-slate-500 text-sm">El registro sera enviado a aprobacion administrativa antes de quedar operativo.</p>
         </div>
         <a href="{% url 'projects:project_list' %}" class="page-back-link">
             Volver al listado
         </a>
     </div>
+
+    {% if project %}
+    <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 text-xs text-amber-100">
+        Estado actual del workflow:
+        <span class="font-black uppercase">{{ project.workflow_status }}</span>
+        {% if project.workflow_comment %}
+        . Observacion: {{ project.workflow_comment }}
+        {% endif %}
+    </div>
+    {% endif %}
 
     <form method="post" class="space-y-6">
         {% csrf_token %}
@@ -20,22 +30,22 @@
         <section class="glass-card rounded-3xl p-8 space-y-8">
             <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Identificación del Proyecto
+                Identificacion del Registro
             </h3>
-            
+
             <div class="grid md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre Completo</label>
                     {{ form.name }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Código Oficial</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Codigo Oficial</label>
                     {{ form.code }}
                 </div>
             </div>
 
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categoría</label>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categoria</label>
                 {{ form.category }}
             </div>
 
@@ -45,13 +55,13 @@
                     {{ form.executor }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicación / Región</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicacion / Region</label>
                     {{ form.location }}
                 </div>
             </div>
 
             <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Descripción General</label>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Descripcion General</label>
                 {{ form.description }}
             </div>
 
@@ -61,7 +71,7 @@
                     {{ form.start_date }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha Conclusión</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha Conclusion</label>
                     {{ form.end_date }}
                 </div>
             </div>
@@ -74,35 +84,37 @@
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entidades Relacionadas</label>
                     {{ form.entities }}
+                    <p class="text-[10px] text-slate-500">Solo se muestran las entidades donde tienes rol operativo de carga.</p>
                 </div>
             </div>
 
+            {% if form.is_active %}
             <div class="flex items-center gap-4 py-4 px-6 rounded-2xl bg-white/[0.02] border border-white/5">
                 {{ form.is_active }}
                 <div class="flex flex-col">
                     <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">Habilitar Seguimiento Operativo</span>
-                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">Marcar para que el proyecto sea visible en flujos de carga y visualización</span>
+                    <span class="text-[10px] text-slate-500 uppercase tracking-widest">Control administrativo interno.</span>
                 </div>
             </div>
+            {% endif %}
 
             {% if form.change_justification %}
             <div class="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2">
-                <label class="block text-[10px] font-bold text-amber-500 uppercase tracking-widest">Justificación del Cambio</label>
+                <label class="block text-[10px] font-bold text-amber-500 uppercase tracking-widest">Justificacion del Cambio</label>
                 {{ form.change_justification }}
                 {% if form.change_justification.errors %}
                     <p class="text-[10px] text-red-500 mt-1 font-bold">{{ form.change_justification.errors|striptags }}</p>
                 {% endif %}
-                <p class="text-[10px] text-slate-500 italic">Requerido si se modifican datos críticos de un proyecto ya operativo.</p>
+                <p class="text-[10px] text-slate-500 italic">Requerido para reenviar cambios a aprobacion.</p>
             </div>
             {% endif %}
         </section>
 
         <div class="flex items-center justify-end pt-4">
             <button type="submit" class="btn-primary glow-emerald px-12">
-                Guardar Proyecto
+                Guardar y Enviar a Aprobacion
             </button>
         </div>
     </form>
 </div>
 {% endblock %}
-

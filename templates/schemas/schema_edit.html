@@ -20,6 +20,38 @@
         </a>
     </div>
 
+    {% if seed_project_label and not dataset %}
+    <section class="glass-card rounded-3xl p-6 md:p-7 border-sky-400/20 bg-gradient-to-br from-sky-500/10 via-slate-950/80 to-transparent space-y-4">
+        <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div class="space-y-2">
+                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-sky-300">Flujo Sembrado Desde Proyectos</p>
+                <h3 class="text-lg font-header font-bold text-white">Este esquema se esta creando para {{ seed_project_label }}</h3>
+                <p class="text-sm text-slate-300">
+                    Crea la estructura tecnica y luego enviala a aprobacion. La administracion revisara el esquema antes de habilitar la carga operativa.
+                </p>
+            </div>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-xl border border-sky-400/30 bg-sky-500/10 text-[10px] font-black uppercase tracking-widest text-sky-200">
+                Requiere aprobacion admin
+            </span>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-3 text-xs">
+            <div class="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-300">1. Resumen</p>
+                <p class="mt-2 text-slate-300">Ficha principal con metadatos, estado de situacion, justificaciones y acciones.</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+                <p class="text-[10px] font-black uppercase tracking-widest text-cyan-300">2. Curva Programada</p>
+                <p class="mt-2 text-slate-300">Serie base del plan semanal o mensual que alimenta la comparacion de avance.</p>
+            </div>
+            <div class="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+                <p class="text-[10px] font-black uppercase tracking-widest text-amber-300">3. Curva Ejecutada</p>
+                <p class="mt-2 text-slate-300">Serie real reportada y validada para publicar el reporte operativo.</p>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
     <form method="post" class="space-y-6">
         {% csrf_token %}
 

@@ -5,8 +5,8 @@ from .models import Project, ProjectReportConfig
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ("name", "code", "entities_display", "executor", "is_active")
-    list_filter = ("is_active", "entities")
+    list_display = ("name", "code", "workflow_status", "entities_display", "executor", "is_active")
+    list_filter = ("workflow_status", "is_active", "entities")
     search_fields = ("name", "code", "executor", "location")
     filter_horizontal = ("entities",)
 
@@ -23,6 +23,7 @@ class ProjectReportConfigAdmin(admin.ModelAdmin):
     list_display = (
         "project",
         "name",
+        "report_variant",
         "report_dataset",
         "curve_program_dataset",
         "curve_executed_dataset",

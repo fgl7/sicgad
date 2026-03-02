@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Eliminar proyecto - SICGAD{% endblock %}
-{% block page_title %}Eliminar proyecto{% endblock %}
+{% block title %}Eliminar registro - SICGAD{% endblock %}
+{% block page_title %}Eliminar registro{% endblock %}
 
 {% block content %}
   <section class="glass-card max-w-md rounded-2xl p-6 text-xs mx-auto">
-    <h2 class="text-base font-semibold mb-3">Confirmar eliminación</h2>
+    <h2 class="text-base font-semibold mb-3">Confirmar eliminacion</h2>
     <p class="text-slate-300 mb-6">
-      Estás a punto de eliminar el proyecto
+      Estas a punto de eliminar el registro
       <span class="font-semibold">{{ project.name }}</span>.
-      Esta acción puede afectar esquemas, cargas y reportes asociados.
+      Solo se recomienda eliminar registros aun no aprobados.
     </p>
     <form method="post" class="flex items-center justify-end gap-3">
       {% csrf_token %}
@@ -17,7 +17,7 @@
         Cancelar
       </a>
       <button type="submit" class="btn-danger">
-        Eliminar proyecto
+        Eliminar registro
       </button>
     </form>
   </section>

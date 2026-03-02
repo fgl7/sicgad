@@ -6,24 +6,32 @@
 <div class="space-y-6 fade-in">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Gestión de Proyectos</h2>
-            <p class="text-slate-500 text-sm">Administración de proyectos de inversión y seguimiento operativo.</p>
+            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Catalogo de Proyectos y Convenios</h2>
+            <p class="text-slate-500 text-sm">
+                {% if is_admin %}
+                Revision y aprobacion administrativa de registros operativos.
+                {% else %}
+                Registro operativo de proyectos, convenios y otros instrumentos sujetos a aprobacion.
+                {% endif %}
+            </p>
         </div>
+        {% if can_create_project %}
         <a href="{% url 'projects:project_create' %}" class="btn-primary glow-emerald">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Nuevo Proyecto
+            Registrar Proyecto
         </a>
+        {% endif %}
     </div>
 
-    <!-- Projects Table Card -->
     <div class="glass-card rounded-3xl overflow-hidden border-white/5">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <th class="px-6 py-4">Código / Proyecto</th>
+                        <th class="px-6 py-4">Codigo / Registro</th>
                         <th class="px-6 py-4">Entidades Vinculadas</th>
-                        <th class="px-6 py-4 text-center">Estado</th>
+                        <th class="px-6 py-4">Workflow</th>
+                        <th class="px-6 py-4">Responsable</th>
                         <th class="px-6 py-4 text-right">Acciones</th>
                     </tr>
                 </thead>
@@ -34,41 +42,81 @@
                             <div class="flex flex-col">
                                 <span class="font-mono text-[10px] text-sky-400 font-bold uppercase">{{ project.code|default:"SIN-COD" }}</span>
                                 <span class="text-slate-200 font-bold">{{ project.name }}</span>
-                                <span class="text-[10px] text-slate-500 uppercase tracking-widest">{{ project.category.name|default:"Sin categoría" }}</span>
+                                <span class="text-[10px] text-slate-500 uppercase tracking-widest">{{ project.category.name|default:"Sin categoria" }}</span>
                             </div>
                         </td>
                         <td class="px-6 py-4">
                             {% with project.entities.all as entity_list %}
-                                <div class="flex flex-wrap gap-1">
-                                    {% for entity in entity_list %}
-                                        <span class="px-2 py-0.5 rounded bg-slate-800 text-[9px] font-black text-slate-400 border border-white/5">{{ entity.code|default:entity.name }}</span>
-                                    {% empty %}
-                                        <span class="text-slate-600 italic text-[10px]">Sin vinculación</span>
-                                    {% endfor %}
-                                </div>
+                            <div class="flex flex-wrap gap-1">
+                                {% for entity in entity_list %}
+                                <span class="px-2 py-0.5 rounded bg-slate-800 text-[9px] font-black text-slate-400 border border-white/5">{{ entity.code|default:entity.name }}</span>
+                                {% empty %}
+                                <span class="text-slate-600 italic text-[10px]">Sin vinculacion</span>
+                                {% endfor %}
+                            </div>
                             {% endwith %}
                         </td>
-                        <td class="px-6 py-4 text-center">
-                            {% if project.is_active %}
-                                <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Operativo</span>
-                            {% else %}
-                                <span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-widest border border-white/5">Pausado</span>
-                            {% endif %}
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col gap-2">
+                                {% if project.workflow_status == "APPROVED" %}
+                                <span class="inline-flex w-fit px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Aprobado</span>
+                                {% elif project.workflow_status == "REJECTED" %}
+                                <span class="inline-flex w-fit px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest border border-red-500/20">Rechazado</span>
+                                {% else %}
+                                <span class="inline-flex w-fit px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-black uppercase tracking-widest border border-amber-500/20">Pendiente</span>
+                                {% endif %}
+                                {% if project.workflow_comment %}
+                                <span class="text-[10px] text-slate-500">{{ project.workflow_comment }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                <span class="text-slate-300 text-xs font-semibold">{{ project.created_by.username|default:"Sin creador" }}</span>
+                                {% if project.approved_by %}
+                                <span class="text-[10px] text-slate-500">Revision: {{ project.approved_by.username }}</span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <div class="flex justify-end gap-2">
-                                <a href="{% url 'projects:project_edit' project.pk %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                </a>
-                                <a href="{% url 'projects:project_delete' project.pk %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </a>
+                            <div class="flex justify-end gap-2 flex-wrap">
+                                {% if is_admin %}
+                                    {% if project.workflow_status != "APPROVED" %}
+                                    <form method="post" action="{% url 'projects:project_review' project.pk 'approve' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500/20">
+                                            Aprobar
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    {% if project.workflow_status != "REJECTED" %}
+                                    <form method="post" action="{% url 'projects:project_review' project.pk 'reject' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500/20">
+                                            Rechazar
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                {% elif project.id in editable_project_ids %}
+                                    <a href="{% url 'projects:project_edit' project.pk %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    </a>
+                                    <a href="{% url 'projects:project_delete' project.pk %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </a>
+                                {% elif not is_admin and project.workflow_status == "APPROVED" %}
+                                    <a href="{{ project.schema_seed_url }}" class="px-3 py-1.5 rounded-lg bg-sky-500/10 text-sky-300 text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:bg-sky-500/20">
+                                        Crear Esquemas
+                                    </a>
+                                {% else %}
+                                    <span class="text-[10px] text-slate-600 uppercase tracking-widest">Sin acciones</span>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="px-6 py-12 text-center text-slate-600 italic">No se encontraron proyectos configurados.</td>
+                        <td colspan="5" class="px-6 py-12 text-center text-slate-600 italic">No se encontraron registros.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -77,4 +125,3 @@
     </div>
 </div>
 {% endblock %}
-

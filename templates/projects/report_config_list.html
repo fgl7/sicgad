@@ -1,22 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Configuración de Reportes - SICGAD{% endblock %}
+{% block title %}Configuracion de Reportes - SICGAD{% endblock %}
 
 {% block content %}
 <div class="space-y-6 fade-in">
-    <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
             <h2 class="text-2xl font-header font-bold text-white tracking-tight">Arquitectura de Reportabilidad</h2>
-            <p class="text-slate-500 text-sm">Víncula datasets operativos con visores analíticos de proyectos.</p>
+            <p class="text-slate-500 text-sm">Configura datasets, frecuencia y variante de cada visor de proyectos.</p>
         </div>
         <a href="{% url 'projects:report_config_create' %}" class="btn-primary glow-emerald">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Nueva Configuración
+            Nueva Configuracion
         </a>
     </div>
 
-    <!-- Inventory Table -->
     <div class="glass-card rounded-[2rem] overflow-hidden border-white/5 bg-white/[0.01]">
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full text-left border-collapse">
@@ -24,6 +22,7 @@
                     <tr class="bg-black/20 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
                         <th class="px-8 py-5">Proyecto Asociado</th>
                         <th class="px-8 py-5">Identificador Reporte</th>
+                        <th class="px-8 py-5">Variante</th>
                         <th class="px-8 py-5">Frecuencia Curva-S</th>
                         <th class="px-8 py-5 text-center">Estado</th>
                         <th class="px-8 py-5 text-right">Control</th>
@@ -36,7 +35,12 @@
                             <span class="text-white font-bold tracking-tight">{{ config.project.name }}</span>
                         </td>
                         <td class="px-8 py-5">
-                            <span class="text-slate-400 font-medium text-xs">{{ config.name }}</span>
+                            <span class="text-slate-300 font-medium text-xs">{{ config.name }}</span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="px-3 py-1 rounded-lg bg-indigo-500/10 text-indigo-300 text-[10px] font-black uppercase border border-indigo-500/20">
+                                {{ config.report_variant }}
+                            </span>
                         </td>
                         <td class="px-8 py-5">
                             <span class="px-3 py-1 rounded-lg bg-sky-500/10 text-sky-500 text-[10px] font-black uppercase border border-sky-500/20">
@@ -63,7 +67,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-8 py-20 text-center text-slate-600 italic">No se han definido vinculaciones de reportes analíticos.</td>
+                        <td colspan="6" class="px-8 py-20 text-center text-slate-600 italic">No se han definido vinculaciones de reportes analiticos.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -71,14 +75,13 @@
         </div>
     </div>
 
-    <!-- Helper Info -->
     <div class="p-8 rounded-[2rem] bg-slate-900/50 border border-white/5 space-y-3">
-        <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Nota Técnica</h4>
+        <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Nota Tecnica</h4>
         <p class="text-xs text-slate-500 leading-relaxed font-medium">
-            La configuración de reportes permite desacoplar los registros técnicos cargados por las entidades del visor ejecutivo de proyectos. 
-            Defina aquí qué <span class="text-slate-300">Dataset Operativo</span> servirá como fuente para la Curva-S y qué información cualitativa se mostrará en los tableros.
+            La variante define la composicion del visor. Hoy existen layouts para
+            <span class="text-slate-300">project</span> y <span class="text-slate-300">agreement</span>.
+            Si registras otra variante, el sistema la conserva y la mostrara temporalmente con el layout base hasta implementar su plantilla dedicada.
         </p>
     </div>
 </div>
 {% endblock %}
-

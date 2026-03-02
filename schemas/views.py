@@ -149,6 +149,8 @@ def schema_edit(request, slug=None):
     allowed_entities_qs = None
     allowed_entity_ids: list[int] = []
     has_global_loader = False
+    seed_project_label = ""
+    seed_entity_id = None
 
     if not is_admin:
         if not request.user.is_authenticated:
@@ -190,6 +192,14 @@ def schema_edit(request, slug=None):
 
         if dataset and not has_global_loader and dataset.entity_id not in allowed_entity_ids:
             return redirect("schemas:schema_list")
+
+        if not dataset:
+            seed_project_label = (request.GET.get("project") or "").strip()
+            seed_entity_raw = (request.GET.get("entity") or "").strip()
+            if seed_entity_raw.isdigit():
+                seed_entity_id = int(seed_entity_raw)
+                if not has_global_loader and seed_entity_id not in allowed_entity_ids:
+                    seed_entity_id = None
 
     DatasetColumnFormSet = inlineformset_factory(
         DatasetType,
@@ -250,6 +260,12 @@ def schema_edit(request, slug=None):
             allowed_entities_qs=allowed_entities_qs,
             allow_set_active=is_admin,
         )
+        if not dataset:
+            if seed_entity_id and "entity" in form.fields:
+                form.fields["entity"].initial = seed_entity_id
+            if seed_project_label and "name" in form.fields:
+                suggested_name = f"{seed_project_label} - resumen"
+                form.fields["name"].initial = suggested_name[:255]
         if not is_admin and not dataset and loader_entity and not loader_has_multiple_entities:
             form.fields["entity"].initial = loader_entity
         formset = DatasetColumnFormSet(instance=dataset)
@@ -267,6 +283,7 @@ def schema_edit(request, slug=None):
             "has_global_loader": has_global_loader,
             "loader_has_multiple_entities": loader_has_multiple_entities,
             "is_admin": is_admin,
+            "seed_project_label": seed_project_label,
         },
     )
 

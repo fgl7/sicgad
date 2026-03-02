@@ -110,19 +110,39 @@ class ProjectForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        allow_activation = kwargs.pop("allow_activation", True)
+        allowed_entity_ids = kwargs.pop("allowed_entity_ids", None)
         super().__init__(*args, **kwargs)
-        self.fields["entities"].queryset = Entity.objects.filter(is_active=True).order_by("code", "name")
+        entity_qs = Entity.objects.filter(is_active=True).order_by("code", "name")
+        if allowed_entity_ids is not None:
+            entity_qs = entity_qs.filter(id__in=allowed_entity_ids)
         self.fields["category"].required = True
         self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by(
             "subsector__sector__name",
             "subsector__name",
             "name",
         )
+        category_id = None
+        if self.data.get("category"):
+            category_id = self.data.get("category")
+        elif self.initial.get("category"):
+            category_id = self.initial.get("category")
+        elif getattr(self.instance, "category_id", None):
+            category_id = self.instance.category_id
+        if category_id:
+            entity_qs = entity_qs.filter(category_id=category_id)
+        self.fields["entities"].queryset = entity_qs
+        self.user = user
         if not getattr(self.instance, "pk", None):
             self.fields.pop("change_justification", None)
+        if not allow_activation:
+            self.fields.pop("is_active", None)
 
     def clean(self):
         cleaned = super().clean()
+        category = cleaned.get("category")
+        entities = cleaned.get("entities")
         if getattr(self.instance, "pk", None):
             changed = [field for field in self.changed_data if field in self.STATIC_FIELDS]
             if changed:
@@ -132,6 +152,17 @@ class ProjectForm(forms.ModelForm):
                         "change_justification",
                         "Debe indicar una justificacion para cambios en datos estaticos.",
                     )
+        if category and entities:
+            invalid_entities = [
+                entity
+                for entity in entities
+                if entity.category_id != category.id
+            ]
+            if invalid_entities:
+                self.add_error(
+                    "entities",
+                    "Todas las entidades seleccionadas deben pertenecer a la categoria del proyecto.",
+                )
         return cleaned
 
 
@@ -141,6 +172,7 @@ class ProjectReportConfigForm(forms.ModelForm):
         fields = [
             "project",
             "name",
+            "report_variant",
             "report_dataset",
             "curve_program_dataset",
             "curve_executed_dataset",
@@ -156,6 +188,13 @@ class ProjectReportConfigForm(forms.ModelForm):
             "name": forms.TextInput(
                 attrs={
                     "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
+                }
+            ),
+            "report_variant": forms.TextInput(
+                attrs={
+                    "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
+                    "placeholder": "auto | project | agreement | otra-variante",
+                    "spellcheck": "false",
                 }
             ),
             "report_dataset": forms.Select(
@@ -188,7 +227,14 @@ class ProjectReportConfigForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["project"].queryset = Project.objects.filter(is_active=True).order_by("name")
+        self.fields["project"].queryset = Project.objects.filter(
+            is_active=True,
+            workflow_status=Project.STATUS_APPROVED,
+        ).order_by("name")
+        self.fields["report_variant"].help_text = (
+            "Use 'auto' para deteccion automatica, o defina un slug como "
+            "'project', 'agreement' u otra variante futura."
+        )
 
         project_id = None
         if self.data.get("project"):
@@ -206,7 +252,14 @@ class ProjectReportConfigForm(forms.ModelForm):
         if project_id:
             project = Project.objects.filter(pk=project_id).select_related("category").first()
             if project and project.category_id:
-                dataset_qs = dataset_qs.filter(entity__category_id=project.category_id)
+                project_entity_ids = list(project.entities.values_list("id", flat=True))
+                if project_entity_ids:
+                    dataset_qs = dataset_qs.filter(
+                        entity__category_id=project.category_id,
+                        entity_id__in=project_entity_ids,
+                    )
+                else:
+                    dataset_qs = dataset_qs.none()
             else:
                 dataset_qs = dataset_qs.none()
         else:
@@ -217,3 +270,10 @@ class ProjectReportConfigForm(forms.ModelForm):
         self.fields["curve_executed_dataset"].queryset = dataset_qs.filter(
             validation_frequency__in=[DatasetType.WEEKLY, DatasetType.MONTHLY]
         )
+
+    def clean_report_variant(self):
+        value = (self.cleaned_data.get("report_variant") or "").strip()
+        if not value:
+            return ProjectReportConfig.VARIANT_AUTO
+        self.instance.report_variant = value
+        return self.instance.normalized_report_variant()

@@ -47,6 +47,80 @@ def _entity_hierarchy(entity):
         "entity": entity,
     }
 
+
+def _resolve_seed_project(project_id_raw, allowed_entity_ids, has_global_loader):
+    if not project_id_raw or not str(project_id_raw).isdigit():
+        return None
+
+    from projects.models import Project
+
+    project = (
+        Project.objects.filter(
+            pk=int(project_id_raw),
+            workflow_status=Project.STATUS_APPROVED,
+            is_active=True,
+        )
+        .prefetch_related("entities")
+        .first()
+    )
+    if not project:
+        return None
+
+    if has_global_loader:
+        return project
+
+    allowed_ids = set(allowed_entity_ids or [])
+    if not allowed_ids:
+        return None
+
+    project_entity_ids = set(project.entities.values_list("id", flat=True))
+    if not project_entity_ids.intersection(allowed_ids):
+        return None
+
+    return project
+
+
+def _ensure_project_report_config(dataset: DatasetType, request):
+    if not dataset.project_id:
+        return
+    if dataset.validation_frequency not in {DatasetType.WEEKLY, DatasetType.MONTHLY}:
+        return
+
+    from projects.models import ProjectReportConfig
+
+    project = dataset.project
+    if (
+        not project
+        or project.workflow_status != project.STATUS_APPROVED
+        or not project.is_active
+        or project.report_configs.exists()
+    ):
+        return
+
+    config = ProjectReportConfig.objects.create(
+        project=project,
+        name="Reporte principal",
+        report_variant=ProjectReportConfig.VARIANT_AUTO,
+        report_dataset=dataset,
+        curve_program_dataset=dataset,
+        curve_executed_dataset=dataset,
+        is_active=True,
+        notes=(
+            "Configuracion automatica creada al aprobar el primer esquema "
+            "operativo vinculado al proyecto."
+        ),
+    )
+    record_action(
+        "OTHER",
+        request=request,
+        module="Projects",
+        object_repr=f"Reporte {config.name} ({project.name}) creado",
+        details=(
+            "Configuracion automatica creada desde aprobacion de esquema "
+            "vinculado al proyecto."
+        ),
+    )
+
 def schema_list(request):
     user = request.user
     is_admin = _is_admin_user(user)
@@ -150,7 +224,9 @@ def schema_edit(request, slug=None):
     allowed_entity_ids: list[int] = []
     has_global_loader = False
     seed_project_label = ""
+    seed_project_id = None
     seed_entity_id = None
+    seed_project = None
 
     if not is_admin:
         if not request.user.is_authenticated:
@@ -194,11 +270,39 @@ def schema_edit(request, slug=None):
             return redirect("schemas:schema_list")
 
         if not dataset:
-            seed_project_label = (request.GET.get("project") or "").strip()
-            seed_entity_raw = (request.GET.get("entity") or "").strip()
+            project_id_raw = (
+                request.POST.get("seed_project_id")
+                if request.method == "POST"
+                else request.GET.get("project_id")
+            )
+            seed_project = _resolve_seed_project(
+                project_id_raw,
+                allowed_entity_ids=allowed_entity_ids,
+                has_global_loader=has_global_loader,
+            )
+            if seed_project:
+                seed_project_id = seed_project.id
+                seed_project_label = seed_project.name
+            if not seed_project_label:
+                seed_project_label = (
+                    request.POST.get("seed_project_label")
+                    if request.method == "POST"
+                    else request.GET.get("project")
+                ) or ""
+                seed_project_label = seed_project_label.strip()
+
+            seed_entity_raw = (
+                request.POST.get("seed_entity_id")
+                if request.method == "POST"
+                else request.GET.get("entity")
+            ) or ""
             if seed_entity_raw.isdigit():
                 seed_entity_id = int(seed_entity_raw)
                 if not has_global_loader and seed_entity_id not in allowed_entity_ids:
+                    seed_entity_id = None
+                elif seed_project and seed_entity_id not in set(
+                    seed_project.entities.values_list("id", flat=True)
+                ):
                     seed_entity_id = None
 
     DatasetColumnFormSet = inlineformset_factory(
@@ -235,6 +339,8 @@ def schema_edit(request, slug=None):
 
                 dataset.status = DatasetType.STATUS_DRAFT
                 dataset.is_active = False
+                if not dataset.pk:
+                    dataset.project = seed_project
 
             if not form.errors:
                 dataset.save()
@@ -284,6 +390,8 @@ def schema_edit(request, slug=None):
             "loader_has_multiple_entities": loader_has_multiple_entities,
             "is_admin": is_admin,
             "seed_project_label": seed_project_label,
+            "seed_project_id": seed_project_id,
+            "seed_entity_id": seed_entity_id,
         },
     )
 
@@ -415,6 +523,7 @@ def schema_approve(request, slug):
     dataset.is_active = True
     dataset.status_comment = ""
     dataset.save(update_fields=["status", "is_active", "status_comment", "updated_at"])
+    _ensure_project_report_config(dataset, request)
     record_action(
         "SCHEMA",
         request=request,

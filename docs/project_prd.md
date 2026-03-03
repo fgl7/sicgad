@@ -79,6 +79,8 @@ Modelos en `schemas/models.py`:
 - `ColumnDef`
 
 Campos/ideas clave de `DatasetType`:
+- `entity` sigue siendo el scope operativo principal
+- `project` (opcional) para vinculo explicito cuando el esquema nace desde `projects`
 - `validation_frequency`: `DAILY|WEEKLY|MONTHLY|FLEXIBLE`
 - `status`: `DRAFT|PENDING|APPROVED|REJECTED`
 - `is_certification`
@@ -105,10 +107,14 @@ Nota operativa:
 - La lista de esquemas muestra solo `DatasetType` activos (`is_active=True`).
 - Cuando un loader entra a `schemas:schema_create` desde un proyecto/convenio aprobado, el formulario puede venir
   "sembrado" desde `projects` con:
+  - `project_id` (fuente de verdad para el vinculo; mas seguro que resolver solo por nombre)
   - nombre sugerido (`<proyecto> - resumen`)
   - entidad preseleccionada (si aplica)
   - guia operativa visible para crear al menos `resumen`, `curva programada` y `curva ejecutada`
+  - el vinculo `DatasetType.project` se persiste al guardar el esquema si la siembra es valida
   - el esquema sigue el workflow normal de `schemas`: loader crea -> loader envia -> admin aprueba/rechaza
+- Un esquema creado desde `Schemas > Nuevo Esquema` sin siembra desde `projects` sigue siendo un esquema general por `entity`
+  y no queda ligado automaticamente a un `Project`.
 
 ## 6. Carga de datos (ingest)
 Modelos en `ingest/models.py`:
@@ -512,6 +518,8 @@ Funciona y se usa activamente:
   - reportes solo visibles para proyectos aprobados
   - detalle de reportes con variantes `project` y `agreement`
   - bridge hacia `schemas` desde proyectos aprobados para sembrar creacion de esquemas
+  - vinculo formal `DatasetType.project` cuando el esquema nace desde el flujo sembrado
+  - autoconfiguracion inicial de `ProjectReportConfig` al aprobar el primer esquema semanal/mensual ligado al proyecto
 
 Requiere refactor planificado:
 - Extender pruebas de regresion para cubrir flujos refactorizados a `entity`.
@@ -525,16 +533,21 @@ Requiere refactor planificado:
 4. Ejecutar:
    - `python manage.py check`
    - si hay cambios en consolidacion mensual: `python manage.py consolidate_certifications --backfill` (entorno de prueba)
-5. Si se modifica ingest/validation, probar manualmente:
+5. Si se toca `projects` + `schemas`, validar manualmente:
+   - proyecto `PENDING` no debe mostrar `Crear Esquemas` al loader
+   - proyecto `APPROVED` si debe mostrar `Crear Esquemas`
+   - el flujo sembrado debe abrir `schemas:schema_create` con nombre y `entity` precargados
+   - al aprobar el primer esquema semanal/mensual ligado al proyecto debe crearse la `ProjectReportConfig` inicial
+6. Si se modifica ingest/validation, probar manualmente:
    - carga historica
    - carga periodica
    - envio a validacion
    - aprobacion historica
    - acceso de admin, loader, validator y viewer
-6. Si hay diferencias entre instancias publicadas y datos en KPIs, verificar `PublishedDataPoint` por dataset/periodo.
+7. Si hay diferencias entre instancias publicadas y datos en KPIs, verificar `PublishedDataPoint` por dataset/periodo.
    - para visualizador externo mensual, confirmar que las instancias mensuales esten en `PUBLISHED/LOCKED`.
-7. Si se toca UX de cuentas, validar formulario crear/editar usuario y creacion de memberships esperados.
-8. Si se toca UX global / navegacion (`templates/base.html`, `templates/landing.html`, `templates/registration/login.html`):
+8. Si se toca UX de cuentas, validar formulario crear/editar usuario y creacion de memberships esperados.
+9. Si se toca UX global / navegacion (`templates/base.html`, `templates/landing.html`, `templates/registration/login.html`):
    - probar paginas con y sin scroll vertical (sin salto visual notable)
    - confirmar que exista un solo scrollbar visible en paginas internas (sin doble barra viewport/panel)
    - probar links normales, links con query params, `target="_blank"` y formularios POST (logout)
@@ -592,6 +605,8 @@ Modelo operativo vigente:
 - `ProjectReportConfig`:
   - referencia datasets validos del proyecto
   - incluye `report_variant` configurable y extensible
+  - es el enlace formal entre el visor de `projects` y los esquemas `DatasetType`
+  - puede crearse manualmente por admin o autogenerarse al aprobar el primer esquema operativo del proyecto
 
 Reglas de negocio implementadas:
 - El admin NO crea proyectos/convenios/etc.
@@ -605,6 +620,7 @@ Reglas de negocio implementadas:
   - aparecer en reportes
   - ser seleccionables en `ProjectReportConfig`
   - sembrar la creacion de esquemas relacionados
+- Mientras el proyecto este `PENDING` o `REJECTED`, el loader no ve la accion `Crear Esquemas` en el catalogo.
 
 Seguridad y consistencia ya endurecidas:
 - Todas las `entities` elegidas en `Project` deben pertenecer a `Project.category`.
@@ -632,9 +648,13 @@ Workflow operativo vigente (proyectos/convenios):
 Puente `projects` -> `schemas` (implementado):
 - Desde un proyecto aprobado, el loader tiene acceso a `Crear Esquemas`.
 - Ese enlace abre `schemas:schema_create` con contexto sembrado:
+  - `project_id` (usado para resolver el proyecto y persistir el vinculo real)
   - nombre sugerido basado en el proyecto
   - entidad preseleccionada cuando el scope lo permite
   - bloque visual de guia en `templates/schemas/schema_edit.html`
+- La UX actual exige esperar la aprobacion del proyecto antes de habilitar esa accion.
+- Si el loader entra por el acceso generico de `schemas` sin pasar por `Crear Esquemas`, no hay selector visible de proyecto;
+  en ese caso el esquema no queda ligado automaticamente al proyecto.
 - La guia recuerda el patron operativo recomendado:
   - `resumen`
   - `curva programada`
@@ -643,6 +663,14 @@ Puente `projects` -> `schemas` (implementado):
   - loader crea/edita
   - loader envia a aprobacion
   - admin aprueba/rechaza
+- Si el esquema sembrado queda ligado a un `Project` y el admin aprueba un esquema `WEEKLY` o `MONTHLY`,
+  se crea automaticamente una `ProjectReportConfig` inicial para reducir errores operativos.
+- En esa autoconfiguracion inicial, el mismo esquema aprobado se usa temporalmente como:
+  - `report_dataset`
+  - `curve_program_dataset`
+  - `curve_executed_dataset`
+- Esa configuracion automatica es un baseline operativo; en una iteracion posterior puede refinarse
+  para separar `resumen`, `curva programada` y `curva ejecutada` en datasets distintos.
 
 Contrato operativo de variantes y datasets (implementacion vigente):
 - `ProjectReportConfig.report_variant` ahora es configurable y extensible:

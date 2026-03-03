@@ -95,6 +95,7 @@ class SchemaSeededCreateTests(TestCase):
         response = self.client.get(
             reverse("schemas:schema_create"),
             {
+                "project_id": self.project.id,
                 "project": self.project.name,
                 "entity": self.entity.id,
             },
@@ -102,6 +103,7 @@ class SchemaSeededCreateTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["seed_project_label"], self.project.name)
+        self.assertEqual(response.context["seed_project_id"], self.project.id)
         self.assertEqual(
             response.context["form"].fields["name"].initial,
             f"{self.project.name} - resumen",

@@ -204,6 +204,7 @@ def _build_schema_seed_url(project) -> str:
     base_url = reverse("schemas:schema_create")
     params = {
         "seed_source": "project",
+        "project_id": project.id,
         "project": project.name,
     }
     project_entities = list(project.entities.all())

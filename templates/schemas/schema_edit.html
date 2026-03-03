@@ -54,6 +54,15 @@
 
     <form method="post" class="space-y-6">
         {% csrf_token %}
+        {% if seed_project_id and not dataset %}
+        <input type="hidden" name="seed_project_id" value="{{ seed_project_id }}">
+        {% endif %}
+        {% if seed_project_label and not dataset %}
+        <input type="hidden" name="seed_project_label" value="{{ seed_project_label }}">
+        {% endif %}
+        {% if seed_entity_id and not dataset %}
+        <input type="hidden" name="seed_entity_id" value="{{ seed_entity_id }}">
+        {% endif %}
 
         <section class="glass-card rounded-3xl p-6 md:p-8 border-white/5 bg-gradient-to-br from-emerald-500/5 to-transparent space-y-6">
             <div class="flex items-center justify-between gap-4">

@@ -217,6 +217,154 @@ class ProjectsModuleTests(TestCase):
         self.assertEqual(pending_project.approved_by_id, self.admin_user.id)
         self.assertTrue(pending_project.is_active)
 
+    def test_admin_created_loader_can_create_project_and_submit_seeded_schema(self):
+        Membership.objects.create(
+            user=self.admin_user,
+            role="ADMIN",
+        )
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            reverse("accounts:admin_user_create"),
+            data={
+                "username": "project_loader_new",
+                "password1": "test-pass-123",
+                "password2": "test-pass-123",
+                "role": "LOADER",
+                "scope_mode": "ENTITY",
+                "category": [self.category_projects.id],
+                "entity": [self.entity_a.id],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        created_loader = get_user_model().objects.get(username="project_loader_new")
+        loader_memberships = Membership.objects.filter(
+            user=created_loader,
+            role="LOADER",
+            is_active=True,
+        )
+        self.assertEqual(loader_memberships.count(), 1)
+        self.assertEqual(loader_memberships.first().entity_id, self.entity_a.id)
+
+        created_loader.profile.must_change_password = False
+        created_loader.profile.save(update_fields=["must_change_password"])
+
+        self.client.force_login(created_loader)
+        response = self.client.post(
+            reverse("projects:project_create"),
+            data={
+                "name": "Convenio Operativo",
+                "category": self.category_projects.id,
+                "entities": [self.entity_a.id],
+                "executor": "YLB",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        created_project = Project.objects.get(name="Convenio Operativo")
+        self.assertEqual(created_project.created_by_id, created_loader.id)
+        self.assertEqual(created_project.workflow_status, Project.STATUS_PENDING)
+        self.assertFalse(created_project.is_active)
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            reverse("projects:project_review", args=[created_project.id, "approve"])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        created_project.refresh_from_db()
+        self.assertEqual(created_project.workflow_status, Project.STATUS_APPROVED)
+        self.assertTrue(created_project.is_active)
+
+        self.client.force_login(created_loader)
+        response = self.client.get(
+            reverse("schemas:schema_create"),
+            {
+                "project_id": created_project.id,
+                "project": created_project.name,
+                "entity": self.entity_a.id,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["form"].fields["name"].initial,
+            f"{created_project.name} - resumen",
+        )
+        self.assertEqual(
+            response.context["form"].fields["entity"].initial,
+            self.entity_a,
+        )
+
+        response = self.client.post(
+            reverse("schemas:schema_create"),
+            data={
+                "seed_project_id": created_project.id,
+                "seed_project_label": created_project.name,
+                "seed_entity_id": self.entity_a.id,
+                "entity": self.entity_a.id,
+                "name": f"{created_project.name} - resumen",
+                "version": "1",
+                "validation_frequency": DatasetType.MONTHLY,
+                "columns-TOTAL_FORMS": "1",
+                "columns-INITIAL_FORMS": "0",
+                "columns-MIN_NUM_FORMS": "0",
+                "columns-MAX_NUM_FORMS": "1000",
+                "columns-0-name": "fecha_corte",
+                "columns-0-label": "Fecha corte",
+                "columns-0-data_type": "DATE",
+                "columns-0-required": "on",
+                "columns-0-min_value": "",
+                "columns-0-max_value": "",
+                "columns-0-regex": "",
+                "columns-0-choices_raw": "",
+                "columns-0-unit": "",
+                "columns-0-axis_role": "X",
+                "columns-0-default_agg": "NONE",
+                "columns-0-display_order": "0",
+                "columns-0-is_active": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        created_schema = DatasetType.objects.get(
+            entity=self.entity_a,
+            name=f"{created_project.name} - resumen",
+            version=1,
+        )
+        self.assertEqual(created_schema.status, DatasetType.STATUS_DRAFT)
+        self.assertFalse(created_schema.is_active)
+        self.assertEqual(created_schema.project_id, created_project.id)
+
+        response = self.client.post(
+            reverse("schemas:schema_submit", args=[created_schema.slug])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        created_schema.refresh_from_db()
+        self.assertEqual(created_schema.status, DatasetType.STATUS_PENDING)
+        self.assertFalse(created_schema.is_active)
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(
+            reverse("schemas:schema_approve", args=[created_schema.slug])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        created_schema.refresh_from_db()
+        self.assertEqual(created_schema.status, DatasetType.STATUS_APPROVED)
+        self.assertTrue(created_schema.is_active)
+
+        auto_config = ProjectReportConfig.objects.get(project=created_project)
+        self.assertEqual(auto_config.report_dataset_id, created_schema.id)
+        self.assertEqual(auto_config.curve_program_dataset_id, created_schema.id)
+        self.assertEqual(auto_config.curve_executed_dataset_id, created_schema.id)
+        self.assertTrue(auto_config.is_active)
+
     def test_report_config_validation_rejects_datasets_outside_project_entities(self):
         config = ProjectReportConfig(
             project=self.project,

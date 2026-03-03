@@ -36,6 +36,14 @@ class DatasetType(models.Model):
         on_delete=models.CASCADE,
         related_name="dataset_types",
     )
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="datasets",
+        help_text="Proyecto operativo al que pertenece este esquema cuando nace desde el modulo projects.",
+    )
     source_dataset = models.ForeignKey(
         "self",
         on_delete=models.SET_NULL,

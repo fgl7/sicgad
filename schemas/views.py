@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db.models import Max, Q
 from django.forms import inlineformset_factory
@@ -31,6 +32,35 @@ def _dataset_scope_label(dataset: DatasetType) -> str:
 
 def _dataset_scope_filter(dataset: DatasetType) -> Q:
     return Q(entity=dataset.entity)
+
+
+def _invalidate_schema_alert_caches(dataset=None, actor_user_id=None):
+    affected_user_ids = set()
+    if actor_user_id:
+        affected_user_ids.add(actor_user_id)
+
+    admin_user_ids = Membership.objects.filter(
+        role="ADMIN",
+        is_active=True,
+    ).values_list("user_id", flat=True)
+    affected_user_ids.update(admin_user_ids)
+
+    superuser_ids = get_user_model().objects.filter(
+        is_superuser=True,
+        is_active=True,
+    ).values_list("id", flat=True)
+    affected_user_ids.update(superuser_ids)
+
+    if dataset is not None and dataset.entity_id:
+        loader_user_ids = Membership.objects.filter(
+            role="LOADER",
+            is_active=True,
+            entity_id=dataset.entity_id,
+        ).values_list("user_id", flat=True)
+        affected_user_ids.update(loader_user_ids)
+
+    for user_id in affected_user_ids:
+        invalidate_admin_flags_cache(user_id)
 
 
 
@@ -125,10 +155,23 @@ def schema_list(request):
     user = request.user
     is_admin = _is_admin_user(user)
 
-    datasets = DatasetType.objects.filter(is_active=True).select_related("entity__category__subsector__sector").order_by(
-        "entity__name",
-        "name",
-        "-version",
+    datasets = (
+        DatasetType.objects.filter(
+            Q(is_active=True)
+            | Q(
+                status__in=[
+                    DatasetType.STATUS_DRAFT,
+                    DatasetType.STATUS_PENDING,
+                    DatasetType.STATUS_REJECTED,
+                ]
+            )
+        )
+        .select_related("entity__category__subsector__sector")
+        .order_by(
+            "entity__name",
+            "name",
+            "-version",
+        )
     )
 
     if not is_admin:
@@ -498,6 +541,7 @@ def schema_submit_for_approval(request, slug):
         dataset.status = DatasetType.STATUS_PENDING
         dataset.is_active = False
         dataset.save(update_fields=["status", "is_active", "updated_at"])
+        _invalidate_schema_alert_caches(dataset=dataset, actor_user_id=request.user.id)
         record_action(
             "SCHEMA",
             request=request,
@@ -523,6 +567,7 @@ def schema_approve(request, slug):
     dataset.is_active = True
     dataset.status_comment = ""
     dataset.save(update_fields=["status", "is_active", "status_comment", "updated_at"])
+    _invalidate_schema_alert_caches(dataset=dataset, actor_user_id=request.user.id)
     _ensure_project_report_config(dataset, request)
     record_action(
         "SCHEMA",
@@ -549,6 +594,7 @@ def schema_reject(request, slug):
     dataset.is_active = False
     dataset.status_comment = comment
     dataset.save(update_fields=["status", "is_active", "status_comment", "updated_at"])
+    _invalidate_schema_alert_caches(dataset=dataset, actor_user_id=request.user.id)
     record_action(
         "SCHEMA",
         request=request,

@@ -156,7 +156,7 @@ class ProjectsModuleTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("entities", form.errors)
 
-    def test_loader_can_create_project_and_it_starts_pending(self):
+    def test_loader_can_create_project_and_it_starts_draft(self):
         Membership.objects.create(
             user=self.loader_same_scope,
             entity=self.entity_a,
@@ -177,7 +177,7 @@ class ProjectsModuleTests(TestCase):
         self.assertEqual(response.status_code, 302)
         created = Project.objects.get(name="Proyecto Nuevo")
         self.assertEqual(created.created_by_id, self.loader_same_scope.id)
-        self.assertEqual(created.workflow_status, Project.STATUS_PENDING)
+        self.assertEqual(created.workflow_status, Project.STATUS_DRAFT)
         self.assertFalse(created.is_active)
 
     def test_admin_cannot_create_project_catalog_entries(self):
@@ -266,6 +266,15 @@ class ProjectsModuleTests(TestCase):
 
         created_project = Project.objects.get(name="Convenio Operativo")
         self.assertEqual(created_project.created_by_id, created_loader.id)
+        self.assertEqual(created_project.workflow_status, Project.STATUS_DRAFT)
+        self.assertFalse(created_project.is_active)
+
+        response = self.client.post(
+            reverse("projects:project_submit", args=[created_project.id])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        created_project.refresh_from_db()
         self.assertEqual(created_project.workflow_status, Project.STATUS_PENDING)
         self.assertFalse(created_project.is_active)
 

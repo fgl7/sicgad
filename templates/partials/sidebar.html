@@ -118,6 +118,17 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 3v4m10-4v4M5 21h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2zm4-7h6m-6 4h6"></path>
       </svg>
       <span class="font-medium">Registrar Proyectos</span>
+      <span class='ml-auto flex items-center gap-1'>
+        {% if loader_project_pending %}
+        <span class='px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold'>{{ loader_project_pending }}</span>
+        {% endif %}
+        {% if loader_project_approved %}
+        <span class='px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold'>+{{ loader_project_approved }}</span>
+        {% endif %}
+        {% if loader_project_rejected %}
+        <span class='px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[10px] font-bold'>-{{ loader_project_rejected }}</span>
+        {% endif %}
+      </span>
     </a>
     {% endif %}
 
@@ -166,6 +177,9 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 3v4m10-4v4M5 21h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2zm4-7h6m-6 4h6"></path>
       </svg>
       <span class="font-medium">Proyectos</span>
+      {% if pending_project_requests %}
+      <span class='ml-auto px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold'>{{ pending_project_requests }}</span>
+      {% endif %}
     </a>
     {% endif %}
 

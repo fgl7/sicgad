@@ -12,7 +12,7 @@ class ProjectForm(forms.ModelForm):
         widget=forms.Textarea(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
-                "rows": 3,
+                "rows": 2,
                 "placeholder": "Describe la razon del cambio en datos estaticos.",
             }
         ),
@@ -66,7 +66,7 @@ class ProjectForm(forms.ModelForm):
             "description": forms.Textarea(
                 attrs={
                     "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
-                    "rows": 3,
+                    "rows": 2,
                 }
             ),
             "executor": forms.TextInput(
@@ -99,7 +99,7 @@ class ProjectForm(forms.ModelForm):
             "entities": forms.SelectMultiple(
                 attrs={
                     "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs",
-                    "size": 4,
+                    "size": 3,
                 }
             ),
             "is_active": forms.CheckboxInput(
@@ -118,6 +118,10 @@ class ProjectForm(forms.ModelForm):
         if allowed_entity_ids is not None:
             entity_qs = entity_qs.filter(id__in=allowed_entity_ids)
         self.fields["category"].required = True
+        self.fields["entities"].required = True
+        self.fields["entities"].error_messages["required"] = (
+            "Debe seleccionar al menos una entidad operativa."
+        )
         self.fields["category"].queryset = Category.objects.filter(is_active=True).order_by(
             "subsector__sector__name",
             "subsector__name",

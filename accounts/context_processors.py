@@ -107,6 +107,7 @@ def admin_flags(request):
     viewer_nav_sectors = []
     authority_nav_tree = []
     pending_schema_requests = 0
+    pending_project_requests = 0
     pending_validation_items = 0
     pending_certification_alerts = 0
     loader_pending_certification_alerts = 0
@@ -115,6 +116,9 @@ def admin_flags(request):
     loader_certification_rejected = 0
     loader_schema_approved = 0
     loader_schema_rejected = 0
+    loader_project_pending = 0
+    loader_project_approved = 0
+    loader_project_rejected = 0
     loader_default_entity = None
 
     if not user or not user.is_authenticated:
@@ -131,6 +135,7 @@ def admin_flags(request):
             "authority_nav_tree": authority_nav_tree,
             "current_section": current_section,
             "pending_schema_requests": pending_schema_requests,
+            "pending_project_requests": pending_project_requests,
             "pending_validation_items": pending_validation_items,
             "pending_certification_alerts": pending_certification_alerts,
             "loader_pending_certification_alerts": loader_pending_certification_alerts,
@@ -139,6 +144,9 @@ def admin_flags(request):
             "loader_certification_rejected": loader_certification_rejected,
             "loader_schema_approved": loader_schema_approved,
             "loader_schema_rejected": loader_schema_rejected,
+            "loader_project_pending": loader_project_pending,
+            "loader_project_approved": loader_project_approved,
+            "loader_project_rejected": loader_project_rejected,
             "loader_default_entity": loader_default_entity,
         }
 
@@ -157,6 +165,7 @@ def admin_flags(request):
             "authority_nav_tree": [],
             "current_section": current_section,
             "pending_schema_requests": 0,
+            "pending_project_requests": 0,
             "pending_validation_items": 0,
             "pending_certification_alerts": 0,
             "loader_pending_certification_alerts": 0,
@@ -165,6 +174,9 @@ def admin_flags(request):
             "loader_certification_rejected": 0,
             "loader_schema_approved": 0,
             "loader_schema_rejected": 0,
+            "loader_project_pending": 0,
+            "loader_project_approved": 0,
+            "loader_project_rejected": 0,
             "loader_default_entity": None,
         }
 
@@ -178,8 +190,10 @@ def admin_flags(request):
     if user and user.is_authenticated:
         try:
             from ingest.models import DatasetInstance
+            from projects.models import Project
             from schemas.models import DatasetType
             from schemas.services import previous_month_range
+            profile = getattr(user, "profile", None)
 
             if user.is_superuser:
                 is_admin = True
@@ -187,13 +201,20 @@ def admin_flags(request):
                     status=DatasetType.STATUS_PENDING,
                     is_certification=False,
                 ).count()
+                pending_projects_qs = Project.objects.filter(
+                    workflow_status=Project.STATUS_PENDING
+                )
+                if profile and profile.last_seen_project_pending:
+                    pending_projects_qs = pending_projects_qs.filter(
+                        updated_at__gt=profile.last_seen_project_pending
+                    )
+                pending_project_requests = pending_projects_qs.count()
             else:
                 memberships = Membership.objects.filter(user=user, is_active=True).select_related("entity")
                 is_admin = memberships.filter(role="ADMIN").exists()
                 is_loader = memberships.filter(role="LOADER").exists()
                 is_validator = memberships.filter(role="VALIDATOR").exists()
                 is_viewer = memberships.filter(role="VIEWER").exists()
-                profile = getattr(user, "profile", None)
                 if profile:
                     viewer_profile_type = profile.viewer_profile_type or AccountProfile.VIEWER_STANDARD
                 is_authority_viewer = (
@@ -310,6 +331,14 @@ def admin_flags(request):
                         status=DatasetType.STATUS_PENDING,
                         is_certification=False,
                     ).count()
+                    pending_projects_qs = Project.objects.filter(
+                        workflow_status=Project.STATUS_PENDING
+                    )
+                    if profile and profile.last_seen_project_pending:
+                        pending_projects_qs = pending_projects_qs.filter(
+                            updated_at__gt=profile.last_seen_project_pending
+                        )
+                    pending_project_requests = pending_projects_qs.count()
 
                 if is_validator:
                     pending_validation_items = _validator_pending_items_count(user, memberships)
@@ -335,6 +364,26 @@ def admin_flags(request):
                         schema_qs = schema_qs.filter(updated_at__gt=profile.last_seen_schema_status)
                     loader_schema_approved = schema_qs.filter(status=DatasetType.STATUS_APPROVED).count()
                     loader_schema_rejected = schema_qs.filter(status=DatasetType.STATUS_REJECTED).count()
+
+                    project_qs = Project.objects.filter(
+                        created_by=user,
+                        workflow_status__in=[
+                            Project.STATUS_PENDING,
+                            Project.STATUS_APPROVED,
+                            Project.STATUS_REJECTED,
+                        ],
+                    )
+                    if profile and profile.last_seen_project_status:
+                        project_qs = project_qs.filter(updated_at__gt=profile.last_seen_project_status)
+                    loader_project_pending = project_qs.filter(
+                        workflow_status=Project.STATUS_PENDING
+                    ).count()
+                    loader_project_approved = project_qs.filter(
+                        workflow_status=Project.STATUS_APPROVED
+                    ).count()
+                    loader_project_rejected = project_qs.filter(
+                        workflow_status=Project.STATUS_REJECTED
+                    ).count()
 
                     validation_qs = DatasetInstance.objects.filter(created_by__user=user)
                     if profile and profile.last_seen_validation_status:
@@ -413,6 +462,7 @@ def admin_flags(request):
         "authority_nav_tree": authority_nav_tree,
         "current_section": current_section,
         "pending_schema_requests": pending_schema_requests,
+        "pending_project_requests": pending_project_requests,
         "pending_validation_items": pending_validation_items,
         "pending_certification_alerts": pending_certification_alerts,
         "loader_pending_certification_alerts": loader_pending_certification_alerts,
@@ -421,6 +471,9 @@ def admin_flags(request):
         "loader_certification_rejected": loader_certification_rejected,
         "loader_schema_approved": loader_schema_approved,
         "loader_schema_rejected": loader_schema_rejected,
+        "loader_project_pending": loader_project_pending,
+        "loader_project_approved": loader_project_approved,
+        "loader_project_rejected": loader_project_rejected,
         "loader_default_entity": loader_default_entity,
     }
 

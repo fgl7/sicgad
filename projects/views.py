@@ -5,11 +5,14 @@ from datetime import date, datetime
 import json
 from urllib.parse import urlencode
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from accounts.cache_utils import invalidate_admin_flags_cache
 from accounts.models import Membership
 from accounts.decorators import admin_role_required
 from audit.utils import record_action
@@ -191,13 +194,45 @@ def _can_user_manage_projects(user) -> bool:
 def _can_user_edit_project(user, project) -> bool:
     if not user.is_authenticated or _is_admin_user(user):
         return False
-    if project.workflow_status == Project.STATUS_APPROVED:
+    if project.workflow_status not in {Project.STATUS_DRAFT, Project.STATUS_REJECTED}:
         return False
     loader_entity_ids = _get_loader_entity_ids(user)
     project_entity_ids = set(project.entities.values_list("id", flat=True))
     if not loader_entity_ids.intersection(project_entity_ids):
         return False
     return project.created_by_id == user.id
+
+
+def _can_user_submit_project(user, project) -> bool:
+    if not _can_user_edit_project(user, project):
+        return False
+    return project.workflow_status == Project.STATUS_DRAFT
+
+
+def _invalidate_project_alert_caches(project=None, actor_user_id=None):
+    affected_user_ids = set()
+    if actor_user_id:
+        affected_user_ids.add(actor_user_id)
+
+    admin_user_ids = Membership.objects.filter(
+        role="ADMIN",
+        is_active=True,
+    ).values_list("user_id", flat=True)
+    affected_user_ids.update(admin_user_ids)
+
+    if project is not None:
+        if project.created_by_id:
+            affected_user_ids.add(project.created_by_id)
+        project_entity_ids = list(project.entities.values_list("id", flat=True))
+        loader_qs = Membership.objects.filter(role="LOADER", is_active=True)
+        if project_entity_ids:
+            loader_qs = loader_qs.filter(entity_id__in=project_entity_ids)
+        else:
+            loader_qs = loader_qs.none()
+        affected_user_ids.update(loader_qs.values_list("user_id", flat=True))
+
+    for user_id in affected_user_ids:
+        invalidate_admin_flags_cache(user_id)
 
 
 def _build_schema_seed_url(project) -> str:
@@ -499,6 +534,7 @@ def project_list(request):
         return redirect("home")
 
     is_admin = _is_admin_user(request.user)
+    loader_has_scope = bool(_get_loader_entity_ids(request.user))
     projects = Project.objects.prefetch_related("entities").select_related("created_by", "approved_by")
     if not is_admin:
         loader_entity_ids = _get_loader_entity_ids(request.user)
@@ -506,10 +542,27 @@ def project_list(request):
     projects = list(projects.order_by("name"))
 
     editable_project_ids = set()
+    submit_project_ids = set()
     for project in projects:
         project.schema_seed_url = _build_schema_seed_url(project)
         if not is_admin and _can_user_edit_project(request.user, project):
             editable_project_ids.add(project.id)
+        if not is_admin and _can_user_submit_project(request.user, project):
+            submit_project_ids.add(project.id)
+
+    profile = getattr(request.user, "profile", None)
+    if profile:
+        now = timezone.now()
+        fields_to_update = []
+        if is_admin:
+            profile.last_seen_project_pending = now
+            fields_to_update.append("last_seen_project_pending")
+        if loader_has_scope and not is_admin:
+            profile.last_seen_project_status = now
+            fields_to_update.append("last_seen_project_status")
+        if fields_to_update:
+            profile.save(update_fields=fields_to_update)
+            invalidate_admin_flags_cache(request.user.id)
 
     return render(
         request,
@@ -519,6 +572,7 @@ def project_list(request):
             "is_admin": is_admin,
             "can_create_project": _can_user_create_projects(request.user),
             "editable_project_ids": editable_project_ids,
+            "submit_project_ids": submit_project_ids,
         },
     )
 
@@ -537,23 +591,39 @@ def project_create(request):
             allowed_entity_ids=allowed_entity_ids,
         )
         if form.is_valid():
-            project = form.save(commit=False)
-            project.workflow_status = Project.STATUS_PENDING
-            project.workflow_comment = ""
-            project.created_by = request.user
-            project.approved_by = None
-            project.approved_at = None
-            project.is_active = False
-            project.save()
-            form.save_m2m()
-            record_action(
-                "OTHER",
-                request=request,
-                module="Projects",
-                object_repr=f"Proyecto {project.name} registrado",
-                details="Registrado por usuario operativo y enviado a aprobacion.",
-            )
-            return redirect("projects:project_list")
+            try:
+                with transaction.atomic():
+                    project = form.save(commit=False)
+                    project.workflow_status = Project.STATUS_DRAFT
+                    project.workflow_comment = ""
+                    project.created_by = request.user
+                    project.approved_by = None
+                    project.approved_at = None
+                    project.is_active = False
+                    project.save()
+                    form.save_m2m()
+            except IntegrityError:
+                form.add_error(
+                    "entities",
+                    (
+                        "No se pudo guardar la relacion de entidades por una inconsistencia de "
+                        "base de datos. Ejecuta migraciones pendientes y vuelve a intentar."
+                    ),
+                )
+            else:
+                _invalidate_project_alert_caches(project=project, actor_user_id=request.user.id)
+                record_action(
+                    "OTHER",
+                    request=request,
+                    module="Projects",
+                    object_repr=f"Proyecto {project.name} registrado",
+                    details="Registrado por usuario operativo en estado borrador.",
+                )
+                messages.success(
+                    request,
+                    "Proyecto guardado como borrador. Envia el registro a revision desde el listado.",
+                )
+                return redirect("projects:project_list")
     else:
         form = ProjectForm(
             user=request.user,
@@ -587,32 +657,48 @@ def project_edit(request, pk: int):
             allowed_entity_ids=allowed_entity_ids,
         )
         if form.is_valid():
-            project = form.save(commit=False)
-            project.workflow_status = Project.STATUS_PENDING
-            project.workflow_comment = ""
-            project.approved_by = None
-            project.approved_at = None
-            project.is_active = False
-            project.save()
-            form.save_m2m()
-            changed = [
-                field
-                for field in form.changed_data
-                if field in ProjectForm.STATIC_FIELDS
-            ]
-            if changed:
-                justification = (form.cleaned_data.get("change_justification") or "").strip()
-                record_action(
-                    "OTHER",
-                    request=request,
-                    module="Projects",
-                    object_repr=f"Proyecto {project.name} actualizado",
-                    details=(
-                        f"Campos: {', '.join(changed)}. Justificacion: {justification}. "
-                        "Reenviado a aprobacion."
+            try:
+                with transaction.atomic():
+                    project = form.save(commit=False)
+                    project.workflow_status = Project.STATUS_DRAFT
+                    project.workflow_comment = ""
+                    project.approved_by = None
+                    project.approved_at = None
+                    project.is_active = False
+                    project.save()
+                    form.save_m2m()
+            except IntegrityError:
+                form.add_error(
+                    "entities",
+                    (
+                        "No se pudo guardar la relacion de entidades por una inconsistencia de "
+                        "base de datos. Ejecuta migraciones pendientes y vuelve a intentar."
                     ),
                 )
-            return redirect("projects:project_list")
+            else:
+                _invalidate_project_alert_caches(project=project, actor_user_id=request.user.id)
+                changed = [
+                    field
+                    for field in form.changed_data
+                    if field in ProjectForm.STATIC_FIELDS
+                ]
+                if changed:
+                    justification = (form.cleaned_data.get("change_justification") or "").strip()
+                    record_action(
+                        "OTHER",
+                        request=request,
+                        module="Projects",
+                        object_repr=f"Proyecto {project.name} actualizado",
+                        details=(
+                            f"Campos: {', '.join(changed)}. Justificacion: {justification}. "
+                            "Actualizado y guardado en borrador."
+                        ),
+                    )
+                messages.success(
+                    request,
+                    "Cambios guardados en borrador. Envia el registro a revision cuando corresponda.",
+                )
+                return redirect("projects:project_list")
     else:
         form = ProjectForm(
             instance=project,
@@ -632,12 +718,50 @@ def project_edit(request, pk: int):
 
 
 @login_required
+def project_submit(request, pk: int):
+    if request.method != "POST":
+        return redirect("projects:project_list")
+
+    project = get_object_or_404(Project, pk=pk)
+    if not _can_user_submit_project(request.user, project):
+        return redirect("projects:project_list")
+
+    project.workflow_status = Project.STATUS_PENDING
+    project.workflow_comment = ""
+    project.approved_by = None
+    project.approved_at = None
+    project.is_active = False
+    project.save(
+        update_fields=[
+            "workflow_status",
+            "workflow_comment",
+            "approved_by",
+            "approved_at",
+            "is_active",
+            "updated_at",
+        ]
+    )
+
+    _invalidate_project_alert_caches(project=project, actor_user_id=request.user.id)
+    record_action(
+        "OTHER",
+        request=request,
+        module="Projects",
+        object_repr=f"Proyecto {project.name} enviado a aprobacion",
+        details="Envio de borrador a revision administrativa.",
+    )
+    messages.success(request, "Proyecto enviado a revision administrativa.")
+    return redirect("projects:project_list")
+
+
+@login_required
 def project_delete(request, pk: int):
     project = get_object_or_404(Project, pk=pk)
     if not _can_user_edit_project(request.user, project):
         return redirect("projects:project_list")
     if request.method == "POST":
         project_name = project.name
+        _invalidate_project_alert_caches(project=project, actor_user_id=request.user.id)
         project.delete()
         record_action(
             "OTHER",
@@ -646,6 +770,7 @@ def project_delete(request, pk: int):
             object_repr=f"Proyecto {project_name} eliminado",
             details="Eliminado por usuario operativo antes de aprobacion.",
         )
+        messages.success(request, "Proyecto eliminado.")
         return redirect("projects:project_list")
     return render(
         request,
@@ -661,6 +786,10 @@ def project_review(request, pk: int, decision: str):
         return redirect("projects:project_list")
 
     if request.method == "POST":
+        if project.workflow_status != Project.STATUS_PENDING:
+            messages.info(request, "Solo puedes revisar proyectos en estado pendiente.")
+            return redirect("projects:project_list")
+
         if decision == "approve":
             project.workflow_status = Project.STATUS_APPROVED
             project.is_active = True
@@ -693,6 +822,13 @@ def project_review(request, pk: int, decision: str):
             module="Projects",
             object_repr=object_repr,
             details=detail,
+        )
+        _invalidate_project_alert_caches(project=project, actor_user_id=request.user.id)
+        messages.success(
+            request,
+            "Proyecto aprobado correctamente."
+            if decision == "approve"
+            else "Proyecto rechazado y devuelto para ajustes.",
         )
     return redirect("projects:project_list")
 

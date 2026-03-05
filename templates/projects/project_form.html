@@ -3,11 +3,11 @@
 {% block title %}{% if project %}Editar Registro{% else %}Nuevo Registro{% endif %} - SICGAD{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto fade-in space-y-6">
+<div class="max-w-5xl mx-auto fade-in space-y-4">
     <div class="flex items-center justify-between mb-2">
         <div>
             <h2 class="text-2xl font-header font-bold text-white tracking-tight">{% if project %}Actualizar Proyecto / Convenio{% else %}Registrar Proyecto / Convenio{% endif %}</h2>
-            <p class="text-slate-500 text-sm">El registro sera enviado a aprobacion administrativa antes de quedar operativo.</p>
+            <p class="text-slate-500 text-sm">Guarda el registro como borrador y envialo a revision administrativa desde el listado.</p>
         </div>
         <a href="{% url 'projects:project_list' %}" class="page-back-link">
             Volver al listado
@@ -24,67 +24,94 @@
     </div>
     {% endif %}
 
-    <form method="post" class="space-y-6">
+    <form method="post" class="space-y-4">
         {% csrf_token %}
 
-        <section class="glass-card rounded-3xl p-8 space-y-8">
+        {% if form.non_field_errors or form.errors %}
+        <div class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+            <p class="font-black uppercase tracking-widest mb-1">No se pudo guardar el registro</p>
+            {% if form.non_field_errors %}
+                {% for err in form.non_field_errors %}
+                <p>{{ err }}</p>
+                {% endfor %}
+            {% else %}
+                <p>Revisa los campos marcados en rojo e intenta nuevamente.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <section class="glass-card rounded-3xl p-6 md:p-7 space-y-5">
             <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Identificacion del Registro
             </h3>
 
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre Completo</label>
-                    {{ form.name }}
+            <div class="space-y-4">
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="space-y-1.5 md:col-span-2 lg:col-span-2">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre Completo</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Codigo Oficial</label>
+                        {{ form.code }}
+                        {% if form.code.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.code.errors.0 }}</p>{% endif %}
+                    </div>
                 </div>
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Codigo Oficial</label>
-                    {{ form.code }}
-                </div>
-            </div>
 
-            <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categoria</label>
-                {{ form.category }}
-            </div>
+                <div class="pt-4 border-t border-white/10 space-y-3">
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Alcance y Responsable</p>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Categoria</label>
+                            {{ form.category }}
+                            {% if form.category.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.category.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="space-y-1.5 lg:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entidades Relacionadas</label>
+                            {{ form.entities }}
+                            {% if form.entities.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.entities.errors.0 }}</p>{% endif %}
+                            <p class="text-[10px] text-slate-500">Solo se muestran las entidades donde tienes rol operativo de carga.</p>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ente Ejecutor</label>
+                            {{ form.executor }}
+                            {% if form.executor.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.executor.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="space-y-1.5 md:col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicacion / Region</label>
+                            {{ form.location }}
+                            {% if form.location.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.location.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                </div>
 
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ente Ejecutor</label>
-                    {{ form.executor }}
+                <div class="pt-4 border-t border-white/10 space-y-3">
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cronograma y Presupuesto</p>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha Inicio</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.start_date.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha Conclusion</label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.end_date.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Presupuesto Referencial (MMBs)</label>
+                            {{ form.budget_mmbs }}
+                            {% if form.budget_mmbs.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.budget_mmbs.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
                 </div>
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ubicacion / Region</label>
-                    {{ form.location }}
-                </div>
-            </div>
 
-            <div class="space-y-2">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Descripcion General</label>
-                {{ form.description }}
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-6 py-4 border-y border-white/5">
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha Inicio</label>
-                    {{ form.start_date }}
-                </div>
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fecha Conclusion</label>
-                    {{ form.end_date }}
-                </div>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Presupuesto Referencial (MMBs)</label>
-                    {{ form.budget_mmbs }}
-                </div>
-                <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entidades Relacionadas</label>
-                    {{ form.entities }}
-                    <p class="text-[10px] text-slate-500">Solo se muestran las entidades donde tienes rol operativo de carga.</p>
+                <div class="pt-4 border-t border-white/10 space-y-1.5">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Descripcion General</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}<p class="text-[10px] text-red-400 font-semibold">{{ form.description.errors.0 }}</p>{% endif %}
                 </div>
             </div>
 
@@ -110,9 +137,9 @@
             {% endif %}
         </section>
 
-        <div class="flex items-center justify-end pt-4">
+        <div class="flex items-center justify-end pt-2">
             <button type="submit" class="btn-primary glow-emerald px-12">
-                Guardar y Enviar a Aprobacion
+                Guardar Borrador
             </button>
         </div>
     </form>

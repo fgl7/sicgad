@@ -7,11 +7,13 @@ from structure.models import Entity
 
 
 class Project(models.Model):
+    STATUS_DRAFT = "DRAFT"
     STATUS_PENDING = "PENDING"
     STATUS_APPROVED = "APPROVED"
     STATUS_REJECTED = "REJECTED"
 
     STATUS_CHOICES = [
+        (STATUS_DRAFT, "Borrador"),
         (STATUS_PENDING, "Pendiente de aprobacion"),
         (STATUS_APPROVED, "Aprobado"),
         (STATUS_REJECTED, "Rechazado"),
@@ -42,7 +44,7 @@ class Project(models.Model):
     workflow_status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
+        default=STATUS_DRAFT,
     )
     workflow_comment = models.TextField(blank=True)
     created_by = models.ForeignKey(

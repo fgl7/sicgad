@@ -132,6 +132,16 @@ class AccountProfile(models.Model):
         blank=True,
         help_text="Fecha/hora en la que el usuario revisó las alertas de certificación mensual.",
     )
+    last_seen_project_status = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha/hora en la que el usuario vio por ultima vez el estado de sus proyectos.",
+    )
+    last_seen_project_pending = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha/hora en la que el usuario admin reviso la bandeja pendiente de proyectos.",
+    )
     viewer_profile_type = models.CharField(
         max_length=30,
         choices=VIEWER_PROFILE_CHOICES,

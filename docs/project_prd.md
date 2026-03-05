@@ -104,7 +104,10 @@ Vistas clave:
 - `templates/schemas/schema_detail.html`
 
 Nota operativa:
-- La lista de esquemas muestra solo `DatasetType` activos (`is_active=True`).
+- La lista de esquemas muestra:
+  - activos (`is_active=True`)
+  - y tambien estados de workflow no activos (`DRAFT`, `PENDING`, `REJECTED`)
+  - esto permite que admin vea y atienda los envios pendientes sin perder trazabilidad de borradores/rechazos recientes.
 - Cuando un loader entra a `schemas:schema_create` desde un proyecto/convenio aprobado, el formulario puede venir
   "sembrado" desde `projects` con:
   - `project_id` (fuente de verdad para el vinculo; mas seguro que resolver solo por nombre)
@@ -372,6 +375,24 @@ Entrega a plantillas:
 - alertas de certificacion
 - feedback loader (aprobado/rechazado)
 
+Logica vigente de alarmas/notificaciones (sidebar):
+- Fuente unica: `accounts/context_processors.py` (`admin_flags`).
+- Hay cache corta por usuario (`accounts:admin_flags:v3:user:<id>`, TTL 20s) para no recalcular en cada request.
+- Las alarmas se "limpian" por dos vias:
+  - por atencion de flujo (ej. aprobar/rechazar/enviar) con invalidacion explicita de cache.
+  - por marca de "visto" (`last_seen_*`) en flujos donde aplica.
+- Campos `last_seen_*` activos en `AccountProfile`:
+  - `last_seen_schema_status` (feedback de esquemas para loader)
+  - `last_seen_validation_status`
+  - `last_seen_certification_alert`
+  - `last_seen_project_status`
+  - `last_seen_project_pending` (bandeja admin de proyectos pendientes)
+- Workflow de `projects` ya invalida cache de alertas en submit/review/delete mediante
+  `_invalidate_project_alert_caches(...)`.
+- Workflow de `schemas` ya invalida cache de alertas en submit/approve/reject mediante
+  `_invalidate_schema_alert_caches(...)` (admins/superusers/loaders afectados por entidad),
+  evitando que el badge quede "pegado" tras atender una solicitud.
+
 Sidebar:
 - base: `templates/partials/sidebar.html`
 - autoridad MHE: `templates/partials/sidebar_authority_mhe.html`
@@ -621,6 +642,17 @@ Reglas de negocio implementadas:
   - ser seleccionables en `ProjectReportConfig`
   - sembrar la creacion de esquemas relacionados
 - Mientras el proyecto este `PENDING` o `REJECTED`, el loader no ve la accion `Crear Esquemas` en el catalogo.
+
+Alarmas de workflow (contrato operativo actual):
+- Loader:
+  - ve badges de `PENDING` / `APPROVED` / `REJECTED` de sus proyectos en sidebar.
+  - los contadores se filtran por `created_by` y ventana `last_seen_project_status`.
+- Admin:
+  - ve badge de proyectos pendientes para revision.
+  - el contador usa `last_seen_project_pending` para limpiar lo ya visto.
+- Esquemas:
+  - admin ve badge de pendientes en `Esquemas`.
+  - submit/approve/reject invalidan cache de alertas para refresco inmediato del badge.
 
 Seguridad y consistencia ya endurecidas:
 - Todas las `entities` elegidas en `Project` deben pertenecer a `Project.category`.

@@ -23,6 +23,13 @@
         {% endif %}
     </div>
 
+    {% if not is_admin %}
+    <div class="rounded-2xl border border-sky-500/20 bg-sky-500/5 px-4 py-3 text-xs text-sky-100">
+        Flujo operativo: <span class="font-black uppercase">Borrador</span> -> enviar a revision ->
+        <span class="font-black uppercase">Pendiente</span> -> decision administrativa.
+    </div>
+    {% endif %}
+
     <div class="glass-card rounded-3xl overflow-hidden border-white/5">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
@@ -58,7 +65,9 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex flex-col gap-2">
-                                {% if project.workflow_status == "APPROVED" %}
+                                {% if project.workflow_status == "DRAFT" %}
+                                <span class="inline-flex w-fit px-2 py-0.5 rounded-full bg-slate-700/30 text-slate-300 text-[10px] font-black uppercase tracking-widest border border-white/10">Borrador</span>
+                                {% elif project.workflow_status == "APPROVED" %}
                                 <span class="inline-flex w-fit px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Aprobado</span>
                                 {% elif project.workflow_status == "REJECTED" %}
                                 <span class="inline-flex w-fit px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest border border-red-500/20">Rechazado</span>
@@ -75,21 +84,21 @@
                                 <span class="text-slate-300 text-xs font-semibold">{{ project.created_by.username|default:"Sin creador" }}</span>
                                 {% if project.approved_by %}
                                 <span class="text-[10px] text-slate-500">Revision: {{ project.approved_by.username }}</span>
+                                {% elif project.workflow_status == "PENDING" %}
+                                <span class="text-[10px] text-amber-400">En bandeja de revision</span>
                                 {% endif %}
                             </div>
                         </td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex justify-end gap-2 flex-wrap">
                                 {% if is_admin %}
-                                    {% if project.workflow_status != "APPROVED" %}
+                                    {% if project.workflow_status == "PENDING" %}
                                     <form method="post" action="{% url 'projects:project_review' project.pk 'approve' %}">
                                         {% csrf_token %}
                                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500/20">
                                             Aprobar
                                         </button>
                                     </form>
-                                    {% endif %}
-                                    {% if project.workflow_status != "REJECTED" %}
                                     <form method="post" action="{% url 'projects:project_review' project.pk 'reject' %}">
                                         {% csrf_token %}
                                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500/20">
@@ -98,12 +107,24 @@
                                     </form>
                                     {% endif %}
                                 {% elif project.id in editable_project_ids %}
+                                    {% if project.id in submit_project_ids %}
+                                    <form method="post" action="{% url 'projects:project_submit' project.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-sky-500/10 text-sky-300 text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:bg-sky-500/20">
+                                            Enviar a revision
+                                        </button>
+                                    </form>
+                                    {% endif %}
                                     <a href="{% url 'projects:project_edit' project.pk %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                     </a>
                                     <a href="{% url 'projects:project_delete' project.pk %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                     </a>
+                                {% elif not is_admin and project.workflow_status == "PENDING" %}
+                                    <span class="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-300 text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
+                                        En revision admin
+                                    </span>
                                 {% elif not is_admin and project.workflow_status == "APPROVED" %}
                                     <a href="{{ project.schema_seed_url }}" class="px-3 py-1.5 rounded-lg bg-sky-500/10 text-sky-300 text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:bg-sky-500/20">
                                         Crear Esquemas

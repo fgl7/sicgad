@@ -244,6 +244,7 @@ def charts(request):
 
     datasets = DatasetType.objects.select_related("entity")
     datasets = _apply_membership_scope(user, is_admin, datasets)
+    datasets = datasets.filter(project__isnull=True)
     datasets = datasets.exclude(derived_performance_indicators__isnull=False)
     if is_external_monthly_viewer:
         datasets = datasets.filter(validation_frequency=DatasetType.MONTHLY)
@@ -356,6 +357,8 @@ def dataset_data(request, dataset_id: int):
         DatasetType.objects.select_related("entity"),
         pk=dataset_id,
     )
+    if dataset.project_id:
+        raise Http404
 
     if not is_admin:
         memberships = Membership.objects.filter(user=user, is_active=True)

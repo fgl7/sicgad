@@ -1,36 +1,42 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}{% if institution %}Editar Institución{% else %}Nueva Institución{% endif %} - SICGAD{% endblock %}
+{% block title %}{% if institution %}Editar Institucion{% else %}Nueva Institucion{% endif %} - SICGAD{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto space-y-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">{% if institution %}Configurar Institución{% else %}Registrar Institución{% endif %}</h2>
-            <p class="text-slate-500 text-sm">Define los metadatos y el estado de la entidad en el ecosistema.</p>
+<div class="page-shell page-shell--narrow fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Accounts</p>
+            <h2 class="page-title">{% if institution %}Configurar Institucion{% else %}Registrar Institucion{% endif %}</h2>
+            <p class="page-subtitle">Define los metadatos basicos y el estado operativo de la institucion.</p>
         </div>
-        <a href="{% url 'accounts:institution_list' %}" class="page-back-link">
-            Volver al listado
-        </a>
+        <div class="page-hero__actions">
+            <a href="{% url 'accounts:institution_list' %}" class="page-back-link">Volver al listado</a>
+        </div>
     </div>
 
-    <form method="post" class="space-y-6">
+    <form method="post" class="section-stack">
         {% csrf_token %}
-        <div class="glass-card rounded-[2.5rem] p-10 border-white/5 space-y-8 bg-gradient-to-br from-emerald-500/5 to-transparent">
-            <div class="grid md:grid-cols-2 gap-8">
+        <div class="glass-card rounded-[2rem] p-6 md:p-10 border-white/5 space-y-8 bg-gradient-to-br from-emerald-500/5 to-transparent">
+            <div class="grid gap-6 md:grid-cols-2">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Código Único</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Codigo unico</label>
                     {{ form.code }}
-                    <p class="text-[9px] text-slate-600 font-bold uppercase mt-1">ID técnico e inmutable</p>
+                    <p class="text-[9px] text-slate-600 font-bold uppercase mt-1">Identificador tecnico e inmutable</p>
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Comercial</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre comercial</label>
                     {{ form.name }}
                 </div>
             </div>
 
             <div class="space-y-2">
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Descripción / Misión</label>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Descripcion / Mision</label>
                 {{ form.description }}
             </div>
 
@@ -40,19 +46,18 @@
                         {{ form.is_active }}
                     </div>
                     <div>
-                        <span class="block text-xs font-bold text-slate-300 group-hover:text-white transition-colors">Institución Vigente</span>
-                        <span class="block text-[9px] text-slate-600 font-bold uppercase tracking-widest">Habilita vinculación de usuarios</span>
+                        <span class="block text-xs font-bold text-slate-300 group-hover:text-white transition-colors">Institucion vigente</span>
+                        <span class="block text-[9px] text-slate-600 font-bold uppercase tracking-widest">Habilita vinculacion de usuarios</span>
                     </div>
                 </label>
             </div>
         </div>
 
-        <div class="flex justify-end gap-3 items-center">
-            <button type="submit" class="btn-primary glow-emerald px-12 py-4 text-xs font-black uppercase tracking-widest">
-                {% if institution %}Actualizar Configuración{% else %}Registrar Institución{% endif %}
+        <div class="form-footer-actions">
+            <button type="submit" class="btn-primary glow-emerald px-8 py-3 text-xs font-black uppercase tracking-widest">
+                {% if institution %}Actualizar configuracion{% else %}Registrar institucion{% endif %}
             </button>
         </div>
     </form>
 </div>
 {% endblock %}
-

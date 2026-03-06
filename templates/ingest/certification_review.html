@@ -1,92 +1,96 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Revisión de Consolidación - SICGAD{% endblock %}
+{% block title %}Revision de Consolidacion - SICGAD{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
 
 {% block content %}
-<div class="space-y-6 fade-in">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Consolidación Mensual</h2>
-            <p class="text-slate-500 text-sm">Auditoría previa al cierre de periodo y envío a certificación oficial.</p>
+<div class="page-shell fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Ingest</p>
+            <h2 class="page-title">Consolidacion Mensual</h2>
+            <p class="page-subtitle">Auditoria previa al cierre de periodo y envio a certificacion oficial.</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="page-hero__actions">
            <a href="{% url 'ingest:upload_history' %}" class="page-back-link">Historial</a>
         </div>
     </div>
 
-    <!-- Info Banner -->
-    <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.01] flex flex-col md:flex-row gap-6 relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full -mr-16 -mt-16"></div>
-        <div class="flex-1 space-y-4">
-            <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Metadatos del Periodo</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                    <p class="text-[9px] font-bold text-slate-600 uppercase">Dataset</p>
-                    <p class="text-sm font-bold text-white">{{ instance.dataset_type.name }}</p>
-                </div>
-                <div>
-                    <p class="text-[9px] font-bold text-slate-600 uppercase">Origen</p>
-                    <p class="text-sm font-bold text-sky-400">{{ instance.entity.code|default:instance.entity.name }}</p>
-                </div>
-                <div>
-                    <p class="text-[9px] font-bold text-slate-600 uppercase">Mes Consolidado</p>
-                    <p class="text-sm font-bold text-emerald-400 uppercase">{{ instance.period|date:"F Y" }}</p>
-                </div>
-                <div>
-                    <p class="text-[9px] font-bold text-slate-600 uppercase">Estado</p>
-                    <span class="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] font-black text-slate-400 border border-white/5">{{ instance.get_state_display }}</span>
+    <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.01] relative overflow-hidden">
+        <div class="absolute -mr-16 -mt-16 right-0 top-0 h-32 w-32 rounded-full bg-emerald-500/5 blur-3xl"></div>
+        <div class="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(16rem,18rem)]">
+            <div class="space-y-4">
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Metadatos del Periodo</h3>
+                <div class="info-card-grid md:grid-cols-4">
+                    <div>
+                        <p class="text-[9px] font-bold text-slate-600 uppercase">Dataset</p>
+                        <p class="text-sm font-bold text-white">{{ instance.dataset_type.name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold text-slate-600 uppercase">Origen</p>
+                        <p class="text-sm font-bold text-sky-400">{{ instance.entity.code|default:instance.entity.name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold text-slate-600 uppercase">Mes Consolidado</p>
+                        <p class="text-sm font-bold text-emerald-400 uppercase">{{ instance.period|date:"F Y" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold text-slate-600 uppercase">Estado</p>
+                        <span class="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] font-black text-slate-400 border border-white/5">{{ instance.get_state_display }}</span>
+                    </div>
                 </div>
             </div>
+            {% if not can_edit %}
+            <div class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+                <p class="text-[10px] font-bold leading-tight text-amber-300">MODULO EN SOLO LECTURA. La consolidacion ya ha sido delegada al flujo de validacion jerarquica.</p>
+            </div>
+            {% endif %}
         </div>
-        {% if not can_edit %}
-        <div class="md:w-64 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-            <p class="text-[10px] font-bold text-amber-500 leading-tight">MÓDULO EN SOLO LECTURA. La consolidación ya ha sido delegada al flujo de validación jerárquica.</p>
-        </div>
-        {% endif %}
     </div>
 
     {% if daily_rows %}
-    <!-- Daily Breakdown -->
     <div class="glass-card rounded-[2.5rem] overflow-hidden border-white/5 shadow-2xl">
-        <div class="px-8 py-6 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
+        <div class="flex flex-col gap-3 border-b border-white/5 bg-white/[0.01] px-5 py-5 sm:px-8 sm:py-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-                <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest">Trazabilidad Diaria</h3>
-                <p class="text-[10px] text-slate-500 font-medium">Registros operativos del mes actual procesados para la base acumulada.</p>
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-300">Trazabilidad Diaria</h3>
+                <p class="text-[10px] font-medium text-slate-500">Registros operativos del mes actual procesados para la base acumulada.</p>
             </div>
-            <div class="text-[9px] text-amber-500/80 font-black uppercase tracking-widest">Ajuste Manual habilitado previa justificación</div>
+            <div class="text-[9px] font-black uppercase tracking-widest text-amber-500/80">Ajuste manual habilitado previa justificacion</div>
         </div>
-        
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse">
+
+        <div class="matrix-table-shell custom-scrollbar">
+            <table class="matrix-table text-left">
                 <thead>
-                    <tr class="bg-black/20 text-[9px] font-black text-slate-600 uppercase tracking-widest">
-                        <th class="px-6 py-4">Fecha</th>
+                    <tr class="bg-black/20 text-[9px] font-black uppercase tracking-widest text-slate-600">
+                        <th>Fecha</th>
                         {% for column in daily_display_columns %}
-                            <th class="px-6 py-4">{{ column.label|default:column.name }}</th>
+                            <th>{{ column.label|default:column.name }}</th>
                         {% endfor %}
-                        <th class="px-6 py-4 text-right">Control</th>
+                        <th class="text-right">Control</th>
                     </tr>
                 </thead>
                 <tbody class="text-[10px]">
                     {% for row in daily_rows %}
                     <tr class="border-t border-white/5 transition-colors {% if row.was_changed %}bg-amber-500/[0.03] text-amber-200{% else %}text-slate-400 hover:bg-white/[0.01]{% endif %}">
-                        <td class="px-6 py-4 font-mono font-bold">{{ row.date|date:"d/m/Y" }}</td>
+                        <td class="font-mono font-bold">{{ row.date|date:"d/m/Y" }}</td>
                         {% for cell in row.values %}
-                            <td class="px-6 py-4">{{ cell.display }}</td>
+                            <td>{{ cell.display }}</td>
                         {% endfor %}
-                        <td class="px-6 py-4 text-right">
+                        <td class="text-right">
                             <div class="flex items-center justify-end gap-3">
                                 {% if row.was_changed %}
-                                    <span class="px-2 py-0.5 rounded bg-amber-500/10 text-[8px] font-black text-amber-500 border border-amber-500/20 uppercase tracking-tighter">AJUSTADO</span>
+                                    <span class="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-tighter text-amber-500">Ajustado</span>
                                 {% endif %}
                                 {% if row.has_instance and can_edit %}
-                                    <button type="button" class="text-xs font-bold text-emerald-500 hover:text-white transition-colors p-1" data-open-daily-modal="true" data-target-key="{{ row.form_key }}" data-period-label="{{ row.date|date:'Y-m-d' }}">
-                                        Editar →
+                                    <button type="button" class="p-1 text-xs font-bold text-emerald-500 transition-colors hover:text-white" data-open-daily-modal="true" data-target-key="{{ row.form_key }}" data-period-label="{{ row.date|date:'Y-m-d' }}">
+                                        Editar
                                     </button>
                                 {% elif not row.has_instance %}
-                                    <span class="text-slate-700 italic">No Data</span>
+                                    <span class="italic text-slate-700">No Data</span>
                                 {% endif %}
                             </div>
                         </td>
@@ -98,31 +102,30 @@
     </div>
     {% endif %}
 
-    <!-- Consolidated Data Form -->
-    <section class="space-y-4">
-        <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest pl-2 flex items-center gap-2">
+    <section class="section-stack">
+        <h3 class="section-heading__title text-sky-400">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
             Valores de Cierre Mensual
         </h3>
-        
+
         <form method="post" enctype="multipart/form-data" class="space-y-6" data-cert-scope="true" data-can-edit="{{ can_edit|yesno:'true,false' }}" data-auto-activate="true" data-justification-ready="{{ justification_ready|yesno:'true,false' }}">
             {% csrf_token %}
             <input type="hidden" name="form_type" value="month" />
-            
+
             <div class="glass-card rounded-3xl overflow-hidden border-white/5 bg-sky-500/[0.02]">
-                <div class="overflow-x-auto custom-scrollbar">
-                    <table class="w-full text-left border-collapse">
+                <div class="matrix-table-shell custom-scrollbar">
+                    <table class="matrix-table text-left">
                         <thead>
-                            <tr class="bg-black/20 text-[9px] font-black text-slate-600 uppercase tracking-widest">
+                            <tr class="bg-black/20 text-[9px] font-black uppercase tracking-widest text-slate-600">
                                 {% for column in columns %}
-                                    <th class="px-6 py-4">{{ column.label|default:column.name }} {% if column.required %}<span class="text-red-500">*</span>{% endif %}</th>
+                                    <th>{{ column.label|default:column.name }} {% if column.required %}<span class="text-red-500">*</span>{% endif %}</th>
                                 {% endfor %}
                             </tr>
                         </thead>
                         <tbody class="text-[10px]">
                             <tr class="border-t border-white/5">
                                 {% for column, field in column_fields %}
-                                    <td class="px-6 py-6 align-top">{{ field }}</td>
+                                    <td class="align-top">{{ field }}</td>
                                 {% endfor %}
                             </tr>
                         </tbody>
@@ -130,35 +133,33 @@
                 </div>
             </div>
 
-            <!-- Justification Block -->
-            <div class="grid lg:grid-cols-2 gap-6">
-                <div class="glass-card rounded-3xl p-8 border-white/5 space-y-4">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Justificación del ajuste de cierre</h4>
+            <div class="grid gap-6 lg:grid-cols-2">
+                <div class="glass-card rounded-3xl p-6 sm:p-8 border-white/5 space-y-4">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Justificacion del ajuste de cierre</h4>
                     {{ justification_form.justification }}
-                    <p class="text-[9px] text-slate-600 font-bold uppercase">Explique el origen de los cambios realizados sobre el consolidado automático.</p>
+                    <p class="text-[9px] font-bold uppercase text-slate-600">Explique el origen de los cambios realizados sobre el consolidado automatico.</p>
                 </div>
-                
-                <div class="glass-card rounded-3xl p-8 border-white/5 space-y-4">
+
+                <div class="glass-card rounded-3xl p-6 sm:p-8 border-white/5 space-y-4">
                     <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Soportes Documentales (IMG)</h4>
                     <div class="relative group">
-                        <input type="file" name="support_files" accept="image/*" multiple class="block w-full text-[10px] text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-slate-800 file:text-[10px] file:font-black file:text-white hover:file:bg-emerald-600 transition-all" data-support-input="true" {% if not can_edit or not justification_ready %}disabled{% endif %} />
+                        <input type="file" name="support_files" accept="image/*" multiple class="block w-full text-[10px] text-slate-400 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-800 file:px-4 file:py-2 file:text-[10px] file:font-black file:text-white transition-all hover:file:bg-emerald-600" data-support-input="true" {% if not can_edit or not justification_ready %}disabled{% endif %} />
                     </div>
-                    <p class="text-[9px] text-slate-600 font-bold uppercase">Adjunte los respaldos visuales que acreditan la veracidad de los datos finales.</p>
+                    <p class="text-[9px] font-bold uppercase text-slate-600">Adjunte los respaldos visuales que acreditan la veracidad de los datos finales.</p>
                 </div>
             </div>
 
-            <!-- Footer Actions -->
-            <div class="flex flex-col md:flex-row items-center justify-between gap-6 pt-4">
-                <p class="text-[10px] text-slate-600 font-bold uppercase max-w-md leading-relaxed">
-                    Asegúrese de guardar primero sus ajustes. El botón de envío disparará el flujo de aprobación multinivel irreversible.
+            <div class="flex flex-col gap-6 pt-4 md:flex-row md:items-center md:justify-between">
+                <p class="max-w-md text-[10px] font-bold uppercase leading-relaxed text-slate-600">
+                    Asegurese de guardar primero sus ajustes. El boton de envio disparara el flujo de aprobacion multinivel irreversible.
                 </p>
-                <div class="flex items-center gap-3">
+                <div class="form-footer-actions">
                     {% if can_edit %}
-                        <button type="submit" name="submit_action" value="save" class="px-8 py-3 rounded-xl bg-slate-800 text-[10px] font-black text-slate-300 hover:text-white border border-white/5 transition-all uppercase tracking-widest disabled:opacity-30" data-submit-when-ready="true" {% if not justification_ready %}disabled{% endif %}>
+                        <button type="submit" name="submit_action" value="save" class="rounded-xl border border-white/5 bg-slate-800 px-8 py-3 text-[10px] font-black uppercase tracking-widest text-slate-300 transition-all disabled:opacity-30 hover:text-white" data-submit-when-ready="true" {% if not justification_ready %}disabled{% endif %}>
                             Guardar Borrador
                         </button>
-                        <button type="submit" name="submit_action" value="send" class="btn-primary py-3 px-10 glow-emerald text-xs font-black uppercase tracking-widest disabled:opacity-30" data-submit-when-ready="true" {% if not justification_ready %}disabled{% endif %}>
-                            Enviar a Certificación Official
+                        <button type="submit" name="submit_action" value="send" class="btn-primary glow-emerald px-10 py-3 text-xs font-black uppercase tracking-widest disabled:opacity-30" data-submit-when-ready="true" {% if not justification_ready %}disabled{% endif %}>
+                            Enviar a Certificacion Oficial
                         </button>
                     {% endif %}
                 </div>
@@ -166,27 +167,26 @@
         </form>
     </section>
 
-    <!-- Audit Logs -->
-    <section class="space-y-4">
-        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest pl-2">Bitácora de Ajustes del Periodo</h3>
+    <section class="section-stack">
+        <h3 class="section-heading__title text-slate-500">Bitacora de Ajustes del Periodo</h3>
         <div class="grid gap-4">
             {% for req in change_requests %}
             <div class="glass-card rounded-2xl p-6 border-white/5 bg-white/[0.01] space-y-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <span class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">{{ req.submitted_by.user.username|slice:":2"|upper }}</span>
+                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-[10px] font-black text-slate-500">{{ req.submitted_by.user.username|slice:":2"|upper }}</span>
                         <div>
                             <p class="text-[11px] font-bold text-white">{{ req.submitted_by.user.get_full_name|default:req.submitted_by.user.username }}</p>
-                            <p class="text-[9px] text-slate-500 uppercase font-black tracking-widest">{{ req.created_at|date:"d M Y · H:i" }}</p>
+                            <p class="text-[9px] font-black uppercase tracking-widest text-slate-500">{{ req.created_at|date:"d M Y H:i" }}</p>
                         </div>
                     </div>
                 </div>
-                <p class="text-xs text-slate-300 leading-relaxed italic border-l-2 border-emerald-500/30 pl-4">{{ req.justification }}</p>
-                
+                <p class="border-l-2 border-emerald-500/30 pl-4 text-xs italic leading-relaxed text-slate-300">{{ req.justification }}</p>
+
                 {% if req.attachments.all %}
                 <div class="flex flex-wrap gap-2 pt-2">
                     {% for attachment in req.attachments.all %}
-                    <a href="{{ attachment.file.url }}" target="_blank" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/50 border border-white/5 hover:border-emerald-500/30 transition-all group">
+                    <a href="{{ attachment.file.url }}" target="_blank" class="group flex items-center gap-2 rounded-xl border border-white/5 bg-slate-800/50 px-3 py-2 transition-all hover:border-emerald-500/30">
                         <svg class="w-3 h-3 text-slate-500 group-hover:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
                         <span class="text-[10px] font-bold text-slate-400 group-hover:text-white">{{ attachment.original_name|truncatechars:20 }}</span>
                     </a>
@@ -195,26 +195,25 @@
                 {% endif %}
             </div>
             {% empty %}
-                <p class="text-[10px] text-slate-600 font-bold uppercase ml-2">No se registran justificaciones adicionales para esta consolidación.</p>
+                <p class="ml-2 text-[10px] font-bold uppercase text-slate-600">No se registran justificaciones adicionales para esta consolidacion.</p>
             {% endfor %}
         </div>
     </section>
 </div>
 
-<!-- Modal Structure -->
 <div id="daily-edit-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 md:p-8" aria-hidden="true">
-    <div class="absolute inset-0 bg-slate-950/90 overlay-dark backdrop-blur-md" data-close-daily-modal="true"></div>
-    <div class="relative w-full max-w-6xl glass-card rounded-[3rem] border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden fade-in">
-        <div class="px-10 py-8 border-b border-white/5 flex items-center justify-between">
+    <div class="absolute inset-0 overlay-dark bg-slate-950/90 backdrop-blur-md" data-close-daily-modal="true"></div>
+    <div class="relative w-full max-w-6xl overflow-hidden rounded-[3rem] border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] glass-card fade-in">
+        <div class="flex items-center justify-between border-b border-white/5 px-6 py-6 sm:px-10 sm:py-8">
             <div>
-                <p class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.4em]">Arquitectura de Datos</p>
-                <h3 class="text-2xl font-header font-black text-white tracking-tighter" id="daily-edit-modal-title">AJUSTE UNITARIO</h3>
+                <p class="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500">Arquitectura de Datos</p>
+                <h3 class="font-header text-2xl font-black tracking-tighter text-white" id="daily-edit-modal-title">Ajuste Unitario</h3>
             </div>
-            <button type="button" class="w-12 h-12 rounded-full bg-white/[0.03] hover:bg-white/10 transition-colors flex items-center justify-center text-slate-400 hover:text-white" data-close-daily-modal="true">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <button type="button" class="flex h-12 w-12 items-center justify-center rounded-full bg-white/[0.03] text-slate-400 transition-colors hover:bg-white/10 hover:text-white" data-close-daily-modal="true">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
-        <div id="daily-edit-modal-content" class="p-10 max-h-[70vh] overflow-y-auto custom-scrollbar"></div>
+        <div id="daily-edit-modal-content" class="custom-scrollbar max-h-[70vh] overflow-y-auto p-6 sm:p-10"></div>
     </div>
 </div>
 
@@ -228,37 +227,37 @@
                     <input type="hidden" name="day_instance_id" value="{{ daily.instance.id }}" />
                     <input type="hidden" name="day_row_index" value="{{ daily.row_index }}" />
 
-                    <div class="grid lg:grid-cols-2 gap-8">
+                    <div class="grid gap-8 lg:grid-cols-2">
                         <div class="space-y-4">
-                            <h4 class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Justificación del Cambio Diario</h4>
-                            <textarea name="day_justification" rows="3" class="w-full bg-slate-900/50 border border-white/5 rounded-2xl p-4 text-xs font-semibold text-white focus:border-emerald-500/50 transition-all placeholder:text-slate-700" data-justification-input="true" placeholder="Explique por qué se están modificando los valores del día {{ daily.date|date:'d/m/Y' }}...">{{ daily.justification_value|default_if_none:"" }}</textarea>
-                            <p class="text-[9px] text-red-500 font-black uppercase {% if not daily.justification_error %}hidden{% endif %}" data-justification-error>El campo justificación es obligatorio para validar el ajuste.</p>
+                            <h4 class="text-[9px] font-black uppercase tracking-widest text-slate-500">Justificacion del Cambio Diario</h4>
+                            <textarea name="day_justification" rows="3" class="w-full rounded-2xl border border-white/5 bg-slate-900/50 p-4 text-xs font-semibold text-white transition-all placeholder:text-slate-700 focus:border-emerald-500/50" data-justification-input="true" placeholder="Explique por que se estan modificando los valores del dia {{ daily.date|date:'d/m/Y' }}...">{{ daily.justification_value|default_if_none:"" }}</textarea>
+                            <p class="text-[9px] font-black uppercase text-red-500 {% if not daily.justification_error %}hidden{% endif %}" data-justification-error>El campo justificacion es obligatorio para validar el ajuste.</p>
                         </div>
                         <div class="space-y-4">
-                            <h4 class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Carga de Soporte Fotográfico</h4>
-                            <input type="file" name="day_support_files" accept="image/*" multiple class="block w-full text-[10px] text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-slate-800 file:text-[10px] file:font-black file:text-white" data-support-input="true" />
+                            <h4 class="text-[9px] font-black uppercase tracking-widest text-slate-500">Carga de Soporte Fotografico</h4>
+                            <input type="file" name="day_support_files" accept="image/*" multiple class="block w-full text-[10px] text-slate-400 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-800 file:px-4 file:py-2 file:text-[10px] file:font-black file:text-white" data-support-input="true" />
                             <div class="flex justify-end pt-2">
-                                <button type="button" class="px-6 py-2 rounded-xl bg-emerald-500/10 text-emerald-500 text-[10px] font-black border border-emerald-500/20 uppercase tracking-widest hover:bg-emerald-500 hover:text-slate-900 transition-all" data-activate-justification>Habilitar Edición</button>
+                                <button type="button" class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-6 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 transition-all hover:bg-emerald-500 hover:text-slate-900" data-activate-justification>Habilitar Edicion</button>
                             </div>
                         </div>
                     </div>
 
                     <div class="space-y-4">
-                        <h4 class="text-[9px] font-black text-sky-500 uppercase tracking-widest">Matriz de Datos Técnicos</h4>
+                        <h4 class="text-[9px] font-black uppercase tracking-widest text-sky-500">Matriz de Datos Tecnicos</h4>
                         <div class="glass-card rounded-[2rem] overflow-hidden border-white/5 bg-sky-500/[0.02]">
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
+                            <div class="matrix-table-shell">
+                                <table class="matrix-table text-left">
                                     <thead>
-                                        <tr class="bg-black/20 text-[9px] font-black text-slate-600 uppercase tracking-widest">
+                                        <tr class="bg-black/20 text-[9px] font-black uppercase tracking-widest text-slate-600">
                                             {% for column, field in daily.fields %}
-                                                <th class="px-6 py-4">{{ column.label|default:column.name }} {% if column.required %}<span class="text-red-500">*</span>{% endif %}</th>
+                                                <th>{{ column.label|default:column.name }} {% if column.required %}<span class="text-red-500">*</span>{% endif %}</th>
                                             {% endfor %}
                                         </tr>
                                     </thead>
                                     <tbody class="text-[10px]">
                                         <tr class="border-t border-white/5">
                                             {% for column, field in daily.fields %}
-                                                <td class="px-6 py-6 align-top">{{ field }}</td>
+                                                <td class="align-top">{{ field }}</td>
                                             {% endfor %}
                                         </tr>
                                     </tbody>
@@ -267,8 +266,8 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-end pt-4 border-t border-white/5">
-                        <button type="submit" class="btn-primary py-4 px-12 glow-emerald text-xs font-black uppercase tracking-widest disabled:opacity-30" data-submit-when-ready="true" disabled>Confirmar ajuste del día</button>
+                    <div class="flex justify-end border-t border-white/5 pt-4">
+                        <button type="submit" class="btn-primary glow-emerald px-12 py-4 text-xs font-black uppercase tracking-widest disabled:opacity-30" data-submit-when-ready="true" disabled>Confirmar ajuste del dia</button>
                     </div>
                 </form>
             </div>
@@ -281,5 +280,3 @@
 {% block extra_js %}
   <script src="{% static 'js/certification_review.js' %}"></script>
 {% endblock %}
-
-

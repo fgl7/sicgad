@@ -1,23 +1,31 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Configuracion de Reportes - SICGAD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-<div class="space-y-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Arquitectura de Reportabilidad</h2>
-            <p class="text-slate-500 text-sm">Configura datasets, frecuencia y variante de cada visor de proyectos.</p>
+<div class="page-shell fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Projects</p>
+            <h2 class="page-title">Arquitectura de Reportabilidad</h2>
+            <p class="page-subtitle">Configura datasets, frecuencia y variante de cada visor de proyectos sin perder trazabilidad operativa.</p>
         </div>
-        <a href="{% url 'projects:report_config_create' %}" class="btn-primary glow-emerald">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Nueva Configuracion
-        </a>
+        <div class="page-hero__actions">
+            <a href="{% url 'projects:report_config_create' %}" class="btn-primary glow-emerald">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m-6 0h6m6 0h-6"></path></svg>
+                Nueva Configuracion
+            </a>
+        </div>
     </div>
 
     <div class="glass-card rounded-[2rem] overflow-hidden border-white/5 bg-white/[0.01]">
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse">
+        <div class="responsive-table-shell custom-scrollbar">
+            <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-black/20 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
                         <th class="px-8 py-5">Proyecto Asociado</th>
@@ -31,23 +39,25 @@
                 <tbody class="text-sm">
                     {% for config in configs %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-8 py-5">
-                            <span class="text-white font-bold tracking-tight">{{ config.project.name }}</span>
+                        <td class="px-8 py-5" data-label="Proyecto">
+                            <div class="responsive-table-meta">
+                                <span class="responsive-table-meta__title text-white">{{ config.project.name }}</span>
+                            </div>
                         </td>
-                        <td class="px-8 py-5">
+                        <td class="px-8 py-5" data-label="Identificador">
                             <span class="text-slate-300 font-medium text-xs">{{ config.name }}</span>
                         </td>
-                        <td class="px-8 py-5">
+                        <td class="px-8 py-5" data-label="Variante">
                             <span class="px-3 py-1 rounded-lg bg-indigo-500/10 text-indigo-300 text-[10px] font-black uppercase border border-indigo-500/20">
                                 {{ config.report_variant }}
                             </span>
                         </td>
-                        <td class="px-8 py-5">
+                        <td class="px-8 py-5" data-label="Frecuencia">
                             <span class="px-3 py-1 rounded-lg bg-sky-500/10 text-sky-500 text-[10px] font-black uppercase border border-sky-500/20">
                                 {{ config.curve_executed_dataset.get_validation_frequency_display }}
                             </span>
                         </td>
-                        <td class="px-8 py-5 text-center">
+                        <td class="px-8 py-5 text-center" data-label="Estado">
                             {% if config.is_active %}
                                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                                     <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 glow-emerald"></div>
@@ -60,14 +70,16 @@
                                 </div>
                             {% endif %}
                         </td>
-                        <td class="px-8 py-5 text-right space-x-6">
-                            <a href="{% url 'projects:report_config_edit' config.id %}" class="text-[10px] font-black text-emerald-500 hover:text-white uppercase tracking-widest transition-colors">Configurar</a>
-                            <a href="{% url 'projects:report_config_delete' config.id %}" class="text-[10px] font-black text-slate-700 hover:text-red-500 uppercase tracking-widest transition-colors">Eliminar</a>
+                        <td class="px-8 py-5 text-right responsive-data-table__actions" data-label="Control">
+                            <div class="responsive-action-group">
+                                <a href="{% url 'projects:report_config_edit' config.id %}" class="text-[10px] font-black text-emerald-500 hover:text-white uppercase tracking-widest transition-colors">Configurar</a>
+                                <a href="{% url 'projects:report_config_delete' config.id %}" class="text-[10px] font-black text-slate-700 hover:text-red-500 uppercase tracking-widest transition-colors">Eliminar</a>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="px-8 py-20 text-center text-slate-600 italic">No se han definido vinculaciones de reportes analiticos.</td>
+                        <td colspan="6" class="responsive-empty-state">No se han definido vinculaciones de reportes analiticos.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -75,13 +87,10 @@
         </div>
     </div>
 
-    <div class="p-8 rounded-[2rem] bg-slate-900/50 border border-white/5 space-y-3">
-        <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Nota Tecnica</h4>
-        <p class="text-xs text-slate-500 leading-relaxed font-medium">
-            La variante define la composicion del visor. Hoy existen layouts para
-            <span class="text-slate-300">project</span> y <span class="text-slate-300">agreement</span>.
-            Si registras otra variante, el sistema la conserva y la mostrara temporalmente con el layout base hasta implementar su plantilla dedicada.
-        </p>
+    <div class="surface-note surface-note--info">
+        <strong>Nota tecnica:</strong>
+        la variante define la composicion del visor. Hoy existen layouts para <span class="text-slate-200">project</span> y <span class="text-slate-200">agreement</span>.
+        Si registras otra variante, el sistema la conserva y la mostrara temporalmente con el layout base hasta implementar su plantilla dedicada.
     </div>
 </div>
 {% endblock %}

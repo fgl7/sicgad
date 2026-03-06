@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Certificación Mensual - SICGAD{% endblock %}
 
@@ -79,18 +80,9 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const select = document.getElementById("{{ form.source_dataset.id_for_label }}");
-        if (!select) return;
-        select.addEventListener("change", function () {
-            const value = this.value;
-            const url = new URL(window.location.href);
-            if (value) url.searchParams.set("source_dataset", value);
-            else url.searchParams.delete("source_dataset");
-            window.location.href = url.toString();
-        });
-    });
-</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/schemas/certification_schema_create.js' %}?v=1"></script>
 {% endblock %}
 

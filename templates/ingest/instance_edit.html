@@ -1,61 +1,73 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Corregir archivo de carga - SICGAD{% endblock %}
 {% block page_title %}Corregir archivo de carga{% endblock %}
 
-{% block content %}
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-4 text-xs">
-    <h2 class="text-sm font-semibold">Datos de la carga</h2>
-    <p class="text-slate-300">
-      <strong>Entidad:</strong> {{ instance.entity.code|default:instance.entity.name }}<br />
-      <strong>Dataset:</strong> {{ instance.dataset_type.name }}<br />
-      <strong>Periodo:</strong> {{ instance.period }}<br />
-      <strong>Estado actual:</strong> {{ instance.get_state_display }}
-    </p>
-  </section>
-
-  <section class="mt-4 bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 text-xs">
-    <h2 class="text-sm font-semibold">Subir archivo corregido</h2>
-    <p class="text-slate-400 text-[11px]">
-      Reemplaza el archivo de esta carga con un nuevo archivo corregido. Luego podrás volver a enviarlo a validación diaria.
-    </p>
-
-    <form method="post" enctype="multipart/form-data" class="space-y-3">
-      {% csrf_token %}
-      <div>
-        <label class="block mb-1 text-slate-300">Nuevo archivo corregido</label>
-        {% if instance.raw_file %}
-          <p class="text-[11px] text-slate-500 mb-1">
-            Archivo actual: <span class="text-slate-300">{{ instance.raw_file.name }}</span>
-          </p>
-        {% endif %}
-        {{ form.raw_file }}
-        {% if form.raw_file.errors %}
-          <p class="text-[11px] text-red-400 mt-1">{{ form.raw_file.errors.0 }}</p>
-        {% endif %}
-      </div>
-      {% if instance.dataset_type.is_one_time %}
-        <div>
-          <label class="block mb-1 text-slate-300">Justificacion del cambio</label>
-          {{ form.justification }}
-          {% if form.justification.errors %}
-            <p class="text-[11px] text-red-400 mt-1">{{ form.justification.errors.0 }}</p>
-          {% endif %}
-          <p class="text-[11px] text-slate-400 mt-1">
-            Requerido para actualizar esquemas de carga unica.
-          </p>
-        </div>
-      {% endif %}
-      <div class="flex items-center justify-between">
-        <a href="{% url 'ingest:upload' %}" class="page-back-link">
-          Volver a carga de datos
-        </a>
-        <button type="submit" class="btn-primary inline-flex items-center">
-          Guardar archivo corregido
-        </button>
-      </div>
-    </form>
-  </section>
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
 {% endblock %}
 
+{% block content %}
+  <div class="page-shell page-shell--narrow fade-in">
+    <div class="page-hero">
+      <div class="page-hero__content">
+        <p class="page-kicker">Ingest</p>
+        <h2 class="page-title">Subir archivo corregido</h2>
+        <p class="page-subtitle">Reemplaza el archivo de esta carga con una version corregida sin perder el contexto operativo del dataset.</p>
+      </div>
+    </div>
 
+    <section class="glass-card rounded-[1.75rem] p-6 text-sm space-y-4">
+      <h2 class="text-base font-semibold">Datos de la carga</h2>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <p class="text-slate-300"><strong>Entidad:</strong> {{ instance.entity.code|default:instance.entity.name }}</p>
+        <p class="text-slate-300"><strong>Dataset:</strong> {{ instance.dataset_type.name }}</p>
+        <p class="text-slate-300"><strong>Periodo:</strong> {{ instance.period }}</p>
+        <p class="text-slate-300"><strong>Estado actual:</strong> {{ instance.get_state_display }}</p>
+      </div>
+    </section>
+
+    <section class="glass-card rounded-[1.75rem] p-6 text-sm space-y-4">
+      <p class="text-[13px] text-slate-400">
+        Reemplaza el archivo de esta carga con un nuevo archivo corregido. Luego podras volver a enviarlo a validacion diaria.
+      </p>
+
+      <form method="post" enctype="multipart/form-data" class="space-y-4">
+        {% csrf_token %}
+        <div>
+          <label class="mb-1 block text-slate-300">Nuevo archivo corregido</label>
+          {% if instance.raw_file %}
+            <p class="mb-1 text-[11px] text-slate-500">
+              Archivo actual: <span class="text-slate-300">{{ instance.raw_file.name }}</span>
+            </p>
+          {% endif %}
+          {{ form.raw_file }}
+          {% if form.raw_file.errors %}
+            <p class="mt-1 text-[11px] text-red-400">{{ form.raw_file.errors.0 }}</p>
+          {% endif %}
+        </div>
+        {% if instance.dataset_type.is_one_time %}
+          <div>
+            <label class="mb-1 block text-slate-300">Justificacion del cambio</label>
+            {{ form.justification }}
+            {% if form.justification.errors %}
+              <p class="mt-1 text-[11px] text-red-400">{{ form.justification.errors.0 }}</p>
+            {% endif %}
+            <p class="mt-1 text-[11px] text-slate-400">
+              Requerido para actualizar esquemas de carga unica.
+            </p>
+          </div>
+        {% endif %}
+        <div class="form-footer-actions">
+          <a href="{% url 'ingest:upload' %}" class="page-back-link">
+            Volver a carga de datos
+          </a>
+          <button type="submit" class="btn-primary inline-flex items-center">
+            Guardar archivo corregido
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

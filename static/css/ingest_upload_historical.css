@@ -1,0 +1,50 @@
+body.historical-upload-view .app-shell {
+  filter: blur(8px) saturate(0.92);
+  transform: scale(0.997);
+  opacity: 0.94;
+  pointer-events: none;
+  user-select: none;
+}
+
+body.historical-upload-view {
+  overflow: hidden;
+}
+
+.historical-upload-dialog {
+  animation: historicalUploadEnter 0.18s ease-out both;
+  display: flex;
+  flex-direction: column;
+  max-height: min(100%, 52rem);
+  overflow: hidden;
+}
+
+.historical-upload-dialog > :last-child {
+  overflow-y: auto;
+}
+
+@keyframes historicalUploadEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.historical-upload-view .app-shell,
+  .historical-upload-dialog {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .historical-upload-dialog {
+    max-height: 100%;
+    border-radius: 1rem;
+  }
+}

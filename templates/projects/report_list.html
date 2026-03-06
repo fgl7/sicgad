@@ -1,39 +1,49 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Reportes de proyectos - SICGAD{% endblock %}
 {% block page_title %}Reportes de proyectos{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-sm font-semibold">Reportes disponibles</h2>
+<div class="page-shell fade-in">
+  <div class="page-hero">
+    <div class="page-hero__content">
+      <p class="page-kicker">Projects</p>
+      <h2 class="page-title">Reportes disponibles</h2>
+      <p class="page-subtitle">Acceso a reportes ejecutivos por proyecto o convenio segun configuracion vigente y alcance del usuario.</p>
+    </div>
+    <div class="page-hero__actions">
       {% if is_admin %}
-        <a href="{% url 'projects:report_config_list' %}" class="text-xs text-emerald-400 hover:underline">
-          Configurar reportes
-        </a>
+        <a href="{% url 'projects:report_config_list' %}" class="btn-secondary">Configurar reportes</a>
       {% endif %}
     </div>
+  </div>
 
-    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+  <section class="glass-card rounded-[1.75rem] border-white/5 p-4 sm:p-5">
+    <div class="report-card-grid">
       {% for config in configs %}
         <a
           href="{% url 'projects:report_detail' config.id %}"
-          class="block rounded-lg border border-slate-800 bg-slate-950/70 p-4 hover:border-emerald-500/60 hover:bg-slate-900/60 transition"
+          class="report-card"
         >
-          <div class="text-[11px] uppercase tracking-wide text-slate-400">Proyecto</div>
-          <div class="text-sm font-semibold">{{ config.project.name }}</div>
-          <div class="text-[11px] text-slate-500 mt-1">{{ config.name }}</div>
-          <div class="mt-2 text-[11px] text-slate-400">
+          <div class="report-card__eyebrow">Proyecto</div>
+          <div class="report-card__title">{{ config.project.name }}</div>
+          <div class="report-card__subtitle">{{ config.name }}</div>
+          <div class="report-card__meta">
             Curva ejecutada: {{ config.curve_executed_dataset.get_validation_frequency_display }}
           </div>
         </a>
       {% empty %}
-        <div class="col-span-full text-center text-slate-400 py-6">
+        <div class="responsive-empty-state col-span-full">
           No hay reportes configurados.
           {% if is_admin %}
-            <div class="mt-2">
+            <div class="mt-3">
               <a href="{% url 'projects:report_config_create' %}" class="text-xs text-emerald-400 hover:underline">
-                Crear configuración de reporte
+                Crear configuracion de reporte
               </a>
             </div>
           {% endif %}
@@ -41,4 +51,5 @@
       {% endfor %}
     </div>
   </section>
+</div>
 {% endblock %}

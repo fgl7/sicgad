@@ -1,15 +1,21 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Usuarios - SICGAD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-<div class="space-y-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Gestión de Usuarios</h2>
-            <p class="text-slate-500 text-sm">Administra los accesos y roles institucionales del sistema.</p>
+<div class="page-shell fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Accounts</p>
+            <h2 class="page-title">Gestion de Usuarios</h2>
+            <p class="page-subtitle">Administra accesos, roles, alcance por entidad y permisos de validacion institucional.</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="page-hero__actions">
             <a href="{% url 'accounts:admin_user_create' %}" class="btn-primary glow-emerald">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                 Nuevo Usuario
@@ -17,13 +23,12 @@
         </div>
     </div>
 
-    <!-- Filters Section -->
-    <div class="glass-card rounded-2xl p-6 border-white/5">
-        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+    <div class="glass-card rounded-3xl p-6 border-white/5">
+        <form method="get" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 xl:items-end">
             <div class="space-y-2">
                 <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Rol</label>
                 <select name="role">
-                    <option value="">Todos los Roles</option>
+                    <option value="">Todos los roles</option>
                     {% for value,label in roles %}
                     <option value="{{ value }}" {% if filter_role == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
@@ -32,100 +37,99 @@
             <div class="space-y-2">
                 <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Entidad</label>
                 <select name="entity">
-                    <option value="">Todas las Entidades</option>
+                    <option value="">Todas las entidades</option>
                     {% for ent in entities %}
                     <option value="{{ ent.id }}" {% if filter_entity == ent.id|stringformat:'s' %}selected{% endif %}>{{ ent.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="space-y-2">
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Institución</label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-widest">Institucion</label>
                 <select name="institution">
-                    <option value="">Todas las Instituciones</option>
+                    <option value="">Todas las instituciones</option>
                     {% for inst in institutions %}
                     <option value="{{ inst.id }}" {% if filter_institution == inst.id|stringformat:'s' %}selected{% endif %}>{{ inst.code }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="flex items-center gap-2">
-                <button type="submit" class="flex-1 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-700 transition-colors border border-white/5">
-                    Filtrar
-                </button>
-                <a href="{% url 'accounts:admin_user_list' %}" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition-colors border border-white/5" title="Limpiar Filtros">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                </a>
+            <div class="form-footer-actions xl:justify-end">
+                <button type="submit" class="btn-primary glow-emerald">Filtrar</button>
+                <a href="{% url 'accounts:admin_user_list' %}" class="btn-secondary">Limpiar</a>
             </div>
         </form>
     </div>
 
-    <!-- Users Table Card -->
     <div class="glass-card rounded-3xl overflow-hidden border-white/5">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <div class="responsive-table-shell">
+            <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[11px] font-black text-slate-500 uppercase tracking-[0.16em]">
                         <th class="px-6 py-4">Usuario / Identidad</th>
-                        <th class="px-6 py-4">Alcance / Institución</th>
-                        <th class="px-6 py-4">Configuración de Rol</th>
+                        <th class="px-6 py-4">Alcance / Institucion</th>
+                        <th class="px-6 py-4">Configuracion de rol</th>
                         <th class="px-6 py-4 text-right">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="text-sm">
                     {% for u in users %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4" data-label="Usuario / Identidad">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-900 border border-white/10 flex items-center justify-center text-xs font-bold text-emerald-400 group-hover:border-emerald-500/30 transition-colors">
                                     {{ u.username|slice:":2"|upper }}
                                 </div>
-                                <div class="flex flex-col">
-                                    <span class="font-bold text-slate-200">{{ u.username }}</span>
-                                    <span class="text-[11px] text-slate-500">{{ u.get_full_name|default:u.email }}</span>
+                                <div class="responsive-table-meta">
+                                    <span class="responsive-table-meta__title">{{ u.username }}</span>
+                                    <span class="responsive-table-meta__detail">{{ u.get_full_name|default:u.email }}</span>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4" data-label="Alcance / Institucion">
                             {% with u.memberships.all as mems %}
+                            <div class="responsive-table-meta">
                                 {% for m in mems %}
-                                <div class="flex flex-col mb-2 last:mb-0">
-                                    <span class="text-slate-300 font-medium text-xs">
-                                        {% if m.entity %}{{ m.entity.name }}{% else %}Alcance Global{% endif %}
-                                    </span>
-                                    <span class="text-[11px] text-slate-500 uppercase font-bold">{{ m.institution.code|default:"Sin Institución" }}</span>
+                                <div class="mb-2 last:mb-0">
+                                    <div class="text-slate-300 font-medium text-xs">{% if m.entity %}{{ m.entity.name }}{% else %}Alcance global{% endif %}</div>
+                                    <div class="text-[11px] text-slate-500 uppercase font-bold">{{ m.institution.code|default:"Sin institucion" }}</div>
                                 </div>
                                 {% empty %}
-                                <span class="text-slate-600 italic text-xs">Sin membresías</span>
+                                <span class="text-slate-600 italic text-xs">Sin membresias</span>
                                 {% endfor %}
+                            </div>
                             {% endwith %}
                         </td>
-                        <td class="px-6 py-4">
-                            {% for m in u.memberships.all %}
-                            <div class="flex items-center gap-2 mb-2 last:mb-0">
-                                <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
-                                    {{ m.get_role_display }}
-                                </span>
-                                {% if m.role == "VIEWER" and u.profile %}
-                                <span class="px-2 py-0.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-[10px] font-bold text-sky-300 uppercase tracking-wider">
-                                    {{ u.profile.get_viewer_profile_type_display }}
-                                </span>
-                                {% endif %}
-                                {% if m.validation_level %}
-                                <span class="text-[11px] font-bold text-slate-500 uppercase">L{{ m.validation_level }}</span>
-                                {% endif %}
-                                <div class="flex items-center gap-1.5">
-                                    {% if m.can_validate_daily %}<div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]" title="Flujo diario"></div>{% endif %}
-                                    {% if m.can_validate_weekly %}<div class="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_0_2px_rgba(14,165,233,0.15)]" title="Flujo semanal"></div>{% endif %}
-                                    {% if m.can_validate_monthly %}<div class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.15)]" title="Flujo mensual/certificación"></div>{% endif %}
+                        <td class="px-6 py-4" data-label="Configuracion de rol">
+                            <div class="grid gap-2">
+                                {% for m in u.memberships.all %}
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+                                        {{ m.get_role_display }}
+                                    </span>
+                                    {% if m.role == "VIEWER" and u.profile %}
+                                    <span class="px-2 py-0.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-[10px] font-bold text-sky-300 uppercase tracking-wider">
+                                        {{ u.profile.get_viewer_profile_type_display }}
+                                    </span>
+                                    {% endif %}
+                                    {% if m.validation_level %}
+                                    <span class="text-[11px] font-bold text-slate-500 uppercase">L{{ m.validation_level }}</span>
+                                    {% endif %}
+                                    <div class="flex items-center gap-1.5">
+                                        {% if m.can_validate_daily %}<div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]" title="Flujo diario"></div>{% endif %}
+                                        {% if m.can_validate_weekly %}<div class="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_0_2px_rgba(14,165,233,0.15)]" title="Flujo semanal"></div>{% endif %}
+                                        {% if m.can_validate_monthly %}<div class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.15)]" title="Flujo mensual/certificacion"></div>{% endif %}
+                                    </div>
                                 </div>
+                                {% empty %}
+                                <span class="text-slate-600 italic text-xs">Sin rol asignado</span>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
                         </td>
-                        <td class="px-6 py-4 text-right">
-                            <div class="flex justify-end gap-2">
-                                <a href="{% url 'accounts:admin_user_edit' u.id %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all">
+                        <td class="px-6 py-4 text-right responsive-data-table__actions" data-label="Acciones">
+                            <div class="responsive-action-group">
+                                <a href="{% url 'accounts:admin_user_edit' u.id %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all" title="Editar usuario">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 </a>
-                                <a href="{% url 'accounts:admin_user_delete' u.id %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                <a href="{% url 'accounts:admin_user_delete' u.id %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Eliminar usuario">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </a>
                             </div>
@@ -133,9 +137,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="px-6 py-12 text-center">
-                            <p class="text-slate-500 font-medium">No se encontraron usuarios con los criterios de búsqueda.</p>
-                        </td>
+                        <td colspan="4" class="responsive-empty-state">No se encontraron usuarios con los criterios seleccionados.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -144,7 +146,7 @@
     </div>
 
     <div class="glass-card rounded-2xl p-4 border-white/5">
-        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Referencia de Colores de Flujo</p>
+        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Referencia de flujos</p>
         <div class="flex flex-wrap items-center gap-5 text-xs text-slate-300">
             <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.15)]"></span>
@@ -156,11 +158,9 @@
             </div>
             <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.15)]"></span>
-                <span>Mensual / Certificación</span>
+                <span>Mensual / Certificacion</span>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
-
-

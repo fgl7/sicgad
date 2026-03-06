@@ -1,0 +1,313 @@
+.report-page-shell {
+  width: min(100%, 96rem);
+  margin: 0 auto;
+}
+
+.report-variant-notice {
+  line-height: 1.5;
+}
+
+.project-report-stage {
+  --report-line: rgba(56, 189, 248, 0.28);
+  --report-accent: #0f3f53;
+  --report-accent-strong: #0b3140;
+  --report-program: #38bdf8;
+  --report-executed: #34d399;
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(2, 6, 23, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.3);
+}
+
+.report-agreement-stage .glass-card,
+.project-report-stage > div,
+.report-top-grid > div,
+.report-metric-grid > div,
+.report-split-grid > div,
+.report-comparison-grid > div {
+  min-width: 0;
+}
+
+.report-grid-title {
+  background: linear-gradient(180deg, var(--report-accent), var(--report-accent-strong));
+  color: #fff;
+  border-radius: 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.15;
+  padding: 0.34rem 0.62rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.report-grid-value {
+  min-height: 2.65rem;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--report-line);
+  border-radius: 0.95rem;
+  color: #e2e8f0;
+  display: flex;
+  font-size: 0.88rem;
+  justify-content: center;
+  line-height: 1.2;
+  padding: 0.48rem 0.75rem;
+  text-align: center;
+}
+
+.report-grid-value.report-grid-value-left {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.report-grid-panel {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--report-line);
+  border-radius: 0.95rem;
+  color: #cbd5e1;
+  min-height: 5.5rem;
+}
+
+.report-grid-panel ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.report-grid-panel li,
+.report-grid-panel p {
+  font-size: 0.8rem;
+  line-height: 1.08rem;
+}
+
+.report-curve-table th,
+.report-curve-table td {
+  border: 1px solid rgba(116, 133, 143, 0.45);
+  font-size: 0.8rem;
+  line-height: 1.1;
+  padding: 0.32rem 0.38rem;
+  text-align: center;
+}
+
+.report-curve-table thead th {
+  background: var(--report-accent-strong);
+  color: #fff;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.report-curve-table tbody th {
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 900;
+}
+
+.report-curve-table .row-program th,
+.report-curve-table .row-program td {
+  color: var(--report-program);
+  font-weight: 800;
+}
+
+.report-curve-table .row-executed th,
+.report-curve-table .row-executed td {
+  color: var(--report-executed);
+  font-weight: 800;
+}
+
+.report-kpi-strong {
+  color: #f8fafc;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.report-body-compact {
+  gap: 0.6rem;
+}
+
+.report-compact-header {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns:
+    auto
+    minmax(0, 1.2fr)
+    minmax(0, 1fr)
+    minmax(9rem, 0.48fr);
+}
+
+.report-mini-logo {
+  flex-shrink: 0;
+  height: 2.75rem;
+  object-fit: contain;
+  width: 2.75rem;
+}
+
+.report-aside-card {
+  min-width: 9rem;
+}
+
+.report-inline-filters {
+  align-items: end;
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  max-width: 34rem;
+  width: 100%;
+}
+
+.report-filter-control {
+  height: 2.15rem;
+  line-height: 1.1rem;
+}
+
+input.report-filter-control,
+select.report-filter-control {
+  padding-bottom: 0.45rem;
+  padding-top: 0.45rem;
+}
+
+button.report-filter-control {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  line-height: 1;
+}
+
+.report-top-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr) minmax(0, 2.4fr);
+}
+
+.report-metric-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.report-split-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.report-comparison-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.report-curve-table-shell {
+  padding-bottom: 0.25rem;
+}
+
+.project-curve-chart {
+  min-height: 0;
+  height: clamp(16rem, 34vw, 23.75rem);
+}
+
+.project-curve-chart--project {
+  height: clamp(15rem, 30vw, 19.75rem);
+}
+
+.project-curve-chart--agreement {
+  height: clamp(18rem, 38vw, 23.75rem);
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  .report-top-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-top-grid > :nth-child(3) {
+    grid-column: span 2;
+  }
+
+  .report-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .report-compact-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-aside-card {
+    min-width: 0;
+  }
+
+  .report-split-grid,
+  .report-inline-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1024px) {
+  .report-comparison-grid {
+    align-items: start;
+    grid-template-columns: minmax(0, 0.98fr) minmax(0, 1.32fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .report-page-shell {
+    width: 100%;
+  }
+
+  .project-report-stage {
+    border-radius: 1.5rem;
+  }
+
+  .report-grid-title {
+    font-size: 0.65rem;
+    padding: 0.38rem 0.55rem;
+  }
+
+  .report-grid-value {
+    min-height: 3rem;
+    font-size: 0.82rem;
+    padding: 0.6rem 0.7rem;
+  }
+
+  .report-grid-panel {
+    min-height: 0;
+  }
+
+  .report-grid-panel li,
+  .report-grid-panel p {
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+
+  .report-compact-header {
+    gap: 0.85rem;
+  }
+
+  .report-mini-logo {
+    height: 2.35rem;
+    width: 2.35rem;
+  }
+
+  .report-aside-card {
+    text-align: left;
+  }
+
+  .report-top-grid,
+  .report-metric-grid,
+  .report-split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-curve-table th,
+  .report-curve-table td {
+    font-size: 0.72rem;
+    padding: 0.28rem 0.3rem;
+  }
+
+  .project-curve-chart,
+  .project-curve-chart--agreement,
+  .project-curve-chart--project {
+    height: 17rem;
+  }
+}

@@ -1,29 +1,40 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Eliminar institución - SICGAD{% endblock %}
-{% block page_title %}Eliminar institución{% endblock %}
+{% block title %}Eliminar institucion - SICGAD{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
 
 {% block content %}
-  <section class="glass-card max-w-md rounded-2xl p-6 text-xs mx-auto">
-    <h2 class="text-base font-semibold mb-3">Confirmar eliminación</h2>
-    {% if error %}
-      <div class="mb-3 text-[11px] text-red-300 bg-red-900/30 border border-red-800/60 rounded-md px-3 py-2">
-        {{ error }}
-      </div>
-    {% endif %}
-    <p class="text-slate-300 mb-6">
-      Estás a punto de eliminar la institución
-      <span class="font-semibold">{{ institution.code }} - {{ institution.name }}</span>.
-      Esta acción puede afectar usuarios asociados.
-    </p>
-    <form method="post" class="flex items-center justify-end gap-3">
-      {% csrf_token %}
-      <a href="{% url 'accounts:institution_list' %}" class="btn-secondary">
-        Cancelar
-      </a>
-      <button type="submit" class="btn-danger">
-        Eliminar institución
-      </button>
-    </form>
-  </section>
+<div class="page-shell page-shell--narrow fade-in">
+    <section class="glass-card rounded-3xl p-6 md:p-8 border-red-500/20 bg-gradient-to-br from-red-500/10 to-slate-950/80 space-y-5">
+        <div class="page-hero">
+            <div class="page-hero__content">
+                <p class="page-kicker text-red-300">Accounts</p>
+                <h2 class="page-title text-[clamp(1.3rem,1.15rem+0.7vw,1.7rem)]">Confirmar eliminacion</h2>
+                <p class="page-subtitle">Se eliminara la institucion y podria afectar membresias o accesos asociados.</p>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="surface-note surface-note--warning">
+            <strong>No se puede continuar:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="rounded-2xl border border-white/10 bg-slate-900/45 p-4 text-sm text-slate-200">
+            Estas a punto de eliminar la institucion
+            <strong>{{ institution.code }} - {{ institution.name }}</strong>.
+            Esta accion puede afectar usuarios asociados.
+        </div>
+
+        <form method="post" class="form-footer-actions">
+            {% csrf_token %}
+            <a href="{% url 'accounts:institution_list' %}" class="btn-secondary">Cancelar</a>
+            <button type="submit" class="btn-danger">Eliminar institucion</button>
+        </form>
+    </section>
+</div>
 {% endblock %}

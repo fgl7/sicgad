@@ -3,36 +3,42 @@
 
 {% block title %}Editar usuario - SICGAD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+<link rel="stylesheet" href="{% static 'css/accounts_password.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="max-w-4xl mx-auto fade-in space-y-6">
-    <div class="flex items-center justify-between mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Editar Usuario: {{ user_obj.username }}</h2>
-            <p class="text-slate-500 text-sm">Actualiza credenciales y alcance por sector/subsector/categorías/entidades.</p>
+<div class="page-shell page-shell--narrow fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Accounts</p>
+            <h2 class="page-title">Editar usuario: {{ user_obj.username }}</h2>
+            <p class="page-subtitle">Actualiza credenciales, alcance por entidad y permisos de validacion institucional.</p>
         </div>
-        <a href="{% url 'accounts:admin_user_list' %}" class="page-back-link">
-            Volver al listado
-        </a>
+        <div class="page-hero__actions">
+            <a href="{% url 'accounts:admin_user_list' %}" class="page-back-link">Volver al listado</a>
+        </div>
     </div>
 
-    <form method="post" class="space-y-6">
+    <form method="post" class="section-stack">
         {% csrf_token %}
         {{ form.non_field_errors }}
 
-        <section class="glass-card rounded-3xl p-8 space-y-6">
+        <section class="glass-card rounded-3xl p-6 md:p-8 space-y-6">
             <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                Información personal
+                Informacion personal
             </h3>
 
-            <div class="grid md:grid-cols-2 gap-6">
+            <div class="grid gap-6 md:grid-cols-2">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nombre de Usuario</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nombre de usuario</label>
                     {{ form.username }}
                     {{ form.username.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Correo electrónico</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Correo electronico</label>
                     {{ form.email }}
                     {{ form.email.errors }}
                 </div>
@@ -48,26 +54,26 @@
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+            <div class="grid gap-6 pt-4 border-t border-white/5 md:grid-cols-2">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nueva contraseña temporal</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nueva contrasena temporal</label>
                     <div class="password-field-wrap">
                         {{ form.password1 }}
-                        <button type="button" class="password-toggle" data-toggle-password="id_password1" aria-label="Mostrar contraseña" tabindex="-1">
+                        <button type="button" class="password-toggle" data-toggle-password="id_password1" aria-label="Mostrar contrasena" tabindex="-1">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                             </svg>
                         </button>
                     </div>
-                    <p class="text-[10px] text-slate-500">Deja vacío para mantener la contraseña actual.</p>
+                    <p class="text-[10px] text-slate-500">Deja vacio este campo para mantener la contrasena actual.</p>
                     {{ form.password1.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Confirmar contraseña</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Confirmar contrasena</label>
                     <div class="password-field-wrap">
                         {{ form.password2 }}
-                        <button type="button" class="password-toggle" data-toggle-password="id_password2" aria-label="Mostrar contraseña" tabindex="-1">
+                        <button type="button" class="password-toggle" data-toggle-password="id_password2" aria-label="Mostrar contrasena" tabindex="-1">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
@@ -79,53 +85,53 @@
             </div>
         </section>
 
-        <section class="glass-card rounded-3xl p-8 space-y-6">
+        <section class="glass-card rounded-3xl p-6 md:p-8 space-y-6">
             <h3 class="text-xs font-bold text-sky-400 uppercase tracking-widest flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                Rol y Alcance
+                Rol y alcance
             </h3>
 
-            <div class="grid md:grid-cols-3 gap-6">
+            <div class="grid gap-6 md:grid-cols-3">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Rol del Sistema</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Rol del sistema</label>
                     {{ form.role }}
                     {{ form.role.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Institución</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Institucion</label>
                     {{ form.institution }}
                     {{ form.institution.errors }}
                 </div>
                 <div class="space-y-2" data-viewer-profile-container>
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Plantilla Visualizador</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Plantilla visualizador</label>
                     {{ form.viewer_profile_type }}
                     <p class="text-[10px] text-slate-500">Aplica cuando el rol es Visualizador.</p>
                     {{ form.viewer_profile_type.errors }}
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-white/5" data-standard-scope-container>
+            <div class="grid gap-6 pt-4 border-t border-white/5 md:grid-cols-3" data-standard-scope-container>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Sector</label>
                     {{ form.sector }}
-                    <p class="text-[10px] text-slate-500">Seleccione uno o mas sectores.</p>
+                    <p class="text-[10px] text-slate-500">Selecciona uno o mas sectores.</p>
                     {{ form.sector.errors }}
                 </div>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Subsector</label>
                     {{ form.subsector }}
-                    <p class="text-[10px] text-slate-500">Seleccione uno o mas subsectores de los sectores elegidos.</p>
+                    <p class="text-[10px] text-slate-500">Selecciona uno o mas subsectores de los sectores elegidos.</p>
                     {{ form.subsector.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Categorías</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Categorias</label>
                     {{ form.category }}
-                    <p class="text-[10px] text-slate-500">Seleccione una o más categorías del sector/subsector elegido (Ctrl/Cmd + clic).</p>
+                    <p class="text-[10px] text-slate-500">Selecciona una o mas categorias del sector/subsector elegido.</p>
                     {{ form.category.errors }}
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-6 pt-4 border-t border-white/5" data-standard-scope-container>
+            <div class="grid gap-6 pt-4 border-t border-white/5 md:grid-cols-3" data-standard-scope-container>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Alcance</label>
                     {{ form.scope_mode }}
@@ -134,21 +140,19 @@
                 <div class="space-y-2" data-entity-container>
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Entidades</label>
                     {{ form.entity }}
-                    <p class="text-[10px] text-slate-500">Seleccione una o varias entidades de las categorías elegidas (filtradas por sector/subsector).</p>
+                    <p class="text-[10px] text-slate-500">Selecciona una o varias entidades filtradas por sector, subsector y categoria.</p>
                     {{ form.entity.errors }}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nivel de validación</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Nivel de validacion</label>
                     {{ form.validation_level }}
                     {{ form.validation_level.errors }}
                 </div>
             </div>
 
-            <p class="text-[10px] text-slate-500">
-                Global en categoría aplica a todas las entidades activas de la categoría seleccionada.
-            </p>
+            <p class="text-[10px] text-slate-500">Global en categoria aplica a todas las entidades activas de la categoria seleccionada.</p>
 
-            <div class="grid md:grid-cols-2 gap-6 pt-4 border-t border-white/5 hidden" data-authority-scope-container>
+            <div class="grid gap-6 pt-4 border-t border-white/5 hidden md:grid-cols-2" data-authority-scope-container>
                 <div class="space-y-2">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Alcance autoridad MHE</label>
                     {{ form.authority_scope_mode }}
@@ -163,20 +167,20 @@
             </div>
         </section>
 
-        <section class="glass-card rounded-3xl p-8 space-y-6 uppercase">
-            <h3 class="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2 mb-4">
+        <section class="glass-card rounded-3xl p-6 md:p-8 space-y-6 uppercase">
+            <h3 class="text-xs font-bold text-amber-400 uppercase tracking-widest flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
-                Permisos de validación
+                Permisos de validacion
             </h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <label class="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.05] transition-colors">
                     {{ form.can_validate_daily }}
-                    <span class="text-[10px] font-bold text-slate-300">Flujo Diario</span>
+                    <span class="text-[10px] font-bold text-slate-300">Flujo diario</span>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.05] transition-colors">
                     {{ form.can_validate_weekly }}
-                    <span class="text-[10px] font-bold text-slate-300">Flujo Semanal</span>
+                    <span class="text-[10px] font-bold text-slate-300">Flujo semanal</span>
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.05] transition-colors">
                     {{ form.can_validate_projections }}
@@ -184,25 +188,17 @@
                 </label>
                 <label class="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 cursor-pointer hover:bg-white/[0.05] transition-colors">
                     {{ form.can_validate_monthly }}
-                    <span class="text-[10px] font-bold text-slate-300">Mes / Certificación</span>
+                    <span class="text-[10px] font-bold text-slate-300">Mes / Certificacion</span>
                 </label>
             </div>
         </section>
 
-        <div class="flex items-center justify-end pt-4 gap-2">
-            <a href="{% url 'accounts:admin_user_list' %}" class="btn-secondary">
-                Cancelar
-            </a>
-            <button type="submit" class="btn-primary glow-emerald">
-                Guardar cambios
-            </button>
+        <div class="form-footer-actions">
+            <a href="{% url 'accounts:admin_user_list' %}" class="btn-secondary">Cancelar</a>
+            <button type="submit" class="btn-primary glow-emerald">Guardar cambios</button>
         </div>
     </form>
 </div>
-{% endblock %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/accounts_password.css' %}">
 {% endblock %}
 
 {% block extra_js %}

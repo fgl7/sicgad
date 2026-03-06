@@ -1,32 +1,41 @@
 {% extends "base.html" %}
-
 {% load static %}
 
 {% block title %}Captura manual de datos - SICGAD{% endblock %}
 {% block page_title %}Captura manual de datos{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-  <div class="space-y-6">
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-      <h2 class="text-sm font-semibold mb-2">Ingreso manual</h2>
-      <p class="text-[11px] text-slate-400 mb-4">
-        Completa los valores directamente en la tabla. Cada fila representa un registro del dataset diario seleccionado.
-        Después podrás revisar el borrador desde el historial y enviarlo a validación.
-      </p>
+  <div class="page-shell fade-in">
+    <div class="page-hero">
+      <div class="page-hero__content">
+        <p class="page-kicker">Ingest</p>
+        <h2 class="page-title">Ingreso manual</h2>
+        <p class="page-subtitle">
+          Completa los valores directamente en la tabla. Cada fila representa un registro del dataset diario seleccionado.
+          Despues podras revisar el borrador desde el historial y enviarlo a validacion.
+        </p>
+      </div>
+    </div>
+
+    <section class="glass-card rounded-[1.75rem] p-4 sm:p-6 text-xs">
       <form method="post" class="space-y-4" data-month-lock="{{ month_lock_enabled|yesno:'true,false' }}">
         {% csrf_token %}
-        <div class="grid md:grid-cols-4 gap-3">
+        <div class="grid gap-3 md:grid-cols-4">
           <div>
-            <label class="block font-semibold text-slate-200 mb-1">{{ dataset_form.dataset_type.label }}</label>
+            <label class="mb-1 block font-semibold text-slate-200">{{ dataset_form.dataset_type.label }}</label>
             {{ dataset_form.dataset_type }}
             {% if dataset_form.dataset_type.errors %}
-              <p class="text-red-400 mt-1">{{ dataset_form.dataset_type.errors.0 }}</p>
+              <p class="mt-1 text-red-400">{{ dataset_form.dataset_type.errors.0 }}</p>
             {% endif %}
           </div>
           <div>
-            <label class="block font-semibold text-slate-200 mb-1">{{ dataset_form.entity.label }}</label>
+            <label class="mb-1 block font-semibold text-slate-200">{{ dataset_form.entity.label }}</label>
             {% if loader_default_entity %}
-              <div class="text-slate-200 text-xs mb-1">
+              <div class="mb-1 text-xs text-slate-200">
                 {{ loader_default_entity.code|default:loader_default_entity.name }} - {{ loader_default_entity.name }}
               </div>
               <input type="hidden" name="{{ dataset_form.entity.name }}" value="{{ loader_default_entity.id }}" />
@@ -34,23 +43,23 @@
               {{ dataset_form.entity }}
             {% endif %}
             {% if dataset_form.entity.errors %}
-              <p class="text-red-400 mt-1">{{ dataset_form.entity.errors.0 }}</p>
+              <p class="mt-1 text-red-400">{{ dataset_form.entity.errors.0 }}</p>
             {% endif %}
           </div>
           <div>
-            <label class="block font-semibold text-slate-200 mb-1">{{ dataset_form.period.label }}</label>
+            <label class="mb-1 block font-semibold text-slate-200">{{ dataset_form.period.label }}</label>
             {{ dataset_form.period }}
             {% if dataset_form.period.errors %}
-              <p class="text-red-400 mt-1">{{ dataset_form.period.errors.0 }}</p>
+              <p class="mt-1 text-red-400">{{ dataset_form.period.errors.0 }}</p>
             {% endif %}
           </div>
         </div>
 
         {% if row_formset %}
           {{ row_formset.management_form }}
-          <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="section-heading">
             <span class="text-[11px] text-slate-400">Completa al menos una fila. Los campos marcados como requeridos deben llenarse.</span>
-            <div class="flex items-center gap-3 text-[11px]">
+            <div class="flex flex-wrap items-center gap-3 text-[11px]">
               {% if can_remove_rows %}
                 <a href="?dataset_type={{ selected_dataset.pk }}&rows={{ rows_less_value }}" class="text-amber-300 hover:underline">
                   Quitar ultima fila
@@ -68,13 +77,13 @@
               Solo se habilita el mes correspondiente al periodo seleccionado.
             </p>
           {% endif %}
-          <div class="overflow-auto border border-slate-800 rounded-lg">
-            <table class="min-w-full text-[11px]">
-              <thead class="bg-slate-950 text-slate-300">
+          <div class="matrix-table-shell rounded-lg border border-slate-800">
+            <table class="matrix-table text-[11px]">
+              <thead class="text-slate-300">
                 <tr>
-                  <th class="px-3 py-2 text-left font-semibold">#</th>
+                  <th class="text-left font-semibold">#</th>
                   {% for col in columns %}
-                    <th class="px-3 py-2 text-left font-semibold">
+                    <th class="text-left font-semibold">
                       {{ col.label|default:col.name }}
                       {% if col.required %}
                         <span class="text-red-400">*</span>
@@ -82,30 +91,30 @@
                     </th>
                   {% endfor %}
                   {% if row_formset.can_delete %}
-                    <th class="px-3 py-2 text-left font-semibold">Eliminar</th>
+                    <th class="text-left font-semibold">Eliminar</th>
                   {% endif %}
                 </tr>
               </thead>
               <tbody>
                 {% for form in row_formset %}
                   <tr class="border-t border-slate-800">
-                    <td class="px-3 py-2 text-slate-500">{{ forloop.counter }}</td>
+                    <td class="text-slate-500">{{ forloop.counter }}</td>
                     {% for hidden in form.hidden_fields %}
                       {{ hidden }}
                     {% endfor %}
                     {% for field in form.visible_fields %}
                       {% if field.name != 'DELETE' %}
-                        <td class="px-3 py-2 align-top">
+                        <td class="align-top">
                           {{ field }}
                           {% if field.errors %}
-                            <p class="text-red-400 mt-1">{{ field.errors.0 }}</p>
+                            <p class="mt-1 text-red-400">{{ field.errors.0 }}</p>
                           {% endif %}
                         </td>
                       {% endif %}
                     {% endfor %}
                     {% if row_formset.can_delete %}
-                      <td class="px-3 py-2 align-top">
-                        <label class="inline-flex items-center gap-2 text-slate-300 text-[11px]">
+                      <td class="align-top">
+                        <label class="inline-flex items-center gap-2 text-[11px] text-slate-300">
                           {{ form.DELETE }}
                           <span>Quitar</span>
                         </label>
@@ -117,43 +126,43 @@
             </table>
           </div>
           {% if row_formset.non_form_errors %}
-            <p class="text-red-400 mt-1">{{ row_formset.non_form_errors.0 }}</p>
+            <p class="mt-1 text-red-400">{{ row_formset.non_form_errors.0 }}</p>
           {% endif %}
         {% else %}
-          <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-300">
+          <div class="rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-slate-300">
             Selecciona un dataset base para mostrar los campos disponibles y capturar datos manualmente.
           </div>
         {% endif %}
 
-        <div class="flex items-center justify-between">
-          <a href="{% url 'ingest:upload' %}" class="text-xs text-slate-300 hover:text-slate-100">
+        <div class="form-footer-actions">
+          <a href="{% url 'ingest:upload' %}" class="page-back-link">
             Volver a carga por archivo
           </a>
-          <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500" {% if not row_formset %}disabled{% endif %}>
+          <button type="submit" class="btn-primary" {% if not row_formset %}disabled{% endif %}>
             Guardar dataset manual
           </button>
         </div>
       </form>
     </section>
 
-    <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs">
-      <h2 class="text-sm font-semibold mb-3">Últimas cargas</h2>
-      <p class="text-[11px] text-slate-400 mb-3">
-        Consulta rápidamente los últimos borradores o envíos recientes.
+    <section class="glass-card rounded-[1.75rem] p-4 sm:p-6 text-xs">
+      <h2 class="mb-3 text-sm font-semibold">Ultimas cargas</h2>
+      <p class="mb-3 text-[11px] text-slate-400">
+        Consulta rapidamente los ultimos borradores o envios recientes.
       </p>
       <div class="space-y-2">
         {% for inst in instances %}
-          <div class="border border-slate-800 rounded-lg px-3 py-2">
-            <div class="text-slate-100 font-semibold text-[12px]">
-              {{ inst.dataset_type.name }} — {{ inst.period }}
+          <div class="rounded-lg border border-slate-800 px-3 py-2">
+            <div class="text-[12px] font-semibold text-slate-100">
+              {{ inst.dataset_type.name }} - {{ inst.period }}
             </div>
-            <div class="text-slate-400 text-[11px]">
+            <div class="text-[11px] text-slate-400">
               {{ inst.entity.code|default:inst.entity.name|default:"N/A" }}
-              • {{ inst.get_state_display }}
+              - {{ inst.get_state_display }}
             </div>
           </div>
         {% empty %}
-          <p class="text-slate-500">Aún no registras cargas.</p>
+          <p class="text-slate-500">Aun no registras cargas.</p>
         {% endfor %}
       </div>
     </section>
@@ -163,6 +172,3 @@
 {% block extra_js %}
   <script src="{% static 'js/ingest_manual.js' %}"></script>
 {% endblock %}
-
-
-

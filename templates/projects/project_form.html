@@ -1,21 +1,29 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{% if project %}Editar Registro{% else %}Nuevo Registro{% endif %} - SICGAD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-<div class="max-w-5xl mx-auto fade-in space-y-4">
-    <div class="flex items-center justify-between mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">{% if project %}Actualizar Proyecto / Convenio{% else %}Registrar Proyecto / Convenio{% endif %}</h2>
-            <p class="text-slate-500 text-sm">Guarda el registro como borrador y envialo a revision administrativa desde el listado.</p>
+<div class="page-shell page-shell--narrow fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Projects</p>
+            <h2 class="page-title">{% if project %}Actualizar Proyecto / Convenio{% else %}Registrar Proyecto / Convenio{% endif %}</h2>
+            <p class="page-subtitle">Guarda el registro como borrador y envialo a revision administrativa desde el listado.</p>
         </div>
-        <a href="{% url 'projects:project_list' %}" class="page-back-link">
-            Volver al listado
-        </a>
+        <div class="page-hero__actions">
+            <a href="{% url 'projects:project_list' %}" class="page-back-link">
+                Volver al listado
+            </a>
+        </div>
     </div>
 
     {% if project %}
-    <div class="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 text-xs text-amber-100">
+    <div class="surface-note surface-note--warning">
         Estado actual del workflow:
         <span class="font-black uppercase">{{ project.workflow_status }}</span>
         {% if project.workflow_comment %}
@@ -137,7 +145,7 @@
             {% endif %}
         </section>
 
-        <div class="flex items-center justify-end pt-2">
+        <div class="form-footer-actions pt-2">
             <button type="submit" class="btn-primary glow-emerald px-12">
                 Guardar Borrador
             </button>

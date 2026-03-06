@@ -1,33 +1,38 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Auditoría - SICGAD{% endblock %}
+{% block title %}Auditoria - SICGAD{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
 
 {% block content %}
-<div class="space-y-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Trazabilidad del Sistema</h2>
-            <p class="text-slate-500 text-sm">Registro inmutable de actividades operativas y cambios de configuración.</p>
+<div class="page-shell fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Audit</p>
+            <h2 class="page-title">Trazabilidad del Sistema</h2>
+            <p class="page-subtitle">Registro inmutable de actividades operativas y cambios de configuracion ejecutados en la plataforma.</p>
         </div>
-        <div class="flex items-center gap-2">
-            <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Monitoreo Realtime</span>
+        <div class="page-hero__actions">
+            <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Monitoreo realtime</span>
         </div>
     </div>
 
-    <!-- Filters Section -->
     <div class="glass-card rounded-3xl p-6 border-white/5 bg-slate-900/20">
-        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 items-end">
-            <div class="space-y-2 lg:col-span-1">
+        <form method="get" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6 xl:items-end">
+            <div class="space-y-2 xl:col-span-1">
                 <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Usuario</label>
                 <input type="text" name="user" value="{{ filter_user }}" placeholder="Filtro de identidad..." />
             </div>
-            
-            <div class="space-y-2 lg:col-span-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Acción Ejecutada</label>
+
+            <div class="space-y-2 xl:col-span-1">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Accion ejecutada</label>
                 <select name="action">
                     <option value="">Todas las actividades</option>
                     {% for code, label in actions %}
-                        <option value="{{ code }}" {% if filter_action == code %}selected{% endif %}>{{ label }}</option>
+                    <option value="{{ code }}" {% if filter_action == code %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -42,41 +47,37 @@
                 <input type="date" name="to" value="{{ filter_to }}" />
             </div>
 
-            <div class="flex items-center gap-3 pt-6 lg:pt-0">
+            <div class="flex items-center gap-3 pt-2 xl:pt-0">
                 <label class="flex items-center gap-2 cursor-pointer group">
-                    {{ form.only_mine }}
                     <input type="checkbox" id="only_mine" name="only_mine" value="1" {% if only_mine %}checked{% endif %} class="rounded bg-slate-800 border-white/10" />
-                    <span class="text-[10px] font-bold text-slate-500 uppercase group-hover:text-slate-300 transition-colors">Solo mías</span>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase group-hover:text-slate-300 transition-colors">Solo mias</span>
                 </label>
             </div>
 
-            <div class="flex items-center gap-2 xl:justify-end">
-                <button type="submit" class="btn-primary py-2 px-6 glow-emerald">Filtrar</button>
-                <a href="{% url 'audit:log_list' %}" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                </a>
+            <div class="form-footer-actions xl:justify-end">
+                <button type="submit" class="btn-primary glow-emerald">Filtrar</button>
+                <a href="{% url 'audit:log_list' %}" class="btn-secondary">Limpiar</a>
             </div>
         </form>
     </div>
 
-    <!-- Logs Table Card -->
     <div class="glass-card rounded-3xl overflow-hidden border-white/5">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <div class="responsive-table-shell">
+            <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
                         <th class="px-6 py-4">Timestamp</th>
                         <th class="px-6 py-4">Actor</th>
-                        <th class="px-6 py-4">Acción / Módulo</th>
+                        <th class="px-6 py-4">Accion / Modulo</th>
                         <th class="px-6 py-4">Objeto</th>
-                        <th class="px-6 py-4">Detalle Técnico</th>
+                        <th class="px-6 py-4">Detalle tecnico</th>
                     </tr>
                 </thead>
                 <tbody class="text-sm">
                     {% for log in logs %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-6 py-4 font-mono text-[10px] text-slate-500">{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4 font-mono text-[10px] text-slate-500" data-label="Timestamp">{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+                        <td class="px-6 py-4" data-label="Actor">
                             <div class="flex items-center gap-2">
                                 <span class="w-6 h-6 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-[8px] font-black uppercase text-slate-400">
                                     {{ log.username|default:"SYS"|slice:":2" }}
@@ -84,22 +85,22 @@
                                 <span class="text-slate-300 font-bold text-xs">{{ log.username|default:"Sistema" }}</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4">
-                            <div class="flex flex-col">
+                        <td class="px-6 py-4" data-label="Accion / Modulo">
+                            <div class="responsive-table-meta">
                                 <span class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{{ log.get_action_display }}</span>
-                                <span class="text-[9px] font-black text-slate-600 uppercase tracking-tighter">{{ log.module|default:"Core" }}</span>
+                                <span class="responsive-table-meta__detail text-[9px] font-black uppercase tracking-tighter">{{ log.module|default:"Core" }}</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4" data-label="Objeto">
                             <span class="text-[10px] font-bold text-sky-500/80">{{ log.object_repr|default:"-"|truncatechars:30 }}</span>
                         </td>
-                        <td class="px-6 py-4 max-w-xs">
+                        <td class="px-6 py-4" data-label="Detalle tecnico">
                             <p class="text-[10px] text-slate-500 leading-tight">{{ log.details|truncatechars:120 }}</p>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center italic text-slate-600">No se encontraron registros de auditoría.</td>
+                        <td colspan="5" class="responsive-empty-state">No se encontraron registros de auditoria.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

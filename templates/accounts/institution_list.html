@@ -1,57 +1,76 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Instituciones - SICGAD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-<div class="space-y-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Estructura Institucional</h2>
-            <p class="text-slate-500 text-sm">Organización jerárquica y entidades vinculadas al sistema.</p>
+<div class="page-shell fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Accounts</p>
+            <h2 class="page-title">Estructura Institucional</h2>
+            <p class="page-subtitle">Organizacion jerarquica e instituciones activas vinculadas al sistema.</p>
         </div>
-        <a href="{% url 'accounts:institution_create' %}" class="btn-primary glow-emerald">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Añadir Institución
-        </a>
+        <div class="page-hero__actions">
+            <a href="{% url 'accounts:institution_create' %}" class="btn-primary glow-emerald">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                Anadir Institucion
+            </a>
+        </div>
+    </div>
+
+    <div class="surface-note surface-note--info">
+        Cada institucion define el marco administrativo para usuarios, membresias y trazabilidad operativa.
     </div>
 
     <div class="glass-card rounded-3xl overflow-hidden border-white/5">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <div class="responsive-table-shell">
+            <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[11px] font-black text-slate-500 uppercase tracking-[0.16em]">
                         <th class="px-8 py-4">Identificador</th>
-                        <th class="px-8 py-4">Razón Social / Entidad</th>
-                        <th class="px-8 py-4">Estado Operativo</th>
+                        <th class="px-8 py-4">Razon social / Entidad</th>
+                        <th class="px-8 py-4">Estado operativo</th>
                         <th class="px-8 py-4 text-right">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="text-[14px]">
                     {% for institution in institutions %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-8 py-4 font-mono text-emerald-400 font-bold text-[12px] tracking-tight uppercase">{{ institution.code }}</td>
-                        <td class="px-8 py-4">
-                            <span class="text-slate-200 font-semibold text-[15px] tracking-tight">{{ institution.name }}</span>
+                        <td class="px-8 py-4" data-label="Identificador">
+                            <span class="font-mono text-emerald-400 font-bold text-[12px] tracking-tight uppercase">{{ institution.code }}</span>
                         </td>
-                        <td class="px-8 py-4">
+                        <td class="px-8 py-4" data-label="Razon social / Entidad">
+                            <div class="responsive-table-meta">
+                                <span class="responsive-table-meta__title text-slate-200">{{ institution.name }}</span>
+                                {% if institution.description %}
+                                <span class="responsive-table-meta__detail">{{ institution.description|truncatechars:110 }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-8 py-4" data-label="Estado operativo">
                             {% if institution.is_active %}
-                                <div class="flex items-center gap-2">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 glow-emerald"></div>
-                                    <span class="text-[11px] font-black text-emerald-400 uppercase tracking-wider">Activa</span>
-                                </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 glow-emerald"></div>
+                                <span class="text-[11px] font-black text-emerald-400 uppercase tracking-wider">Activa</span>
+                            </div>
                             {% else %}
-                                <div class="flex items-center gap-2 opacity-50">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
-                                    <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Inactiva</span>
-                                </div>
+                            <div class="flex items-center gap-2 opacity-60">
+                                <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                                <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider">Inactiva</span>
+                            </div>
                             {% endif %}
                         </td>
-                        <td class="px-8 py-4 text-right">
-                            <div class="flex justify-end gap-2">
-                                <a href="{% url 'accounts:institution_edit' institution.pk %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all" title="Editar institución">
+                        <td class="px-8 py-4 text-right responsive-data-table__actions" data-label="Acciones">
+                            <div class="responsive-action-group">
+                                <a href="{% url 'accounts:institution_edit' institution.pk %}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all" title="Editar institucion">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                 </a>
-                                <a href="{% url 'accounts:institution_delete' institution.pk %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Eliminar institución">
+                                <a href="{% url 'accounts:institution_delete' institution.pk %}" class="p-2 rounded-lg bg-slate-800/50 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all" title="Eliminar institucion">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </a>
                             </div>
@@ -59,7 +78,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="px-8 py-16 text-center text-slate-500 text-sm">No se han registrado instituciones en la base de datos central.</td>
+                        <td colspan="4" class="responsive-empty-state">No se han registrado instituciones en la base de datos central.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

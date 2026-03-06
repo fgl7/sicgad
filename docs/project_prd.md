@@ -219,6 +219,107 @@ Detalle de series:
 - Las tablas de detalle del KPI principal y de la formula relacionada se abren via boton `Mostrar tabla` en modales con export `CSV/EXCEL`.
 - El panel derecho del chart principal usa ajuste dinamico de altura + scroll interno en `Indicadores (Eje Y)` para preservar visibilidad del boton de tabla.
 
+## 8.1 Regla critica de frontend (obligatoria)
+Nota super importante:
+- Cuando se modifiquen UX, plantillas o cualquier parte del frontend, el codigo `CSS` y `JS` no debe quedarse embebido dentro de las plantillas salvo una justificacion tecnica muy puntual y temporal.
+- La regla por defecto es:
+  - estilos en `static/css/...`
+  - scripts en `static/js/...`
+  - las plantillas (`templates/...`) solo deben referenciar esos archivos via `{% static %}`.
+
+Buenas practicas obligatorias:
+- Antes de crear un archivo o funcion nueva de frontend, revisar si ya existe logica equivalente en `static/css` o `static/js`.
+- No duplicar estilos, funciones, listeners, helpers ni comportamiento visual ya implementado en otra pantalla.
+- Si un cambio afecta layout base o comportamiento comun, centralizarlo en assets reutilizables en vez de repetirlo por plantilla.
+- Si una plantilla requiere comportamiento especifico, crear un asset dedicado pero manteniendo separacion clara entre HTML, CSS y JS.
+- Cuando se refactorice frontend existente, mover primero el codigo inline a `static` y luego hacer el ajuste funcional/visual.
+- Cada modificacion de frontend debe revisar impacto en:
+  - reutilizacion,
+  - mantenimiento,
+  - consistencia visual,
+  - y riesgo de duplicacion tecnica.
+
+Archivos de referencia recientes:
+- `static/css/data_workbench.css`
+- `static/css/project_report.css`
+- `static/js/project_report.js`
+- `static/css/ingest_upload_historical.css`
+- `static/css/base_shell.css`
+- `static/js/base_route_transition.js`
+
+Esta regla debe seguirse en cualquier cambio futuro de frontend del proyecto.
+
+### 8.2 Estado real del refactor responsive/global de frontend
+Resultado implementado recientemente:
+- Se estandarizo una capa reusable de frontend en `static/css/data_workbench.css` para:
+  - `page-shell`
+  - `page-hero`
+  - `surface-note`
+  - tablas responsive (`responsive-data-table`)
+  - tablas anchas controladas (`matrix-table`)
+  - footers de formulario (`form-footer-actions`)
+  - grids de cards e informacion reutilizable
+- Se movio y/o consolido logica visual especifica en assets dedicados:
+  - `static/css/project_report.css`
+  - `static/js/project_report.js`
+  - `static/css/ingest_upload_historical.css`
+- Se evito dejar CSS/JS inline nuevo dentro de templates, siguiendo la regla operativa del proyecto.
+
+Modulos y vistas ya alineados al patron reusable:
+- `projects`:
+  - `project_list`
+  - `project_form`
+  - `project_confirm_delete`
+  - `report_list`
+  - `report_detail`
+  - `report_config_list`
+  - `report_config_form`
+  - `report_config_confirm_delete`
+  - `report_denied`
+- `ingest`:
+  - `upload`
+  - `upload_historical`
+  - `upload_history`
+  - `manual_entry`
+  - `instance_detail`
+  - `instance_edit`
+  - `certification_review`
+- `validation`:
+  - `inbox`
+  - `detail`
+  - `admin_overview`
+- `accounts`:
+  - `institution_list`
+  - `institution_form`
+  - `institution_confirm_delete`
+  - `admin_user_list`
+  - `admin_user_create`
+  - `admin_user_edit`
+  - `admin_user_confirm_delete`
+- `schemas`:
+  - `schema_list`
+  - `schema_detail`
+  - `schema_edit`
+- `audit`:
+  - `logs`
+
+Alcance tecnico del refactor:
+- Se corrigieron layouts desktop-first que rompian en `mobile` y `tablet`.
+- Las tablas operativas pasaron a dos estrategias segun el caso:
+  - `responsive-data-table` para listados que pueden colapsar a cards
+  - `matrix-table` para matrices anchas donde no conviene romper columnas
+- Se homogeneizaron headers, CTA, espaciados, notas operativas y estados visuales.
+- Se redujo duplicacion de estilos entre templates de `projects`, `ingest`, `validation`, `accounts`, `schemas` y `audit`.
+- Se corrigio una parte importante del copy legacy con encoding roto (`mojibake`) en vistas administrativas y operativas clave.
+
+Validacion aplicada durante esta pasada:
+- `python manage.py check`
+- `python manage.py test validation.tests projects.tests ingest.tests`
+
+Regla operativa nueva para mantenimiento:
+- Si una vista nueva necesita layout/listado/formulario estandar, reutilizar primero `static/css/data_workbench.css`.
+- Solo crear CSS o JS adicional cuando el comportamiento no quepa razonablemente en esa base reusable.
+
 ### Modulo de desempeno / formulas (admin)
 Objetivo funcional actual:
 - Permitir al `ADMIN` crear formulas de desempeno/eficiencia por `entity`, usando columnas de esquemas aprobados, ver preview y materializar resultados calculados.
@@ -477,7 +578,7 @@ El legado de `plants` fue retirado y el flujo operativo ya esta alineado a `enti
 
 Foco actual de deuda:
 - Consolidar cobertura de pruebas (ingest, validation, kpis, performance).
-- Normalizar textos/encoding en plantillas antiguas.
+- Completar normalizacion de textos/encoding en vistas secundarias legacy que aun no entraron en la pasada global.
 - Revisar y limpiar documentacion tecnica vieja que todavia menciona `plant/project`.
 - Seguir simplificando UX del builder de formulas para alinearlo al flujo admin definido
   (entidad -> variables -> formula -> preview -> aprobacion/materializacion).
@@ -541,6 +642,11 @@ Funciona y se usa activamente:
   - bridge hacia `schemas` desde proyectos aprobados para sembrar creacion de esquemas
   - vinculo formal `DatasetType.project` cuando el esquema nace desde el flujo sembrado
   - autoconfiguracion inicial de `ProjectReportConfig` al aprobar el primer esquema semanal/mensual ligado al proyecto
+- Base visual responsive reusable ya extendida a modulos operativos principales:
+  - `projects`, `ingest`, `validation`, `accounts`, `schemas` y `audit`
+  - headers, formularios, confirmaciones, tablas y vistas de detalle comparten patron comun
+  - `report_detail` recalcula su grafico en funcion del ancho disponible mediante `static/js/project_report.js`
+  - tablas operativas usan colapso a cards o scroll matricial segun densidad de columnas
 
 Requiere refactor planificado:
 - Extender pruebas de regresion para cubrir flujos refactorizados a `entity`.
@@ -574,6 +680,10 @@ Requiere refactor planificado:
    - probar links normales, links con query params, `target="_blank"` y formularios POST (logout)
    - confirmar que HTMX/Alpine no se vean interceptados por la transicion
    - usar `data-no-route-transition` en enlaces con JS propio si fuera necesario
+10. Si se toca frontend de modulos operativos:
+   - probar `mobile` (320-767), `tablet` (768-1023) y `desktop` (1024+)
+   - revisar overflow horizontal, botones superpuestos, paddings inconsistentes y tablas extensas
+   - reutilizar `static/css/data_workbench.css` antes de crear otro patron de layout
 
 ## 16. Archivos que primero hay que abrir para entender el sistema
 1. `structure/models.py`

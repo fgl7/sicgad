@@ -1,137 +1,146 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Historial de Cargas - SICGAD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-<div class="space-y-8 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Historial de Ingestas</h2>
-            <p class="text-slate-500 text-sm">Registro completo de archivos procesados, validaciones y cargas históricas.</p>
+<div class="page-shell fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Ingest</p>
+            <h2 class="page-title">Historial de Ingestas</h2>
+            <p class="page-subtitle">Registro completo de archivos procesados, validaciones y cargas historicas.</p>
         </div>
-        {% if not is_admin %}
-        <a href="{% url 'ingest:upload' %}" class="btn-primary glow-emerald">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-            Nueva Carga de Datos
-        </a>
-        {% endif %}
+        <div class="page-hero__actions">
+            {% if not is_admin %}
+            <a href="{% url 'ingest:upload' %}" class="btn-primary glow-emerald">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                Nueva Carga de Datos
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     {% if historical_batches %}
-    <!-- Historical Batches Section -->
-    <section class="space-y-4">
-        <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+    <section class="section-stack">
+        <h3 class="section-heading__title text-indigo-400">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Inyecciones Históricas Masivas
+            Inyecciones Historicas Masivas
         </h3>
         <div class="glass-card rounded-3xl overflow-hidden border-white/5 bg-indigo-500/5">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <th class="px-6 py-4">Fecha Importación</th>
-                        <th class="px-6 py-4">Origen / Dataset</th>
-                        <th class="px-6 py-4 text-center">Rango Temporal</th>
-                        <th class="px-6 py-4 text-center">Progreso (D/S/P)</th>
-                        <th class="px-6 py-4 text-right">Aciones</th>
-                    </tr>
-                </thead>
-                <tbody class="text-sm">
-                    {% for row in historical_batches %}
-                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors">
-                        <td class="px-6 py-4 font-mono text-[10px] text-slate-400">{{ row.batch.created_at|date:"d/m/Y H:i" }}</td>
-                        <td class="px-6 py-4">
-                            <div class="flex flex-col">
-                                <span class="font-bold text-slate-200">{{ row.batch.dataset_type.name }}</span>
-                                <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">ENT: {{ row.batch.entity.code|default:row.batch.entity.name }}</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="text-[10px] font-bold text-slate-500 uppercase">{{ row.period_start }} -> {{ row.period_end }}</span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <div class="flex justify-center gap-2">
-                                <span class="text-[10px] font-bold text-slate-600 bg-black/30 px-2 py-0.5 rounded border border-white/5">{{ row.draft_count }}</span>
-                                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{{ row.submitted_count }}</span>
-                                <span class="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{{ row.published_count }}</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            {% if row.draft_count %}
-                            <form method="post" action="{% url 'ingest:submit_historical_batch' row.batch.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="text-[10px] font-black text-amber-500 hover:text-amber-400 uppercase tracking-widest transition-colors">Enviar a Validación</button>
-                            </form>
-                            {% else %}
-                            <span class="text-slate-700 text-[10px] font-black uppercase">VINCULADO</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="responsive-table-shell">
+                <table class="responsive-data-table w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            <th class="px-6 py-4">Fecha Importacion</th>
+                            <th class="px-6 py-4">Origen / Dataset</th>
+                            <th class="px-6 py-4 text-center">Rango Temporal</th>
+                            <th class="px-6 py-4 text-center">Progreso (D/S/P)</th>
+                            <th class="px-6 py-4 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        {% for row in historical_batches %}
+                        <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors">
+                            <td class="px-6 py-4 font-mono text-[10px] text-slate-400" data-label="Fecha importacion">{{ row.batch.created_at|date:"d/m/Y H:i" }}</td>
+                            <td class="px-6 py-4" data-label="Origen / Dataset">
+                                <div class="responsive-table-meta">
+                                    <span class="responsive-table-meta__title text-slate-200">{{ row.batch.dataset_type.name }}</span>
+                                    <span class="responsive-table-meta__detail text-[10px] font-black text-indigo-400 uppercase tracking-widest">ENT: {{ row.batch.entity.code|default:row.batch.entity.name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center" data-label="Rango temporal">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">{{ row.period_start }} -> {{ row.period_end }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-center" data-label="Progreso">
+                                <div class="flex justify-center gap-2">
+                                    <span class="text-[10px] font-bold text-slate-600 bg-black/30 px-2 py-0.5 rounded border border-white/5">{{ row.draft_count }}</span>
+                                    <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{{ row.submitted_count }}</span>
+                                    <span class="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{{ row.published_count }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right responsive-data-table__actions" data-label="Acciones">
+                                {% if row.draft_count %}
+                                <form method="post" action="{% url 'ingest:submit_historical_batch' row.batch.id %}" class="responsive-inline-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-[10px] font-black text-amber-500 hover:text-amber-400 uppercase tracking-widest transition-colors">Enviar a Validacion</button>
+                                </form>
+                                {% else %}
+                                <span class="text-slate-700 text-[10px] font-black uppercase">VINCULADO</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
     {% endif %}
 
-    <!-- Main History Table -->
-    <section class="space-y-4">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+    <section class="section-stack">
+        <div class="section-heading">
+            <h3 class="section-heading__title text-emerald-400">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m3.293-7.707a1 1 0 011.414 0L9 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"></path></svg>
-                Últimas Cargas Individuales
+                Ultimas Cargas Individuales
             </h3>
         </div>
         <div class="glass-card rounded-3xl overflow-hidden border-white/5">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <th class="px-6 py-4">Fecha Carga</th>
-                        <th class="px-6 py-4">Dataset / Origen</th>
-                        <th class="px-6 py-4 text-center">Periodo</th>
-                        <th class="px-6 py-4 text-center">Volumen</th>
-                        <th class="px-6 py-4 text-center">Estado</th>
-                        <th class="px-6 py-4 text-right">Datos</th>
-                    </tr>
-                </thead>
-                <tbody class="text-sm">
-                    {% for inst in instances %}
-                    <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-6 py-4 font-mono text-[10px] text-slate-500">{{ inst.created_at|date:"d/m/Y H:i" }}</td>
-                        <td class="px-6 py-4">
-                            <div class="flex flex-col">
-                                <span class="font-bold text-slate-200">{{ inst.dataset_type.name }}</span>
-                                <span class="text-[9px] font-black text-slate-600 uppercase tracking-tighter">ENT: {{ inst.entity.code|default:inst.entity.name }} · POR: {{ inst.created_by.user.username|default:"Sistema" }}</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="text-[10px] font-bold text-sky-400 uppercase">{{ inst.period }}</span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="text-[10px] font-bold text-slate-300">{{ inst.row_count }} <span class="text-slate-600">filas</span></span>
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter
-                                {% if inst.state == 'PUBLISHED' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
-                                {% elif inst.state == 'DRAFT' %}bg-slate-800 text-slate-500
-                                {% else %}bg-amber-500/10 text-amber-500 border border-amber-500/20{% endif %}">
-                                {{ inst.get_state_display }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-right">
-                            <a href="{% url 'ingest:instance_detail' inst.pk %}?next={{ request.path|urlencode }}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all inline-block">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center italic text-slate-600">No hay cargas registradas en el historial.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="responsive-table-shell">
+                <table class="responsive-data-table w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            <th class="px-6 py-4">Fecha Carga</th>
+                            <th class="px-6 py-4">Dataset / Origen</th>
+                            <th class="px-6 py-4 text-center">Periodo</th>
+                            <th class="px-6 py-4 text-center">Volumen</th>
+                            <th class="px-6 py-4 text-center">Estado</th>
+                            <th class="px-6 py-4 text-right">Datos</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        {% for inst in instances %}
+                        <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
+                            <td class="px-6 py-4 font-mono text-[10px] text-slate-500" data-label="Fecha carga">{{ inst.created_at|date:"d/m/Y H:i" }}</td>
+                            <td class="px-6 py-4" data-label="Dataset / Origen">
+                                <div class="responsive-table-meta">
+                                    <span class="responsive-table-meta__title text-slate-200">{{ inst.dataset_type.name }}</span>
+                                    <span class="responsive-table-meta__detail text-[9px] font-black text-slate-600 uppercase tracking-tighter">ENT: {{ inst.entity.code|default:inst.entity.name }} - POR: {{ inst.created_by.user.username|default:"Sistema" }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center" data-label="Periodo">
+                                <span class="text-[10px] font-bold text-sky-400 uppercase">{{ inst.period }}</span>
+                            </td>
+                            <td class="px-6 py-4 text-center" data-label="Volumen">
+                                <span class="text-[10px] font-bold text-slate-300">{{ inst.row_count }} <span class="text-slate-600">filas</span></span>
+                            </td>
+                            <td class="px-6 py-4 text-center" data-label="Estado">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter
+                                    {% if inst.state == 'PUBLISHED' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
+                                    {% elif inst.state == 'DRAFT' %}bg-slate-800 text-slate-500
+                                    {% else %}bg-amber-500/10 text-amber-500 border border-amber-500/20{% endif %}">
+                                    {{ inst.get_state_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right responsive-data-table__actions" data-label="Datos">
+                                <a href="{% url 'ingest:instance_detail' inst.pk %}?next={{ request.path|urlencode }}" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-all inline-block">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="responsive-empty-state">No hay cargas registradas en el historial.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 </div>
 {% endblock %}
-

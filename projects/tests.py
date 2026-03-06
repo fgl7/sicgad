@@ -7,10 +7,10 @@ from django.urls import reverse
 
 from accounts.models import Membership
 from config.urls import urlpatterns as config_urlpatterns
-from ingest.models import DatasetInstance
+from ingest.models import DatasetInstance, PublishedDataPoint
 from projects.forms import ProjectForm
 from projects.models import Project, ProjectReportConfig
-from schemas.models import DatasetType
+from schemas.models import ColumnDef, DatasetType
 from structure.models import Category, Entity, Sector, Subsector
 
 
@@ -508,3 +508,160 @@ class ProjectsModuleTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.context["summary_instance"])
+
+    def test_report_detail_reads_curve_months_from_column_labels(self):
+        january_program = ColumnDef.objects.create(
+            dataset_type=self.program_dataset_a,
+            name="m01",
+            label="Enero",
+            data_type="FLOAT",
+            is_active=True,
+        )
+        january_executed = ColumnDef.objects.create(
+            dataset_type=self.executed_dataset_a,
+            name="avance_semana",
+            label="Ejecutado pct",
+            data_type="FLOAT",
+            is_active=True,
+        )
+
+        program_instance = DatasetInstance.objects.get(
+            dataset_type=self.program_dataset_a,
+            entity=self.entity_a,
+            period=date(2026, 1, 31),
+        )
+        executed_instance = DatasetInstance.objects.get(
+            dataset_type=self.executed_dataset_a,
+            entity=self.entity_a,
+            period=date(2026, 1, 12),
+        )
+        program_instance.state = DatasetInstance.STATE_PUBLISHED
+        executed_instance.state = DatasetInstance.STATE_PUBLISHED
+        program_instance.save(update_fields=["state"])
+        executed_instance.save(update_fields=["state"])
+
+        PublishedDataPoint.objects.create(
+            instance=program_instance,
+            column=january_program,
+            row_index=1,
+            numeric_value=54.0,
+        )
+        PublishedDataPoint.objects.create(
+            instance=executed_instance,
+            column=january_executed,
+            row_index=1,
+            numeric_value=0.0,
+        )
+
+        Membership.objects.create(
+            user=self.viewer_same_scope,
+            entity=self.entity_a,
+            role="VIEWER",
+        )
+
+        self.client.force_login(self.viewer_same_scope)
+        response = self.client.get(reverse("projects:report_detail", args=[self.config.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["program_values"][0], 54.0)
+        self.assertEqual(response.context["executed_values"][0], 0.0)
+
+    def test_report_detail_falls_back_to_curve_datasets_when_config_points_to_summary(self):
+        summary_curve_like = self._create_dataset(
+            self.entity_a,
+            "Proyecto X - resumen",
+            DatasetType.WEEKLY,
+        )
+        curve_program = self._create_dataset(
+            self.entity_a,
+            "Curva Programada Alt",
+            DatasetType.WEEKLY,
+        )
+        curve_executed = self._create_dataset(
+            self.entity_a,
+            "Curva Ejecutada Alt",
+            DatasetType.WEEKLY,
+        )
+        summary_curve_like.project = self.project
+        curve_program.project = self.project
+        curve_executed.project = self.project
+        summary_curve_like.save(update_fields=["project"])
+        curve_program.save(update_fields=["project"])
+        curve_executed.save(update_fields=["project"])
+
+        for idx, month in enumerate(("Ene", "Feb", "Mar"), start=1):
+            ColumnDef.objects.create(
+                dataset_type=curve_program,
+                name=month,
+                label=month,
+                data_type="FLOAT",
+                display_order=idx,
+                is_active=True,
+            )
+            ColumnDef.objects.create(
+                dataset_type=curve_executed,
+                name=month,
+                label=month,
+                data_type="FLOAT",
+                display_order=idx,
+                is_active=True,
+            )
+
+        program_instance = DatasetInstance.objects.create(
+            dataset_type=curve_program,
+            entity=self.entity_a,
+            period=date(2026, 1, 9),
+            state=DatasetInstance.STATE_PUBLISHED,
+        )
+        executed_instance = DatasetInstance.objects.create(
+            dataset_type=curve_executed,
+            entity=self.entity_a,
+            period=date(2026, 1, 9),
+            state=DatasetInstance.STATE_PUBLISHED,
+        )
+        PublishedDataPoint.objects.create(
+            instance=program_instance,
+            column=curve_program.columns.get(name="Ene"),
+            row_index=1,
+            numeric_value=0.0,
+        )
+        PublishedDataPoint.objects.create(
+            instance=program_instance,
+            column=curve_program.columns.get(name="Feb"),
+            row_index=1,
+            numeric_value=10.0,
+        )
+        PublishedDataPoint.objects.create(
+            instance=program_instance,
+            column=curve_program.columns.get(name="Mar"),
+            row_index=1,
+            numeric_value=15.0,
+        )
+        PublishedDataPoint.objects.create(
+            instance=executed_instance,
+            column=curve_executed.columns.get(name="Ene"),
+            row_index=1,
+            numeric_value=0.0,
+        )
+
+        legacy_like_config = ProjectReportConfig.objects.create(
+            project=self.project,
+            name="Reporte Auto Legacy",
+            report_dataset=summary_curve_like,
+            curve_program_dataset=summary_curve_like,
+            curve_executed_dataset=summary_curve_like,
+            is_active=True,
+        )
+
+        Membership.objects.create(
+            user=self.viewer_same_scope,
+            entity=self.entity_a,
+            role="VIEWER",
+        )
+
+        self.client.force_login(self.viewer_same_scope)
+        response = self.client.get(reverse("projects:report_detail", args=[legacy_like_config.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["program_values"][:3], [0.0, 10.0, 15.0])
+        self.assertEqual(response.context["executed_values"][0], 0.0)

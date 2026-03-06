@@ -70,6 +70,8 @@ def _is_weekly_month_locked_dataset(dataset: DatasetType | None) -> bool:
 def _requires_historical_seed(dataset: DatasetType | None) -> bool:
     if not dataset or dataset.is_certification:
         return False
+    if dataset.derived_performance_indicators.filter(is_active=True).exists():
+        return False
     return dataset.validation_frequency in {
         DatasetType.DAILY,
         DatasetType.WEEKLY,
@@ -289,7 +291,7 @@ def upload(request):
             status=DatasetType.STATUS_APPROVED,
             is_certification=False,
             validation_frequency__in=[DatasetType.DAILY, DatasetType.WEEKLY, DatasetType.MONTHLY],
-        )
+        ).exclude(derived_performance_indicators__is_active=True).distinct()
         if loader_entities is not None and not has_global_loader:
             if loader_entities:
                 approved_periodic = approved_periodic.filter(entity_id__in=loader_entities)

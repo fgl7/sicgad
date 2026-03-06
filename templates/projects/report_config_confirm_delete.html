@@ -1,23 +1,33 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Eliminar reporte - SICGAD{% endblock %}
 {% block page_title %}Eliminar reporte{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-  <section class="glass-card max-w-lg rounded-2xl p-6 text-xs">
-    <h2 class="text-base font-semibold mb-3">Eliminar configuración</h2>
-    <p class="text-slate-300 mb-4">
-      ¿Estás seguro de eliminar el reporte <strong>{{ config.name }}</strong>
-      del proyecto <strong>{{ config.project.name }}</strong>?
-    </p>
-    <form method="post" class="flex items-center justify-end gap-3">
-      {% csrf_token %}
-      <a href="{% url 'projects:report_config_list' %}" class="btn-secondary">
-        Cancelar
-      </a>
-      <button type="submit" class="btn-danger">
-        Eliminar
-      </button>
-    </form>
-  </section>
+  <div class="page-shell page-shell--narrow fade-in">
+    <section class="glass-card max-w-2xl rounded-[1.75rem] p-6 sm:p-8 text-sm">
+      <div class="space-y-4">
+        <p class="page-kicker">Projects</p>
+        <h2 class="page-title text-[clamp(1.3rem,1.15rem+0.7vw,1.7rem)]">Eliminar configuracion</h2>
+        <p class="page-subtitle">
+          Vas a eliminar el reporte <strong>{{ config.name }}</strong> del proyecto
+          <strong>{{ config.project.name }}</strong>. Esta accion retira la configuracion del visor ejecutivo.
+        </p>
+      </div>
+      <form method="post" class="form-footer-actions mt-6">
+        {% csrf_token %}
+        <a href="{% url 'projects:report_config_list' %}" class="btn-secondary">
+          Cancelar
+        </a>
+        <button type="submit" class="btn-danger">
+          Eliminar
+        </button>
+      </form>
+    </section>
+  </div>
 {% endblock %}

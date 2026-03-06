@@ -1,22 +1,29 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Carga de Datos - Detalle - SICGAD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-<div class="space-y-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Detalle de Ingesta</h2>
-            <p class="text-slate-500 text-sm">Exploración de datos RAW procesados para el período configurado.</p>
+<div class="page-shell fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Ingest</p>
+            <h2 class="page-title">Detalle de Ingesta</h2>
+            <p class="page-subtitle">Exploracion de datos RAW procesados para el periodo configurado.</p>
         </div>
-        <a href="{{ back_url }}" class="page-back-link">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 0118 0z"></path></svg>
-            Volver
-        </a>
+        <div class="page-hero__actions">
+            <a href="{{ back_url }}" class="page-back-link">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 0118 0z"></path></svg>
+                Volver
+            </a>
+        </div>
     </div>
 
-    <!-- Info Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="info-card-grid md:grid-cols-4">
         <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
             <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Unidad Operativa</p>
             <p class="text-sm font-bold text-white">{{ instance.entity.code|default:instance.entity.name }}</p>
@@ -30,26 +37,25 @@
             <p class="text-sm font-bold text-sky-400">{{ instance.period }}</p>
         </div>
         <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado Validación</p>
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado Validacion</p>
             <p class="text-sm font-bold text-emerald-400">{{ instance.get_state_display }}</p>
         </div>
     </div>
 
-    <!-- Data Table Section -->
-    <section class="space-y-4">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Previsualización de Datos (Top 100)</h3>
-            <span class="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic">Archivo: {{ instance.raw_file.name|default:"Memoria RAM" }}</span>
+    <section class="section-stack">
+        <div class="section-heading">
+            <h3 class="section-heading__title text-slate-400">Previsualizacion de Datos (Top 100)</h3>
+            <span class="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic break-all text-left sm:text-right">Archivo: {{ instance.raw_file.name|default:"Memoria RAM" }}</span>
         </div>
-        
+
         <div class="glass-card rounded-3xl overflow-hidden border-white/5">
             {% if header %}
-            <div class="overflow-auto max-h-[600px] custom-scrollbar">
-                <table class="w-full text-left border-collapse">
-                    <thead class="sticky top-0 z-10">
-                        <tr class="bg-slate-900/90 backdrop-blur-md text-[10px] font-black text-slate-400 uppercase tracking-widest shadow-lg">
+            <div class="matrix-table-shell custom-scrollbar">
+                <table class="matrix-table text-left">
+                    <thead>
+                        <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest shadow-lg">
                             {% for col in header %}
-                                <th class="px-4 py-4 whitespace-nowrap border-b border-white/10">{{ col }}</th>
+                                <th class="border-b border-white/10">{{ col }}</th>
                             {% endfor %}
                         </tr>
                     </thead>
@@ -57,12 +63,12 @@
                         {% for row in rows %}
                         <tr class="border-t border-white/5 hover:bg-white/[0.02] transition-colors text-slate-300 group">
                             {% for value in row %}
-                                <td class="px-4 py-3 whitespace-nowrap font-mono group-hover:text-emerald-400 transition-colors">{{ value }}</td>
+                                <td class="font-mono group-hover:text-emerald-400 transition-colors">{{ value }}</td>
                             {% endfor %}
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="{{ header|length }}" class="px-6 py-12 text-center text-slate-600 italic">No se encontraron filas de datos en esta ingesta.</td>
+                            <td colspan="{{ header|length }}" class="responsive-empty-state">No se encontraron filas de datos en esta ingesta.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -73,7 +79,7 @@
                 <div class="text-slate-700">
                     <svg class="w-12 h-12 mx-auto mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.876c.54 0 .899-.596.63-1.026L13.03 4.062a1.012 1.012 0 00-1.817 0l-7.73 13.912c-.269.43-.269.946.063 1.026z"></path></svg>
                     <p class="text-sm font-bold uppercase tracking-widest">No se pudo materializar la vista previa</p>
-                    <p class="text-xs text-slate-600">El archivo fuente podría estar vacío o en un formato no binario compatible.</p>
+                    <p class="text-xs text-slate-600">El archivo fuente podria estar vacio o en un formato no binario compatible.</p>
                 </div>
             </div>
             {% endif %}
@@ -81,4 +87,3 @@
     </section>
 </div>
 {% endblock %}
-

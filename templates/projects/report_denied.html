@@ -1,20 +1,29 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Acceso restringido - SICGAD{% endblock %}
 {% block page_title %}Acceso restringido{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-  <section class="bg-slate-950/60 border border-slate-800 rounded-xl p-5 text-xs max-w-xl">
-    <h2 class="text-sm font-semibold mb-2">No tienes acceso a este reporte</h2>
-    <p class="text-slate-300 mb-4">
-      No cuentas con permisos para ver el reporte del proyecto seleccionado.
-      Contacta al administrador si necesitas acceso.
-    </p>
-    <a
-      href="{% url 'projects:report_list' %}"
-      class="inline-flex items-center px-3 py-1.5 rounded-md bg-emerald-600 text-xs font-semibold hover:bg-emerald-500"
-    >
-      Volver a reportes
-    </a>
-  </section>
+  <div class="page-shell page-shell--narrow fade-in">
+    <section class="glass-card max-w-2xl rounded-[1.75rem] p-6 sm:p-8 text-sm">
+      <div class="space-y-4">
+        <p class="page-kicker">Projects</p>
+        <h2 class="page-title text-[clamp(1.3rem,1.15rem+0.7vw,1.7rem)]">No tienes acceso a este reporte</h2>
+        <p class="page-subtitle">
+          No cuentas con permisos para ver el reporte del proyecto seleccionado.
+          Contacta al administrador si necesitas acceso.
+        </p>
+      </div>
+      <div class="form-footer-actions mt-6">
+        <a href="{% url 'projects:report_list' %}" class="btn-primary glow-emerald">
+          Volver a reportes
+        </a>
+      </div>
+    </section>
+  </div>
 {% endblock %}

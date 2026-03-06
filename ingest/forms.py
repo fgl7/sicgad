@@ -16,6 +16,20 @@ def _exclude_one_time_with_instance(qs):
     return qs.annotate(has_instance=Exists(inst_qs)).exclude(is_one_time=True, has_instance=True)
 
 
+def _exclude_historical_seeded(qs):
+    seed_qs = DatasetInstance.objects.filter(
+        dataset_type=OuterRef("pk"),
+        entity_id=OuterRef("entity_id"),
+        entity_id__isnull=False,
+        historical_batch__isnull=False,
+    )
+    return qs.annotate(has_historical_seed=Exists(seed_qs)).exclude(has_historical_seed=True)
+
+
+def _exclude_performance_derived(qs):
+    return qs.exclude(derived_performance_indicators__is_active=True).distinct()
+
+
 def _has_one_time_instance(dataset: DatasetType | None) -> bool:
     if not dataset or not dataset.is_one_time:
         return False
@@ -27,8 +41,10 @@ def _has_one_time_instance(dataset: DatasetType | None) -> bool:
 
 class DatasetInstanceUploadForm(forms.ModelForm):
     dataset_type = forms.ModelChoiceField(
-        queryset=DatasetType.objects.select_related("entity")
-        .filter(is_active=True, status=DatasetType.STATUS_APPROVED),
+        queryset=_exclude_performance_derived(
+            DatasetType.objects.select_related("entity")
+            .filter(is_active=True, status=DatasetType.STATUS_APPROVED)
+        ),
         widget=forms.Select(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
@@ -55,7 +71,7 @@ class DatasetInstanceUploadForm(forms.ModelForm):
                 status=DatasetType.STATUS_APPROVED,
                 entity_id__in=entity_ids,
             )
-            self.fields["dataset_type"].queryset = qs
+            self.fields["dataset_type"].queryset = _exclude_performance_derived(qs)
 
         self.fields["dataset_type"].queryset = _exclude_one_time_with_instance(
             self.fields["dataset_type"].queryset
@@ -101,11 +117,15 @@ class DatasetInstanceUploadForm(forms.ModelForm):
 
 class HistoricalDatasetUploadForm(forms.Form):
     dataset_type = forms.ModelChoiceField(
-        queryset=DatasetType.objects.select_related("entity").filter(
-            is_active=True,
-            is_certification=False,
-            validation_frequency__in=[DatasetType.DAILY, DatasetType.WEEKLY, DatasetType.MONTHLY],
-            status=DatasetType.STATUS_APPROVED,
+        queryset=_exclude_historical_seeded(
+            _exclude_performance_derived(
+                DatasetType.objects.select_related("entity").filter(
+                    is_active=True,
+                    is_certification=False,
+                    validation_frequency__in=[DatasetType.DAILY, DatasetType.WEEKLY, DatasetType.MONTHLY],
+                    status=DatasetType.STATUS_APPROVED,
+                )
+            )
         ),
         widget=forms.Select(
             attrs={
@@ -153,16 +173,37 @@ class HistoricalDatasetUploadForm(forms.Form):
         super().__init__(*args, **kwargs)
         if loader_entities is not None:
             self.fields["entity"].queryset = Entity.objects.filter(id__in=loader_entities, is_active=True)
-            self.fields["dataset_type"].queryset = (
-                DatasetType.objects.select_related("entity")
-                .filter(
-                    entity_id__in=loader_entities,
-                    is_active=True,
-                    is_certification=False,
-                    validation_frequency__in=[DatasetType.DAILY, DatasetType.WEEKLY, DatasetType.MONTHLY],
-                    status=DatasetType.STATUS_APPROVED,
+            self.fields["dataset_type"].queryset = _exclude_historical_seeded(
+                _exclude_performance_derived(
+                    DatasetType.objects.select_related("entity")
+                    .filter(
+                        entity_id__in=loader_entities,
+                        is_active=True,
+                        is_certification=False,
+                        validation_frequency__in=[DatasetType.DAILY, DatasetType.WEEKLY, DatasetType.MONTHLY],
+                        status=DatasetType.STATUS_APPROVED,
+                    )
                 )
             )
+
+    def clean(self):
+        cleaned = super().clean()
+        dataset = cleaned.get("dataset_type")
+        entity = cleaned.get("entity")
+        if not dataset or not entity:
+            return cleaned
+
+        has_seed = DatasetInstance.objects.filter(
+            dataset_type=dataset,
+            entity=entity,
+            historical_batch__isnull=False,
+        ).exists()
+        if has_seed:
+            self.add_error(
+                "dataset_type",
+                "Este esquema ya tiene su carga historica inicial. Debes continuar con la carga periodica o manual.",
+            )
+        return cleaned
 
 
 class DatasetInstanceEditForm(forms.ModelForm):
@@ -207,8 +248,10 @@ class DatasetInstanceEditForm(forms.ModelForm):
 
 class ManualDatasetForm(forms.ModelForm):
     dataset_type = forms.ModelChoiceField(
-        queryset=DatasetType.objects.select_related("entity")
-        .filter(is_active=True, status=DatasetType.STATUS_APPROVED),
+        queryset=_exclude_performance_derived(
+            DatasetType.objects.select_related("entity")
+            .filter(is_active=True, status=DatasetType.STATUS_APPROVED)
+        ),
         widget=forms.Select(
             attrs={
                 "class": "w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-sm",
@@ -249,7 +292,7 @@ class ManualDatasetForm(forms.ModelForm):
                 status=DatasetType.STATUS_APPROVED,
                 entity_id__in=entity_ids,
             )
-            self.fields["dataset_type"].queryset = qs
+            self.fields["dataset_type"].queryset = _exclude_performance_derived(qs)
 
         self.fields["dataset_type"].queryset = _exclude_one_time_with_instance(
             self.fields["dataset_type"].queryset

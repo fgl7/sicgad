@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, datetime
 import json
+import unicodedata
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -352,11 +353,76 @@ def _month_number_from_label(label: str | None) -> int | None:
     return MONTH_ALIASES.get(key)
 
 
-def _extract_month_values_from_rows(rows):
+def _normalize_lookup_key(value) -> str:
+    if value in (None, ""):
+        return ""
+    text = unicodedata.normalize("NFKD", str(value))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = text.strip().lower()
+    normalized_chars = []
+    previous_was_separator = False
+    for ch in text:
+        if ch.isalnum():
+            normalized_chars.append(ch)
+            previous_was_separator = False
+        else:
+            if not previous_was_separator:
+                normalized_chars.append("_")
+            previous_was_separator = True
+    return "".join(normalized_chars).strip("_")
+
+
+def _resolve_curve_dataset(config, configured_dataset, kind: str):
+    if not config.project_id:
+        return configured_dataset
+
+    normalized_name = _normalize_lookup_key(getattr(configured_dataset, "name", ""))
+    expected_tokens = {
+        "program": ("curva", "program"),
+        "executed": ("curva", "ejecut"),
+    }.get(kind, ())
+
+    if normalized_name and all(token in normalized_name for token in expected_tokens):
+        return configured_dataset
+
+    sibling_datasets = list(
+        config.project.datasets.filter(
+            is_active=True,
+            status=DatasetType.STATUS_APPROVED,
+            entity_id__in=config.project.entities.values_list("id", flat=True),
+        ).select_related("entity")
+    )
+
+    for dataset in sibling_datasets:
+        normalized = _normalize_lookup_key(dataset.name)
+        if all(token in normalized for token in expected_tokens):
+            return dataset
+
+    return configured_dataset
+
+
+def _column_alias_map(columns):
+    alias_map: dict[str, set[str]] = {}
+    for column in columns:
+        aliases = {
+            _normalize_lookup_key(column.name),
+            _normalize_lookup_key(column.label),
+        }
+        alias_map[column.name] = {alias for alias in aliases if alias}
+    return alias_map
+
+
+def _extract_month_values_from_rows(rows, columns=None):
     month_values: dict[int, float] = {}
+    alias_map = _column_alias_map(columns or [])
     for row in rows:
         for key, value in row.items():
             month = _month_number_from_label(key)
+            if not month:
+                for alias in alias_map.get(key, set()):
+                    month = _month_number_from_label(alias)
+                    if month:
+                        break
             if not month:
                 continue
             parsed = _to_float(value)
@@ -367,9 +433,18 @@ def _extract_month_values_from_rows(rows):
 
 
 def _extract_row_value(row, columns, candidate_keys):
+    normalized_candidates = {_normalize_lookup_key(key) for key in candidate_keys}
+    alias_map = _column_alias_map(columns)
     for key in candidate_keys:
         if key in row:
             value = _to_float(row.get(key))
+            if value is not None:
+                return value
+    for column in columns:
+        if not normalized_candidates.intersection(alias_map.get(column.name, set())):
+            continue
+        if column.name in row:
+            value = _to_float(row.get(column.name))
             if value is not None:
                 return value
     for column in columns:
@@ -976,6 +1051,17 @@ def report_detail(request, config_id: int):
 
     can_see_drafts = permissions["can_view_drafts"]
 
+    curve_program_dataset = _resolve_curve_dataset(
+        config,
+        config.curve_program_dataset,
+        "program",
+    )
+    curve_executed_dataset = _resolve_curve_dataset(
+        config,
+        config.curve_executed_dataset,
+        "executed",
+    )
+
     source = (request.GET.get("source") or "published").lower()
     if source not in ("published", "draft"):
         source = "published"
@@ -986,20 +1072,20 @@ def report_detail(request, config_id: int):
         config.report_dataset.columns.filter(is_active=True).order_by("display_order", "name")
     )
     program_columns = list(
-        config.curve_program_dataset.columns.filter(is_active=True).order_by(
+        curve_program_dataset.columns.filter(is_active=True).order_by(
             "display_order", "name"
         )
     )
     executed_columns = list(
-        config.curve_executed_dataset.columns.filter(is_active=True).order_by(
+        curve_executed_dataset.columns.filter(is_active=True).order_by(
             "display_order", "name"
         )
     )
 
     project_entity_ids = list(config.project.entities.values_list("id", flat=True))
     summary_qs = DatasetInstance.objects.filter(dataset_type=config.report_dataset)
-    program_qs = DatasetInstance.objects.filter(dataset_type=config.curve_program_dataset)
-    executed_qs = DatasetInstance.objects.filter(dataset_type=config.curve_executed_dataset)
+    program_qs = DatasetInstance.objects.filter(dataset_type=curve_program_dataset)
+    executed_qs = DatasetInstance.objects.filter(dataset_type=curve_executed_dataset)
     if project_entity_ids:
         summary_qs = summary_qs.filter(entity_id__in=project_entity_ids)
         program_qs = program_qs.filter(entity_id__in=project_entity_ids)
@@ -1032,7 +1118,7 @@ def report_detail(request, config_id: int):
 
     executed_week_options = []
     selected_week_id = None
-    executed_frequency = config.curve_executed_dataset.validation_frequency
+    executed_frequency = curve_executed_dataset.validation_frequency
     selected_executed_instance = None
     if executed_frequency == DatasetType.WEEKLY and executed_instances:
         for inst in executed_instances:
@@ -1073,7 +1159,7 @@ def report_detail(request, config_id: int):
         if matching_summary:
             summary_instance = matching_summary[-1]
 
-    program_frequency = config.curve_program_dataset.validation_frequency
+    program_frequency = curve_program_dataset.validation_frequency
     program_instance = program_instances[-1] if program_instances else None
     if program_frequency == DatasetType.WEEKLY and program_instances:
         if selected_week_number:
@@ -1173,7 +1259,7 @@ def report_detail(request, config_id: int):
     executed_values = [None] * len(chart_labels)
 
     def populate_month_series(rows, columns, candidate_keys, values):
-        month_map = _extract_month_values_from_rows(rows)
+        month_map = _extract_month_values_from_rows(rows, columns)
         if month_map:
             for month, value in month_map.items():
                 values[month - 1] = value
@@ -1200,7 +1286,17 @@ def report_detail(request, config_id: int):
     if executed_frequency == DatasetType.WEEKLY and selected_executed_instance:
         rows = _load_instance_rows(selected_executed_instance, executed_columns)
         executed_category_rows = rows
-        populate_month_series(rows, executed_columns, EXECUTED_VALUE_KEYS, executed_values)
+        populated = populate_month_series(rows, executed_columns, EXECUTED_VALUE_KEYS, executed_values)
+        if not populated and selected_executed_instance.period:
+            fallback_values = []
+            for row in rows:
+                value = _extract_row_value(row, executed_columns, EXECUTED_VALUE_KEYS)
+                if value is not None:
+                    fallback_values.append(value)
+            if fallback_values:
+                executed_values[selected_executed_instance.period.month - 1] = (
+                    sum(fallback_values) / len(fallback_values)
+                )
     elif executed_instances:
         latest_executed = executed_instances[-1]
         wide_rows = _load_instance_rows(latest_executed, executed_columns)
@@ -1270,6 +1366,14 @@ def report_detail(request, config_id: int):
         "chart_labels": chart_labels,
         "program_values": program_values,
         "executed_values": executed_values,
+        "curve_table_rows": [
+            {
+                "label": label,
+                "program": program_values[idx],
+                "executed": executed_values[idx],
+            }
+            for idx, label in enumerate(chart_labels)
+        ],
         "source": source,
         "can_see_drafts": can_see_drafts,
         "executed_week_options": executed_week_options,

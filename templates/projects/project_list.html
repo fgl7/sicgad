@@ -1,13 +1,19 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Proyectos - SICGAD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
+{% endblock %}
+
 {% block content %}
-<div class="space-y-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-        <div>
-            <h2 class="text-2xl font-header font-bold text-white tracking-tight">Catalogo de Proyectos y Convenios</h2>
-            <p class="text-slate-500 text-sm">
+<div class="page-shell fade-in">
+    <div class="page-hero">
+        <div class="page-hero__content">
+            <p class="page-kicker">Projects</p>
+            <h2 class="page-title">Catalogo de Proyectos y Convenios</h2>
+            <p class="page-subtitle">
                 {% if is_admin %}
                 Revision y aprobacion administrativa de registros operativos.
                 {% else %}
@@ -15,24 +21,26 @@
                 {% endif %}
             </p>
         </div>
+        <div class="page-hero__actions">
         {% if can_create_project %}
         <a href="{% url 'projects:project_create' %}" class="btn-primary glow-emerald">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
             Registrar Proyecto
         </a>
         {% endif %}
+        </div>
     </div>
 
     {% if not is_admin %}
-    <div class="rounded-2xl border border-sky-500/20 bg-sky-500/5 px-4 py-3 text-xs text-sky-100">
+    <div class="surface-note surface-note--info">
         Flujo operativo: <span class="font-black uppercase">Borrador</span> -> enviar a revision ->
         <span class="font-black uppercase">Pendiente</span> -> decision administrativa.
     </div>
     {% endif %}
 
     <div class="glass-card rounded-3xl overflow-hidden border-white/5">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <div class="responsive-table-shell">
+            <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
                         <th class="px-6 py-4">Codigo / Registro</th>
@@ -45,16 +53,16 @@
                 <tbody class="text-sm">
                     {% for project in projects %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-6 py-4">
-                            <div class="flex flex-col">
+                        <td class="px-6 py-4" data-label="Codigo / Registro">
+                            <div class="responsive-table-meta">
                                 <span class="font-mono text-[10px] text-sky-400 font-bold uppercase">{{ project.code|default:"SIN-COD" }}</span>
-                                <span class="text-slate-200 font-bold">{{ project.name }}</span>
-                                <span class="text-[10px] text-slate-500 uppercase tracking-widest">{{ project.category.name|default:"Sin categoria" }}</span>
+                                <span class="responsive-table-meta__title text-slate-200">{{ project.name }}</span>
+                                <span class="responsive-table-meta__detail text-[10px] uppercase tracking-widest">{{ project.category.name|default:"Sin categoria" }}</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4" data-label="Entidades">
                             {% with project.entities.all as entity_list %}
-                            <div class="flex flex-wrap gap-1">
+                            <div class="responsive-chip-list">
                                 {% for entity in entity_list %}
                                 <span class="px-2 py-0.5 rounded bg-slate-800 text-[9px] font-black text-slate-400 border border-white/5">{{ entity.code|default:entity.name }}</span>
                                 {% empty %}
@@ -63,7 +71,7 @@
                             </div>
                             {% endwith %}
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-6 py-4" data-label="Workflow">
                             <div class="flex flex-col gap-2">
                                 {% if project.workflow_status == "DRAFT" %}
                                 <span class="inline-flex w-fit px-2 py-0.5 rounded-full bg-slate-700/30 text-slate-300 text-[10px] font-black uppercase tracking-widest border border-white/10">Borrador</span>
@@ -79,27 +87,27 @@
                                 {% endif %}
                             </div>
                         </td>
-                        <td class="px-6 py-4">
-                            <div class="flex flex-col">
+                        <td class="px-6 py-4" data-label="Responsable">
+                            <div class="responsive-table-meta">
                                 <span class="text-slate-300 text-xs font-semibold">{{ project.created_by.username|default:"Sin creador" }}</span>
                                 {% if project.approved_by %}
-                                <span class="text-[10px] text-slate-500">Revision: {{ project.approved_by.username }}</span>
+                                <span class="responsive-table-meta__detail text-[10px]">Revision: {{ project.approved_by.username }}</span>
                                 {% elif project.workflow_status == "PENDING" %}
-                                <span class="text-[10px] text-amber-400">En bandeja de revision</span>
+                                <span class="responsive-table-meta__detail text-[10px] text-amber-400">En bandeja de revision</span>
                                 {% endif %}
                             </div>
                         </td>
-                        <td class="px-6 py-4 text-right">
-                            <div class="flex justify-end gap-2 flex-wrap">
+                        <td class="px-6 py-4 text-right responsive-data-table__actions" data-label="Acciones">
+                            <div class="responsive-action-group">
                                 {% if is_admin %}
                                     {% if project.workflow_status == "PENDING" %}
-                                    <form method="post" action="{% url 'projects:project_review' project.pk 'approve' %}">
+                                    <form method="post" action="{% url 'projects:project_review' project.pk 'approve' %}" class="responsive-inline-form">
                                         {% csrf_token %}
                                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20 hover:bg-emerald-500/20">
                                             Aprobar
                                         </button>
                                     </form>
-                                    <form method="post" action="{% url 'projects:project_review' project.pk 'reject' %}">
+                                    <form method="post" action="{% url 'projects:project_review' project.pk 'reject' %}" class="responsive-inline-form">
                                         {% csrf_token %}
                                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 text-[10px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500/20">
                                             Rechazar
@@ -108,7 +116,7 @@
                                     {% endif %}
                                 {% elif project.id in editable_project_ids %}
                                     {% if project.id in submit_project_ids %}
-                                    <form method="post" action="{% url 'projects:project_submit' project.pk %}">
+                                    <form method="post" action="{% url 'projects:project_submit' project.pk %}" class="responsive-inline-form">
                                         {% csrf_token %}
                                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-sky-500/10 text-sky-300 text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:bg-sky-500/20">
                                             Enviar a revision
@@ -137,7 +145,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-slate-600 italic">No se encontraron registros.</td>
+                        <td colspan="5" class="responsive-empty-state">No se encontraron registros.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

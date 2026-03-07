@@ -1,10 +1,12 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.db.models import Exists, OuterRef, Q
 from django.forms import formset_factory
 
 from schemas.models import DatasetType, ColumnDef
 from structure.models import Entity
 from .models import DatasetInstance
+from .security import validate_ingest_upload
 from .utils import month_number_from_label
 
 
@@ -102,8 +104,14 @@ class DatasetInstanceUploadForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         dataset = cleaned.get("dataset_type")
+        raw_file = cleaned.get("raw_file")
         if not dataset:
             return cleaned
+        if raw_file:
+            try:
+                validate_ingest_upload(raw_file)
+            except ValidationError as exc:
+                self.add_error("raw_file", exc)
 
         cleaned["entity"] = dataset.entity
 
@@ -190,8 +198,20 @@ class HistoricalDatasetUploadForm(forms.Form):
         cleaned = super().clean()
         dataset = cleaned.get("dataset_type")
         entity = cleaned.get("entity")
+        raw_file = cleaned.get("raw_file")
         if not dataset or not entity:
             return cleaned
+        if raw_file:
+            try:
+                validate_ingest_upload(raw_file)
+            except ValidationError as exc:
+                self.add_error("raw_file", exc)
+
+        if dataset.entity_id and entity.id != dataset.entity_id:
+            self.add_error(
+                "entity",
+                "La entidad seleccionada no coincide con el esquema aprobado.",
+            )
 
         has_seed = DatasetInstance.objects.filter(
             dataset_type=dataset,
@@ -236,6 +256,12 @@ class DatasetInstanceEditForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         dataset = getattr(self.instance, "dataset_type", None)
+        raw_file = cleaned.get("raw_file")
+        if raw_file:
+            try:
+                validate_ingest_upload(raw_file)
+            except ValidationError as exc:
+                self.add_error("raw_file", exc)
         if dataset and dataset.is_one_time:
             justification = (cleaned.get("justification") or "").strip()
             if not justification:

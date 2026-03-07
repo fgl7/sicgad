@@ -38,6 +38,9 @@ $RECYCLE.BIN/
 *.tmp
 *.orig
 *.log
+.env
+.env.*
+!.env.example
 
 # Frontend build
 node_modules/

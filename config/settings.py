@@ -1,4 +1,6 @@
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,13 +23,24 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = env.int("DATA_UPLOAD_MAX_NUMBER_FIELDS", default
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("SECRET_KEY")
+SECRET_KEY = env("SECRET_KEY", default="")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env("DEBUG")
+DEBUG = env.bool("DEBUG", default=False)
+
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY no esta configurada.")
+
+if not DEBUG and SECRET_KEY == "pon_una_clave_segura_solo_para_desarrollo":
+    raise ImproperlyConfigured(
+        "SECRET_KEY usa un valor de desarrollo. Define una clave real para produccion."
+    )
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured("ALLOWED_HOSTS no puede estar vacio con DEBUG=False.")
 
 
 # Application definition
@@ -144,6 +157,19 @@ STATIC_ROOT = env("STATIC_ROOT", default=str(BASE_DIR / "staticfiles"))
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+FILE_UPLOAD_MAX_MEMORY_SIZE = env.int(
+    "FILE_UPLOAD_MAX_MEMORY_SIZE",
+    default=2_621_440,
+)
+DATA_UPLOAD_MAX_MEMORY_SIZE = env.int(
+    "DATA_UPLOAD_MAX_MEMORY_SIZE",
+    default=10_485_760,
+)
+MAX_INGEST_UPLOAD_BYTES = env.int("MAX_INGEST_UPLOAD_BYTES", default=10_485_760)
+MAX_SUPPORT_IMAGE_BYTES = env.int("MAX_SUPPORT_IMAGE_BYTES", default=5_242_880)
+FILE_UPLOAD_PERMISSIONS = 0o640
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
+
 # Automatic ingest file cleanup policy
 AUTO_INGEST_CLEANUP_ENABLED = env.bool("AUTO_INGEST_CLEANUP_ENABLED", default=True)
 AUTO_INGEST_CLEANUP_INTERVAL_SECONDS = env.int("AUTO_INGEST_CLEANUP_INTERVAL_SECONDS", default=21600)
@@ -175,9 +201,28 @@ OTP_TOTP_ISSUER = env("OTP_TOTP_ISSUER", default="SICGAD")
 
 # Production security switches (useful for PythonAnywhere HTTPS deployments)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
-SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
-CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=not DEBUG)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=not DEBUG)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=not DEBUG)
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = env("SESSION_COOKIE_SAMESITE", default="Lax")
+CSRF_COOKIE_SAMESITE = env("CSRF_COOKIE_SAMESITE", default="Lax")
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = env("SECURE_REFERRER_POLICY", default="same-origin")
+SECURE_CROSS_ORIGIN_OPENER_POLICY = env(
+    "SECURE_CROSS_ORIGIN_OPENER_POLICY",
+    default="same-origin",
+)
+X_FRAME_OPTIONS = env("X_FRAME_OPTIONS", default="DENY")
+SECURE_HSTS_SECONDS = env.int(
+    "SECURE_HSTS_SECONDS",
+    default=3600 if not DEBUG else 0,
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS",
+    default=not DEBUG,
+)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)
 
 
 

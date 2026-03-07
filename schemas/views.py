@@ -34,6 +34,22 @@ def _dataset_scope_filter(dataset: DatasetType) -> Q:
     return Q(entity=dataset.entity)
 
 
+def _user_can_manage_dataset(user, dataset: DatasetType | None = None) -> bool:
+    if not user.is_authenticated:
+        return False
+    if _is_admin_user(user):
+        return True
+
+    loader_memberships = Membership.objects.filter(user=user, role="LOADER", is_active=True)
+    if not loader_memberships.exists():
+        return False
+    if dataset is None:
+        return True
+    if loader_memberships.filter(entity__isnull=True).exists():
+        return True
+    return loader_memberships.filter(entity_id=dataset.entity_id).exists()
+
+
 def _invalidate_schema_alert_caches(dataset=None, actor_user_id=None):
     affected_user_ids = set()
     if actor_user_id:
@@ -151,6 +167,7 @@ def _ensure_project_report_config(dataset: DatasetType, request):
         ),
     )
 
+@login_required
 def schema_list(request):
     user = request.user
     is_admin = _is_admin_user(user)
@@ -195,7 +212,7 @@ def schema_list(request):
 
     can_edit_schemas = False
     can_create_schemas = False
-    if user.is_authenticated and not is_admin:
+    if not is_admin:
         is_loader = Membership.objects.filter(user=user, role="LOADER", is_active=True).exists()
         if is_loader:
             can_edit_schemas = True
@@ -229,17 +246,18 @@ def _get_dataset_by_slug_or_pk(slug: str) -> DatasetType:
         return get_object_or_404(qs, pk=pk)
 
 
+@login_required
 def schema_detail(request, slug):
     dataset = _get_dataset_by_slug_or_pk(slug)
+    if not _user_can_manage_dataset(request.user, dataset):
+        raise Http404
     columns = dataset.columns.order_by("display_order", "name")
 
     user = request.user
     is_admin = _is_admin_user(user)
     can_edit_schemas = False
-    if user.is_authenticated and not is_admin:
-        is_loader = Membership.objects.filter(user=user, role="LOADER", is_active=True).exists()
-        if is_loader:
-            can_edit_schemas = True
+    if not is_admin and _user_can_manage_dataset(user, dataset):
+        can_edit_schemas = True
 
     return render(
         request,
@@ -253,10 +271,13 @@ def schema_detail(request, slug):
     )
 
 
+@login_required
 def schema_edit(request, slug=None):
     dataset = _get_dataset_by_slug_or_pk(slug) if slug else None
 
     is_admin = _is_admin_user(request.user)
+    if dataset and not _user_can_manage_dataset(request.user, dataset):
+        raise Http404
     if is_admin and dataset and not dataset.is_certification:
         return redirect("schemas:schema_detail", slug=dataset.slug)
 
@@ -272,9 +293,6 @@ def schema_edit(request, slug=None):
     seed_project = None
 
     if not is_admin:
-        if not request.user.is_authenticated:
-            return redirect("login")
-
         loader_memberships = (
             Membership.objects.filter(user=request.user, role="LOADER", is_active=True)
             .select_related("entity__category__subsector__sector")
@@ -516,6 +534,7 @@ def schema_toggle_one_time(request, slug):
     return redirect("schemas:schema_detail", slug=dataset.slug or dataset.pk)
 
 
+@login_required
 def schema_submit_for_approval(request, slug):
     if request.method != "POST":
         return redirect("schemas:schema_list")
@@ -525,6 +544,8 @@ def schema_submit_for_approval(request, slug):
     is_admin = _is_admin_user(request.user)
     if not request.user.is_authenticated or is_admin:
         return redirect("schemas:schema_list")
+    if not _user_can_manage_dataset(request.user, dataset):
+        raise Http404
 
     can_submit = Membership.objects.filter(
         user=request.user,

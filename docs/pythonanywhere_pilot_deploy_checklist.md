@@ -1,8 +1,8 @@
-# PythonAnywhere Pilot Deploy (Checklist Rápido)
+# PythonAnywhere Pilot Deploy (Checklist Rapido)
 
 Checklist corto para desplegar/actualizar SICGAD en PythonAnywhere (`lfl.pythonanywhere.com`) usando SQLite.
 
-Guía completa:
+Guia completa:
 - `docs/pythonanywhere_pilot_deploy.md`
 
 ## 0. Datos base (piloto actual)
@@ -24,13 +24,14 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Si repo privado:
-- `git clone` normal y usar usuario GitHub + token (PAT) cuando lo pida.
+Si el repo es privado:
+- usar `git clone` normal
+- ingresar usuario GitHub + token (PAT) cuando lo pida
 
 ## 2. `.env` (primera vez / revisar)
-Crear `~/sicgad/.env` con mínimo:
+Crear `~/sicgad/.env` con minimo:
 ```env
-SECRET_KEY=...
+SECRET_KEY=REEMPLAZAR_CON_UNA_CLAVE_REAL_Y_LARGA
 DEBUG=False
 ALLOWED_HOSTS=lfl.pythonanywhere.com
 CSRF_TRUSTED_ORIGINS=https://lfl.pythonanywhere.com
@@ -38,7 +39,22 @@ STATIC_ROOT=/home/lfl/sicgad/staticfiles
 SECURE_SSL_REDIRECT=True
 SESSION_COOKIE_SECURE=True
 CSRF_COOKIE_SECURE=True
+SECURE_HSTS_SECONDS=3600
+SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+SECURE_HSTS_PRELOAD=False
+FILE_UPLOAD_MAX_MEMORY_SIZE=2621440
+DATA_UPLOAD_MAX_MEMORY_SIZE=10485760
+MAX_INGEST_UPLOAD_BYTES=10485760
+MAX_SUPPORT_IMAGE_BYTES=5242880
 ```
+
+Importante:
+- no usar la `SECRET_KEY` de ejemplo del repo ni placeholders de desarrollo
+- con el hardening actual, Django bloquea el arranque si:
+  - falta `SECRET_KEY`
+  - `DEBUG=False` y la `SECRET_KEY` sigue siendo de desarrollo
+  - `ALLOWED_HOSTS` queda vacio
+- `.env` debe existir solo en servidor; usar `.env.example` solo como plantilla
 
 ## 3. Django (Bash)
 ```bash
@@ -52,7 +68,8 @@ python manage.py check --deploy
 ```
 
 Nota:
-- `security.W004` (HSTS) puede salir como warning y no bloquea el piloto.
+- si `check --deploy` o el arranque fallan por configuracion, revisar primero `.env`
+- si definiste `SECURE_HSTS_SECONDS`, no deberia aparecer `security.W004`
 
 ## 4. PythonAnywhere Web tab (primera vez)
 
@@ -87,22 +104,34 @@ application = get_wsgi_application()
 - `/static/` -> `/home/lfl/sicgad/staticfiles`
 - `/media/` -> `/home/lfl/sicgad/media`
 
+Nota:
+- con `DEBUG=False`, Django ya no sirve `media/` desde `config/urls.py`
+- el mapping `/media/` en PythonAnywhere es obligatorio si el sistema debe exponer uploads
+
 ## 7. HTTPS (Web tab)
 - `Security` -> `Force HTTPS` = `Enabled`
+
+Validar tambien:
+- el dominio final debe coincidir con `ALLOWED_HOSTS`
+- el origen HTTPS final debe coincidir con `CSRF_TRUSTED_ORIGINS`
 
 ## 8. Reload y prueba
 - `Web` -> `Reload`
 - Probar:
   - `/`
   - login
+  - logout desde formulario POST
   - `/kpis/`
   - `/home/` con viewer puro (redirige a `/kpis/`)
+  - descarga de plantilla en `ingest`
+  - carga valida de archivo en `ingest`
+  - rechazo de archivo con extension no permitida
 
 ## 9. Logs si falla
 - `Web` -> `error log`
 - `Web` -> `server log`
 
-## 10. Redeploy rápido (nuevo commit)
+## 10. Redeploy rapido (nuevo commit)
 ```bash
 cd ~/sicgad
 source ~/.virtualenvs/sicgad-pilot/bin/activate
@@ -111,10 +140,17 @@ git pull
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --noinput
+python manage.py check
+python manage.py check --deploy
 ```
 
 Luego:
 - `Web` -> `Reload`
+
+Si el reload falla justo despues del update:
+- revisar `error log`
+- confirmar `SECRET_KEY`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` y flags HTTPS en `.env`
+- confirmar que `.env` no fue reemplazado por una plantilla insegura
 
 ## 11. Backup SQLite (recomendado)
 ```bash
@@ -122,6 +158,5 @@ cp ~/sicgad/db.sqlite3 ~/sicgad/db.sqlite3.bak.$(date +%Y%m%d_%H%M%S)
 ```
 
 ## 12. Notas plan gratis
-- Web app gratuita con expiración aproximada de `1 mes` (reactivable desde la cuenta).
-- Ideal para piloto, no para carga alta.
-
+- la web app gratuita expira aproximadamente en `1 mes` (reactivable desde la cuenta)
+- sirve para piloto, no para carga alta

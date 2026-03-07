@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 
 from audit.utils import record_action
 from structure.models import Entity
@@ -15,6 +17,18 @@ from .models import AccountProfile, Institution, Membership
 User = get_user_model()
 
 
+@method_decorator(never_cache, name="dispatch")
+class SecureLoginView(LoginView):
+    template_name = "registration/login.html"
+    redirect_authenticated_user = True
+
+
+@method_decorator(never_cache, name="dispatch")
+class SecureLogoutView(LogoutView):
+    http_method_names = ["post", "options"]
+
+
+@method_decorator(never_cache, name="dispatch")
 class ForcePasswordChangeView(PasswordChangeView):
     template_name = "accounts/force_password_change.html"
     success_url = reverse_lazy("home")

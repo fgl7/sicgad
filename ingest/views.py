@@ -2,10 +2,13 @@ import calendar
 from datetime import date, datetime
 
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.utils.text import slugify
 from django.db import close_old_connections
@@ -37,6 +40,7 @@ from .models import (
     DatasetChangeAttachment,
     HistoricalImportBatch,
 )
+from .security import validate_support_image
 from .utils import (
     _read_instance_file,
     month_columns_for_dataset,
@@ -54,6 +58,21 @@ def _has_one_time_instance(dataset: DatasetType | None) -> bool:
     if dataset.entity_id:
         qs = qs.filter(entity_id=dataset.entity_id)
     return qs.exists()
+
+
+def _user_has_entity_scope(user, entity_id: int | None) -> bool:
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    memberships = Membership.objects.filter(user=user, is_active=True)
+    if memberships.filter(role="ADMIN").exists():
+        return True
+    if memberships.filter(entity__isnull=True).exists():
+        return True
+    if entity_id is None:
+        return False
+    return memberships.filter(entity_id=entity_id).exists()
 
 
 
@@ -257,6 +276,7 @@ def _apply_weekly_month_lock_to_formset(
     return True
 
 
+@login_required
 def upload(request):
     user = request.user
     if user.is_authenticated and (
@@ -760,6 +780,7 @@ def upload_historical(request):
         },
     )
 
+@login_required
 def upload_manual(request):
     user = request.user
     if user.is_authenticated and (
@@ -806,10 +827,9 @@ def upload_manual(request):
         dataset_form_valid = True
         selected_dataset = dataset_form.cleaned_data["dataset_type"]
     elif dataset_initial and not dataset_form.is_bound:
-        try:
-            selected_dataset = DatasetType.objects.get(pk=dataset_initial)
-        except DatasetType.DoesNotExist:
-            selected_dataset = None
+        selected_dataset = dataset_form.fields["dataset_type"].queryset.filter(
+            pk=dataset_initial
+        ).first()
 
     row_formset = None
     columns = []
@@ -998,6 +1018,7 @@ def upload_manual(request):
     )
 
 
+@login_required
 def download_template(request):
     dataset_type_id = request.GET.get("dataset_type")
     if not dataset_type_id:
@@ -1011,6 +1032,9 @@ def download_template(request):
         )
     except DatasetType.DoesNotExist:
         raise Http404("Dataset no encontrado o no aprobado.")
+
+    if not _user_has_entity_scope(request.user, ds.entity_id):
+        raise Http404("Dataset no encontrado o no autorizado.")
 
     columns = ds.columns.filter(is_active=True).order_by("display_order", "name")
 
@@ -1047,6 +1071,7 @@ def download_template(request):
     return response
 
 
+@login_required
 def instance_detail(request, pk):
     instance = (
         DatasetInstance.objects.select_related(
@@ -1059,9 +1084,6 @@ def instance_detail(request, pk):
         raise Http404("Carga no encontrada.")
 
     user = request.user
-    if not user.is_authenticated:
-        return redirect("ingest:upload_history")
-
     is_admin = user.is_superuser or Membership.objects.filter(
         user=user,
         role="ADMIN",
@@ -1167,7 +1189,11 @@ def instance_detail(request, pk):
                 rows = list(reversed(rows))
 
     next_url = request.GET.get("next")
-    if next_url and next_url.startswith("/"):
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
         back_url = next_url
     elif is_loader and not is_validator and not is_admin:
         back_url = reverse("ingest:upload")
@@ -1447,6 +1473,7 @@ def _submit_instance_to_validation(instance: DatasetInstance, request) -> None:
     )
 
 
+@login_required
 def certification_review(request, pk):
     instance = (
         DatasetInstance.objects.select_related(
@@ -1461,9 +1488,6 @@ def certification_review(request, pk):
     dataset = instance.dataset_type
     if not (dataset.is_certification and dataset.validation_frequency == DatasetType.MONTHLY):
         raise Http404("Esta vista solo aplica a consolidaciones mensuales.")
-
-    if not request.user.is_authenticated:
-        return redirect("login")
 
     is_admin = request.user.is_superuser or Membership.objects.filter(
         user=request.user,
@@ -1556,9 +1580,10 @@ def certification_review(request, pk):
     if bind_month_post and can_edit:
         files_to_process = request.FILES.getlist("support_files")
         for uploaded in files_to_process:
-            content_type = (uploaded.content_type or "").lower()
-            if content_type and not content_type.startswith("image/"):
-                attachment_errors.append(f"{uploaded.name}: formato no permitido.")
+            try:
+                validate_support_image(uploaded)
+            except ValidationError as exc:
+                attachment_errors.extend([f"{uploaded.name}: {message}" for message in exc.messages])
 
         if row_form.is_valid() and justification_form.is_valid() and not attachment_errors:
             justification_text = justification_form.cleaned_data["justification"].strip()
@@ -1748,9 +1773,12 @@ def certification_review(request, pk):
                 if bind_daily:
                     files = request.FILES.getlist("day_support_files")
                     for uploaded in files:
-                        content_type = (uploaded.content_type or "").lower()
-                        if content_type and not content_type.startswith("image/"):
-                            attachment_errors_row.append(f"{uploaded.name}: formato no permitido.")
+                        try:
+                            validate_support_image(uploaded)
+                        except ValidationError as exc:
+                            attachment_errors_row.extend(
+                                [f"{uploaded.name}: {message}" for message in exc.messages]
+                            )
 
                     if day_form.is_valid() and justification_value and not attachment_errors_row:
                         cleaned = day_form.cleaned_data
@@ -1899,6 +1927,7 @@ def certification_review(request, pk):
     )
 
 
+@login_required
 def upload_history(request):
     loader_certifications_pending = []
     loader_certifications_rejected = []
@@ -2046,6 +2075,7 @@ def upload_history(request):
     )
 
 
+@login_required
 def submit_instance(request, pk):
     if request.method != "POST":
         return redirect("ingest:upload_history")
@@ -2061,9 +2091,6 @@ def submit_instance(request, pk):
         raise Http404("Carga no encontrada.")
 
     user = request.user
-    if not user.is_authenticated:
-        return redirect("ingest:upload_history")
-
     can_submit = instance.created_by and instance.created_by.user_id == user.id
     if (
         not can_submit
@@ -2089,14 +2116,12 @@ def submit_instance(request, pk):
     return redirect("ingest:upload")
 
 
+@login_required
 def submit_historical_batch(request, batch_id: int):
     if request.method != "POST":
         return redirect("ingest:upload_history")
 
     user = request.user
-    if not user.is_authenticated:
-        return redirect("login")
-
     batch = (
         HistoricalImportBatch.objects.select_related("dataset_type", "entity")
         .filter(pk=batch_id)
@@ -2145,6 +2170,7 @@ def submit_historical_batch(request, batch_id: int):
     return redirect("ingest:upload_history")
 
 
+@login_required
 def edit_instance(request, pk):
     instance = (
         DatasetInstance.objects.select_related("dataset_type", "entity", "created_by__user")
@@ -2155,7 +2181,7 @@ def edit_instance(request, pk):
         raise Http404("Carga no encontrada.")
 
     user = request.user
-    if not user.is_authenticated or not instance.created_by or instance.created_by.user_id != user.id:
+    if not instance.created_by or instance.created_by.user_id != user.id:
         return redirect("ingest:upload_history")
 
     if instance.state != DatasetInstance.STATE_DRAFT:
@@ -2208,6 +2234,7 @@ def edit_instance(request, pk):
     )
 
 
+@login_required
 def delete_instance(request, pk):
     if request.method != "POST":
         return redirect("ingest:upload_history")
@@ -2217,7 +2244,7 @@ def delete_instance(request, pk):
         raise Http404("Carga no encontrada.")
 
     user = request.user
-    if not user.is_authenticated or not instance.created_by or instance.created_by.user_id != user.id:
+    if not instance.created_by or instance.created_by.user_id != user.id:
         return redirect("ingest:upload_history")
 
     if instance.state != DatasetInstance.STATE_DRAFT:
@@ -2502,6 +2529,7 @@ def upload_historical_cancel(request, batch_id: int):
     return JsonResponse({"ok": True, "status": batch.status})
 
 
+@login_required
 def upload_historical(request):
     user = request.user
     if user.is_authenticated and (
@@ -2513,9 +2541,6 @@ def upload_historical(request):
             "Los administradores no realizan cargas directas; use el historial para revisar y gestionar cargas existentes.",
         )
         return redirect(reverse("ingest:upload_history"))
-
-    if not user.is_authenticated:
-        return redirect("login")
 
     loader_memberships = (
         Membership.objects.filter(user=user, role="LOADER", is_active=True)

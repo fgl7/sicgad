@@ -1,14 +1,14 @@
 # Despliegue Piloto en PythonAnywhere (SQLite)
 
-Guia operativa para publicar el piloto de SICGAD en `pythonanywhere.com` usando:
+Guia operativa para publicar SICGAD en `pythonanywhere.com` usando:
 - Django + WSGI
-- Base de datos `sqlite3` (piloto)
-- Datos actuales del proyecto (snapshot del `db.sqlite3` del repo)
+- base de datos `sqlite3` para piloto
+- despliegue HTTPS con configuracion endurecida
 
-Checklist rapido (redeploy / referencia breve):
+Checklist breve:
 - `docs/pythonanywhere_pilot_deploy_checklist.md`
 
-Cuenta objetivo (ejemplo actual):
+Cuenta objetivo de referencia:
 - usuario PythonAnywhere: `lfl`
 - dominio esperado: `lfl.pythonanywhere.com`
 
@@ -17,13 +17,13 @@ Repositorio:
 
 ## 1. Antes de empezar (local)
 
-### 1.0 Compilar Tailwind (si cambiaste templates/JS con clases Tailwind)
-Si en tus cambios modificaste clases Tailwind en:
+### 1.0 Tailwind
+Si tus cambios tocaron clases Tailwind en:
 - `templates/**/*.html`
 - `static/js/**/*.js`
 - `tailwind.config.js`
 
-entonces **antes de hacer deploy** debes regenerar `static/css/tailwind.generated.css` localmente:
+entonces regenera localmente:
 
 ```powershell
 cd d:\34_other\sigad
@@ -31,30 +31,41 @@ npm run build:tailwind
 ```
 
 Importante:
-- Este paso normalmente se hace **en tu maquina local** (no en PythonAnywhere).
-- El archivo generado `static/css/tailwind.generated.css` debe quedar incluido en el commit que subes a Git.
-- Si solo cambias Python o CSS propio (por ejemplo `static/css/sicgad_theme.css`) y no agregaste/quitaste clases Tailwind, no hace falta correrlo.
+- este paso se hace localmente, no en PythonAnywhere
+- el archivo `static/css/tailwind.generated.css` debe quedar incluido en el commit
 
-### 1.1 Confirmar que el snapshot de datos esta en Git
-En este repo, `db.sqlite3` esta versionado en Git, por lo que al clonar en PythonAnywhere se descargan los datos del commit actual.
+### 1.1 Base de datos del piloto
+En este repo `db.sqlite3` sigue versionado, asi que al clonar el repositorio llega el snapshot del commit actual.
 
-Validar localmente (opcional):
+Validacion local opcional:
 ```powershell
 git ls-files db.sqlite3
 ```
 
-### 1.2 Media (archivos subidos)
-La estructura base de `media/` **si** esta en Git (con archivos `.gitkeep`), por lo que al clonar el repo en PythonAnywhere ya se crean las carpetas necesarias.
+### 1.2 `media/`
+No asumas que PythonAnywhere va a recibir archivos reales subidos por Git.
 
-Estado actual del piloto (segun repo):
-- `media/ingest/raw/.gitkeep`
-- `media/ingest/historical/.gitkeep`
+Regla practica:
+- el codigo crea `MEDIA_ROOT=/home/lfl/sicgad/media`
+- en produccion Django no sirve `media/` por `urls.py`
+- PythonAnywhere debe mapear `/media/` al directorio real
 
-Importante:
-- Si mas adelante quieres migrar archivos reales (uploads/adjuntos) al servidor, esos archivos **no** se sincronizan automaticamente salvo que tambien los subas al repo.
-- Para ese caso, puedes subir un `.zip` manualmente desde PythonAnywhere (ver nota en la seccion 4.2).
+Si quieres asegurarte de que las carpetas basicas existan:
+```bash
+mkdir -p ~/sicgad/media/ingest/raw
+mkdir -p ~/sicgad/media/ingest/historical
+mkdir -p ~/sicgad/media/ingest/change_support
+```
+
+Si luego necesitas migrar archivos reales:
+- subirlos manualmente desde `Files`
+- o descomprimir un zip dentro de `~/sicgad/media`
 
 ## 2. Crear el entorno en PythonAnywhere (Bash)
+
+Nota para cuenta gratuita:
+- esta guia asume uso desde la consola `Bash` del panel de PythonAnywhere
+- no depende de acceso SSH
 
 Abre una consola `Bash` en PythonAnywhere y ejecuta:
 
@@ -64,17 +75,16 @@ git clone https://github.com/fgl7/sicgad.git
 cd ~/sicgad
 ```
 
-Nota (repo privado):
-- Puedes usar el mismo `git clone https://github.com/...`.
-- Si Git pide credenciales, usa tu usuario de GitHub + token (PAT).
-- Evita poner el token directamente en la URL del comando.
+Si el repo es privado:
+- usar usuario GitHub + token (PAT) cuando Git lo solicite
+- no incrustar el token en la URL
 
 ### 2.1 Crear entorno virtual
-Usa la misma version de Python que vayas a configurar en la Web app.
+Usa la misma version de Python que despues configurarás en la Web app.
 
-Caso validado en este piloto:
-- `python --version` en Bash: `Python 3.13.1`
-- Web app configurada con `Python 3.13`
+Caso de referencia:
+- Bash: `Python 3.13.x`
+- Web app: `Python 3.13`
 
 ```bash
 python -m venv ~/.virtualenvs/sicgad-pilot
@@ -83,13 +93,11 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Si `python3.11` no existe en tu cuenta, usa la version disponible (ej. `python3.10`) y luego configura esa misma en la pestaña `Web`.
+## 3. Configurar variables de entorno (`.env`)
 
-## 3. Configurar variables de entorno (.env)
+El proyecto lee configuracion desde `~/sicgad/.env`.
 
-El proyecto ya lee variables desde `~/sicgad/.env`.
-
-Genera una clave secreta:
+Genera una clave segura:
 ```bash
 python - <<'PY'
 import secrets
@@ -97,53 +105,70 @@ print(secrets.token_urlsafe(64))
 PY
 ```
 
-Crea el archivo `.env`:
+Crea `~/sicgad/.env`:
+
 ```bash
 cat > ~/sicgad/.env <<'EOF'
-SECRET_KEY=REEMPLAZAR_CON_TU_SECRET_KEY
+SECRET_KEY=REEMPLAZAR_CON_UNA_CLAVE_REAL_Y_LARGA
 DEBUG=False
 ALLOWED_HOSTS=lfl.pythonanywhere.com
 CSRF_TRUSTED_ORIGINS=https://lfl.pythonanywhere.com
 
-# Static/Media
+# Static
 STATIC_ROOT=/home/lfl/sicgad/staticfiles
 
-# Seguridad HTTPS (activar para piloto)
+# HTTPS
 SECURE_SSL_REDIRECT=True
 SESSION_COOKIE_SECURE=True
 CSRF_COOKIE_SECURE=True
+SECURE_HSTS_SECONDS=3600
+SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+SECURE_HSTS_PRELOAD=False
 
-# Ajustes actuales del proyecto (opcionales, se muestran por claridad)
+# Upload limits
+FILE_UPLOAD_MAX_MEMORY_SIZE=2621440
+DATA_UPLOAD_MAX_MEMORY_SIZE=10485760
+MAX_INGEST_UPLOAD_BYTES=10485760
+MAX_SUPPORT_IMAGE_BYTES=5242880
+
+# Ajustes operativos existentes
 AUTO_INGEST_CLEANUP_ENABLED=True
 OTP_TOTP_ISSUER=SICGAD
 EOF
 ```
 
-Reemplaza `REEMPLAZAR_CON_TU_SECRET_KEY`.
+Importante:
+- no copies `.env.example` como archivo final sin revisar valores
+- no uses la `SECRET_KEY` de ejemplo ni una placeholder de desarrollo
+- con el hardening actual Django bloquea el arranque si:
+  - falta `SECRET_KEY`
+  - `DEBUG=False` y la `SECRET_KEY` sigue siendo de desarrollo
+  - `ALLOWED_HOSTS` queda vacio
 
 ## 4. Base de datos y archivos del piloto
 
-### 4.1 SQLite (snapshot actual)
-Como `db.sqlite3` esta en Git, ya llega al clonar el repo.
+### 4.1 SQLite
+Como `db.sqlite3` esta en Git, ya llega al clonar.
+
+Regla operativa importante:
+- en este piloto existen dos estrategias validas para `db.sqlite3`
+- `preservar base del servidor`: usar cuando PythonAnywhere ya tiene datos operativos que quieres mantener
+- `reemplazar con snapshot del repo`: usar cuando tu fuente de verdad actual es la base local versionada en Git y quieres llevarla completa al piloto
+
+No mezcles ambas estrategias en el mismo redeploy sin tener claro el objetivo.
 
 Verificar:
 ```bash
 ls -lh ~/sicgad/db.sqlite3
 ```
 
-### 4.2 `media/` (actualmente ya viaja con el repo)
-Para este piloto, la estructura de `media/` ya llega con el `git clone` (carpetas + `.gitkeep`), asi que **no necesitas** subir `media/` manualmente si sigue vacia o sin archivos relevantes.
-
-Verificar:
+### 4.2 `media/`
+Verificar estructura:
 ```bash
-find ~/sicgad/media -maxdepth 3 -type f | head -20
+find ~/sicgad/media -maxdepth 3 -type d | sort
 ```
 
-#### Solo si necesitas migrar archivos reales a futuro (opcional)
-Como no hay SSH obligatorio, puedes subir `media_pilot.zip` desde:
-- `Files` tab en PythonAnywhere (por ejemplo a `/home/lfl/`)
-
-Luego descomprimir en Bash:
+Si necesitas subir archivos reales en un zip:
 ```bash
 cd ~/sicgad
 mkdir -p media
@@ -156,13 +181,12 @@ print("media extraida")
 PY
 ```
 
-Nota:
-- Si el zip contiene una carpeta `media/` en su raiz, revisa el resultado para evitar `media/media/...`.
-- Puedes inspeccionar con `find ~/sicgad/media | head -50`.
+Despues revisar:
+```bash
+find ~/sicgad/media | head -50
+```
 
 ## 5. Comandos Django para dejar listo el proyecto
-
-Activa el entorno virtual y ejecuta:
 
 ```bash
 cd ~/sicgad
@@ -171,41 +195,28 @@ source ~/.virtualenvs/sicgad-pilot/bin/activate
 python manage.py migrate
 python manage.py collectstatic --noinput
 python manage.py check
-```
-
-Opcional (recomendado para revisar seguridad):
-```bash
 python manage.py check --deploy
 ```
 
-Resultado esperado en este piloto:
-- Puede aparecer una advertencia `security.W004` por `SECURE_HSTS_SECONDS` no configurado.
-- Esa advertencia no bloquea el despliegue del piloto.
+Esperado:
+- si `.env` esta bien, ambos checks deben pasar
+- si fallan, revisar primero `SECRET_KEY`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` y flags HTTPS
 
-## 6. Crear la Web App en PythonAnywhere (UI Web tab)
-
-Esto no se puede hacer solo desde Bash: requiere configurar la web app en la pestaña `Web`.
+## 6. Crear la Web App en PythonAnywhere (Web tab)
 
 ### 6.1 Crear app web
 En `Web`:
 1. `Add a new web app`
 2. `Manual configuration`
-3. Selecciona la misma version de Python que usaste en el `venv` (en este piloto: `Python 3.13`)
-
-Nota:
-- Esta seccion se realiza en la interfaz web (pestaña `Web`), no en Bash.
+3. Elegir la misma version de Python usada en el `venv`
 
 ### 6.2 Configurar paths
-En la Web app:
-- **Source code**: `/home/lfl/sicgad`
-- **Working directory**: `/home/lfl/sicgad`
-- **Virtualenv**: `/home/lfl/.virtualenvs/sicgad-pilot`
-
-Nota:
-- PythonAnywhere puede dejar inicialmente `Working directory` como `/home/lfl/`; en ese caso, cambialo manualmente a `/home/lfl/sicgad`.
+- `Source code`: `/home/lfl/sicgad`
+- `Working directory`: `/home/lfl/sicgad`
+- `Virtualenv`: `/home/lfl/.virtualenvs/sicgad-pilot`
 
 ### 6.3 Configurar WSGI
-Abre el archivo WSGI desde la Web tab (algo como `/var/www/lfl_pythonanywhere_com_wsgi.py`) y deja algo asi:
+Editar `/var/www/lfl_pythonanywhere_com_wsgi.py` y dejar:
 
 ```python
 import os
@@ -222,39 +233,46 @@ application = get_wsgi_application()
 ```
 
 ### 6.4 Static files mappings
-En `Static files` agrega:
-- URL: `/static/` -> Path: `/home/lfl/sicgad/staticfiles`
-- URL: `/media/` -> Path: `/home/lfl/sicgad/media`
+Agregar:
+- `/static/` -> `/home/lfl/sicgad/staticfiles`
+- `/media/` -> `/home/lfl/sicgad/media`
 
-### 6.5 HTTPS (recomendado para piloto con login)
-En `Security` (misma pagina de la Web app):
-- PythonAnywhere provee certificado HTTPS automatico para `lfl.pythonanywhere.com`
-- Activar `Force HTTPS` = `Enabled`
+Importante:
+- con `DEBUG=False`, Django ya no expone `media/` via `config/urls.py`
+- el mapping `/media/` es obligatorio si el sistema debe servir uploads
+
+### 6.5 HTTPS
+En `Security`:
+- PythonAnywhere ya provee HTTPS para `lfl.pythonanywhere.com`
+- activar `Force HTTPS`
+
+Validar:
+- el dominio final debe estar en `ALLOWED_HOSTS`
+- el origen HTTPS final debe estar en `CSRF_TRUSTED_ORIGINS`
 
 ## 7. Reiniciar y probar
 
-En la Web tab:
-- Click en `Reload`
+En `Web`:
+- click en `Reload`
 
 Pruebas minimas:
 1. `https://lfl.pythonanywhere.com/`
 2. login
-3. `/kpis/`
-4. `/home/` con usuario viewer puro (debe redirigir a `/kpis/`)
-5. chart + boton `Presentacion`
-6. carga de CSS/JS/imagenes (sin 404 en `static`)
-
-Estado real validado:
-- Despliegue funcionando correctamente en `https://lfl.pythonanywhere.com/`
-- Landing carga con datos del snapshot (`db.sqlite3` del repo)
+3. logout por formulario POST
+4. `/kpis/`
+5. `/home/` con viewer puro, debe redirigir a `/kpis/`
+6. carga de CSS/JS/imagenes sin 404
+7. descarga de plantilla en `ingest`
+8. carga valida de archivo en `ingest`
+9. rechazo de archivo con extension no permitida
 
 ## 8. Logs y troubleshooting
 
-Desde `Web` tab revisa:
-- error log
-- server log
+Desde `Web`:
+- `error log`
+- `server log`
 
-Tambien puedes usar Bash para revisar rapido (paths pueden variar segun nombre de app):
+Tambien en Bash:
 ```bash
 ls /var/log | grep pythonanywhere
 tail -n 200 /var/log/*pythonanywhere*.error.log
@@ -262,52 +280,119 @@ tail -n 200 /var/log/*pythonanywhere*.error.log
 
 Errores comunes:
 - `DisallowedHost`: falta `ALLOWED_HOSTS`
-- `CSRF verification failed`: falta `CSRF_TRUSTED_ORIGINS` o dominio distinto
+- `CSRF verification failed`: falta `CSRF_TRUSTED_ORIGINS` o el dominio/origen no coincide
+- arranque bloqueado por `SECRET_KEY`: la clave no existe o sigue siendo de desarrollo
 - `Static files` sin estilos: faltan mappings o `collectstatic`
-- `No module named django`: virtualenv no configurado en Web tab o dependencias no instaladas
+- `media` con 404: falta mapping `/media/`
+- `No module named django`: virtualenv mal configurado o dependencias faltantes
 
 ## 9. Notas del piloto (SQLite en produccion)
 
-Se acepta para piloto, pero con limites:
-- No es ideal para alta concurrencia
-- Mantener una sola instancia web (configuracion tipica de PythonAnywhere)
-- Hacer backup frecuente del archivo `db.sqlite3`
-- En cuenta gratuita nueva, la web app gratuita expira aproximadamente en 1 mes (reactivable desde la cuenta)
+SQLite se acepta para piloto, con limites:
+- no es ideal para alta concurrencia
+- conviene mantener una sola instancia web
+- hacer backup frecuente de `db.sqlite3`
+- una cuenta gratuita puede expirar aproximadamente al mes
 
-Backup rapido en Bash:
+Backup rapido:
 ```bash
 cp ~/sicgad/db.sqlite3 ~/sicgad/db.sqlite3.bak.$(date +%Y%m%d_%H%M%S)
 ```
 
-## 10. Actualizar el deploy despues (nuevo commit)
+## 10. Redeploy despues de nuevos commits
 
-### 10.0 Previo al `git push` (local)
-Si el cambio toca plantillas/JS con clases Tailwind, ejecuta localmente:
+### 10.0 Antes del push (local)
+Si tocaste templates/JS con clases Tailwind:
 
 ```powershell
 npm run build:tailwind
 ```
 
-Luego haz commit del archivo actualizado:
+Y sube el archivo generado:
 - `static/css/tailwind.generated.css`
+
+Si tambien cambiaste datos del piloto y quieres que PythonAnywhere reciba exactamente tu estado local:
+- incluir `db.sqlite3` en el commit/push
+- confirmar que realmente deseas reemplazar la base actual del servidor
+
+### 10.1 Elegir estrategia para `db.sqlite3`
+Antes de hacer `git pull`, decide una de estas rutas:
+
+#### Opcion A. Preservar la base actual del servidor
+Usa esta opcion si PythonAnywhere ya tiene datos mas recientes o si no quieres sobrescribirlos con la base del repo.
 
 ```bash
 cd ~/sicgad
 source ~/.virtualenvs/sicgad-pilot/bin/activate
 
+cp db.sqlite3 ~/db.sqlite3.prod.backup.$(date +%Y%m%d_%H%M%S)
+git update-index --no-skip-worktree db.sqlite3 || true
+mv db.sqlite3 ~/db.sqlite3.prod.current
+git pull
+cp ~/db.sqlite3.prod.current ~/sicgad/db.sqlite3
+git update-index --skip-worktree db.sqlite3
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+python manage.py check --deploy
+```
+
+Resultado:
+- el codigo y assets se actualizan desde Git
+- la base de datos activa sigue siendo la del servidor
+
+#### Opcion B. Reemplazar la base del servidor con la del repo
+Usa esta opcion si tu fuente de verdad es `db.sqlite3` local versionada en Git y quieres que PythonAnywhere quede exactamente igual a ese snapshot.
+
+```bash
+cd ~/sicgad
+source ~/.virtualenvs/sicgad-pilot/bin/activate
+
+cp db.sqlite3 ~/db.sqlite3.before_repo_pull.$(date +%Y%m%d_%H%M%S)
+git update-index --no-skip-worktree db.sqlite3 || true
+git restore db.sqlite3
 git pull
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py collectstatic --noinput
+python manage.py check
+python manage.py check --deploy
+```
+
+Resultado:
+- entra el `db.sqlite3` del commit recien subido
+- la base anterior del servidor queda solo como backup
+
+### 10.2 Comandos comunes post-update
+En ambos casos, el bloque minimo de validacion sigue siendo:
+
+```bash
+cd ~/sicgad
+source ~/.virtualenvs/sicgad-pilot/bin/activate
+
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+python manage.py check --deploy
 ```
 
 Luego:
-- `Web` tab -> `Reload`
+- `Web` -> `Reload`
 
-Si el nuevo snapshot de datos cambia (y quieres reemplazarlo en piloto):
-- sube nuevo `db.sqlite3` manualmente (con respaldo previo), o
-- usa scripts de migracion/carga definidos por el proyecto.
+Si falla justo despues del update:
+- revisar `error log`
+- revisar que `.env` siga intacto
+- confirmar `SECRET_KEY`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`
+- confirmar que `Force HTTPS` siga activo
+- confirmar que elegiste la estrategia correcta para `db.sqlite3`
+- si faltan proyectos/datasets/cargas tras el redeploy, revisar primero si la base activa del servidor fue preservada o reemplazada
 
-Si luego decides versionar archivos reales dentro de `media/` (ademas de `.gitkeep`):
-- bastara con `git pull` para traerlos al servidor
-- revisa el tamaño del repo y evita archivos muy grandes/sensibles
+### 10.3 Si cambian datos o archivos
+Si necesitas reemplazar el snapshot:
+- respaldar primero `db.sqlite3`
+- luego subir el archivo nuevo o ejecutar la migracion/carga definida por el proyecto
+
+Si cambian archivos reales en `media/`:
+- subirlos manualmente o sincronizarlos fuera de Git
+- evitar versionar archivos sensibles o muy grandes en el repo

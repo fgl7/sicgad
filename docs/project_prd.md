@@ -54,6 +54,15 @@ Reglas importantes:
 Seguridad:
 - `AccountProfile.must_change_password` forzado por middleware.
 - Middleware: `accounts/middleware.py`.
+- Login/logout endurecidos en `accounts/views.py` + `config/urls.py`:
+  - `SecureLoginView` con `never_cache`
+  - `SecureLogoutView` solo acepta `POST`
+- El alta/edicion administrativa de usuarios valida contrasenas con los validadores nativos de Django
+  (`accounts/forms.py`), incluso cuando el usuario se crea desde el panel operativo.
+- Regla operativa: no dejar secretos reales en el repo.
+  - usar `.env` local/servidor
+  - mantener `.env.example` como plantilla segura
+  - `SECRET_KEY` real obligatoria fuera de desarrollo
 
 ## 4. Alcance para visualizadores jerarquicos (AUTHORITY_MHE y EXTERNAL_MONTHLY)
 Configurado desde UX de admin en:
@@ -147,6 +156,16 @@ Reglas de negocio activas:
 - En envios/aprobaciones historicas, el flujo operativo usa `entity` (no `plant/project`) en permisos y consultas.
 - `materialize_instance` preserva puntos ya existentes cuando la instancia no tiene `raw_file`
   (caso consolidaciones mensuales), evitando perdida de `PublishedDataPoint`.
+- Endurecimiento de seguridad aplicado en `ingest`:
+  - las vistas operativas sensibles (`upload`, `upload_manual`, `upload_history`, `download_template`,
+    `instance_detail`, `certification_review`, `submit/edit/delete`, historico) exigen autenticacion
+  - `download_template` valida scope real del usuario sobre la `entity` del esquema
+  - la carga historica valida consistencia `dataset_type.entity == entity` para evitar cruces inseguros
+  - `instance_detail` ya no acepta redireccion abierta por query param `next`; solo URLs locales seguras
+  - se centralizo validacion de archivos en `ingest/security.py`
+    - cargas operativas: solo `.csv/.xlsx/.xlsm/.xltx/.xltm`
+    - adjuntos de respaldo: solo imagenes permitidas
+    - se valida extension y tamano maximo desde `config/settings.py`
 
 UX:
 - En `upload_historical`, spinner y barra de progreso de subida.
@@ -573,6 +592,45 @@ Definidas en `config/urls.py`:
 - `/kpis/`
 - `/projects/`
 
+## 12.1 Endurecimiento de seguridad (estado implementado)
+Configuracion/base:
+- `config/settings.py` ya endurece defaults y validaciones de despliegue:
+  - `DEBUG` leido como boolean real
+  - bloqueo de arranque si falta `SECRET_KEY`
+  - bloqueo de arranque si `DEBUG=False` y la `SECRET_KEY` sigue siendo de desarrollo
+  - bloqueo si `ALLOWED_HOSTS` queda vacio con `DEBUG=False`
+- Headers/cookies activos o configurables:
+  - `SESSION_COOKIE_HTTPONLY`
+  - `SESSION_COOKIE_SAMESITE`
+  - `CSRF_COOKIE_SAMESITE`
+  - `SECURE_CONTENT_TYPE_NOSNIFF`
+  - `SECURE_REFERRER_POLICY`
+  - `SECURE_CROSS_ORIGIN_OPENER_POLICY`
+  - `X_FRAME_OPTIONS`
+  - `SECURE_HSTS_*`
+  - `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`
+- `config/urls.py` solo sirve `media/` via Django cuando `DEBUG=True`.
+
+Acceso/autorizacion:
+- `schemas` ya no expone listado/detalle/edicion a anonimos.
+- `schemas` aplica validacion de alcance por `entity` para loaders fuera de su scope.
+- `projects`, `kpis`, `validation` e `ingest` mantienen control por memberships/entidad como contrato principal.
+
+Subida de archivos:
+- Limites configurables en settings:
+  - `FILE_UPLOAD_MAX_MEMORY_SIZE`
+  - `DATA_UPLOAD_MAX_MEMORY_SIZE`
+  - `MAX_INGEST_UPLOAD_BYTES`
+  - `MAX_SUPPORT_IMAGE_BYTES`
+- Permisos de escritura de archivos endurecidos:
+  - `FILE_UPLOAD_PERMISSIONS`
+  - `FILE_UPLOAD_DIRECTORY_PERMISSIONS`
+
+Pruebas agregadas:
+- `accounts/tests.py`: password debil rechazado en admin form.
+- `schemas/tests.py`: `schema_list` requiere login y `schema_detail` responde `404` fuera de scope.
+- `ingest/tests.py`: rechazo de extension no permitida, mismatch `dataset/entity` y acceso anonimo a template.
+
 ## 13. Deuda tecnica conocida (importante)
 El legado de `plants` fue retirado y el flujo operativo ya esta alineado a `entity`.
 
@@ -582,6 +640,8 @@ Foco actual de deuda:
 - Revisar y limpiar documentacion tecnica vieja que todavia menciona `plant/project`.
 - Seguir simplificando UX del builder de formulas para alinearlo al flujo admin definido
   (entidad -> variables -> formula -> preview -> aprobacion/materializacion).
+- Integrar 2FA/OTP real en el flujo de autenticacion si el despliegue lo requiere;
+  `django-otp` ya esta instalado pero no gobierna aun el login operativo por defecto.
 
 Impacto:
 - Menor riesgo de `FieldError` por referencias legacy eliminadas.
@@ -647,6 +707,13 @@ Funciona y se usa activamente:
   - headers, formularios, confirmaciones, tablas y vistas de detalle comparten patron comun
   - `report_detail` recalcula su grafico en funcion del ancho disponible mediante `static/js/project_report.js`
   - tablas operativas usan colapso a cards o scroll matricial segun densidad de columnas
+- Hardening de seguridad ya aplicado:
+  - settings con validaciones de despliegue y cookies/headers mas seguros
+  - logout solo por `POST`
+  - validacion de contrasenas Django en alta/edicion de usuarios administrativos
+  - validacion centralizada de uploads/adjuntos
+  - cierre de exposicion anonima en `schemas`
+  - mitigacion de open redirect en `ingest`
 
 Requiere refactor planificado:
 - Extender pruebas de regresion para cubrir flujos refactorizados a `entity`.
@@ -660,20 +727,27 @@ Requiere refactor planificado:
 4. Ejecutar:
    - `python manage.py check`
    - si hay cambios en consolidacion mensual: `python manage.py consolidate_certifications --backfill` (entorno de prueba)
+   - si se tocaron `settings`/seguridad y el entorno local usa una `SECRET_KEY` de ejemplo,
+     validar tambien con variables reales o temporales seguras para no saltarse los guards de produccion
 5. Si se toca `projects` + `schemas`, validar manualmente:
    - proyecto `PENDING` no debe mostrar `Crear Esquemas` al loader
    - proyecto `APPROVED` si debe mostrar `Crear Esquemas`
    - el flujo sembrado debe abrir `schemas:schema_create` con nombre y `entity` precargados
    - al aprobar el primer esquema semanal/mensual ligado al proyecto debe crearse la `ProjectReportConfig` inicial
+   - `schema_list` y `schema_detail` no deben quedar accesibles a usuarios sin login o fuera de scope
 6. Si se modifica ingest/validation, probar manualmente:
    - carga historica
    - carga periodica
    - envio a validacion
    - aprobacion historica
    - acceso de admin, loader, validator y viewer
+   - rechazo de archivos con extension/tamano no permitido
+   - `download_template` solo para datasets dentro del alcance del usuario autenticado
+   - `next`/redirecciones de retorno sin salida a dominios externos
 7. Si hay diferencias entre instancias publicadas y datos en KPIs, verificar `PublishedDataPoint` por dataset/periodo.
    - para visualizador externo mensual, confirmar que las instancias mensuales esten en `PUBLISHED/LOCKED`.
 8. Si se toca UX de cuentas, validar formulario crear/editar usuario y creacion de memberships esperados.
+   - confirmar rechazo de contrasenas debiles en el form admin
 9. Si se toca UX global / navegacion (`templates/base.html`, `templates/landing.html`, `templates/registration/login.html`):
    - probar paginas con y sin scroll vertical (sin salto visual notable)
    - confirmar que exista un solo scrollbar visible en paginas internas (sin doble barra viewport/panel)
@@ -689,14 +763,18 @@ Requiere refactor planificado:
 1. `structure/models.py`
 2. `accounts/models.py`
 3. `accounts/forms.py`
-4. `accounts/context_processors.py`
-5. `schemas/models.py`
-6. `ingest/models.py`
-7. `kpis/views.py`
-8. `templates/base.html`
-9. `templates/partials/sidebar.html`
-10. `templates/partials/sidebar_authority_mhe.html`
-11. `performance/views.py` (builder y calculo por entidad)
+4. `accounts/views.py`
+5. `config/settings.py`
+6. `accounts/context_processors.py`
+7. `schemas/models.py`
+8. `schemas/views.py`
+9. `ingest/models.py`
+10. `ingest/security.py`
+11. `kpis/views.py`
+12. `templates/base.html`
+13. `templates/partials/sidebar.html`
+14. `templates/partials/sidebar_authority_mhe.html`
+15. `performance/views.py` (builder y calculo por entidad)
 
 ---
 

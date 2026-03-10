@@ -4,6 +4,7 @@ from django.test import TestCase
 
 from structure.models import Category, Entity, Sector, Subsector
 
+from .forms import AdminUserCreateForm
 from .models import Membership
 
 
@@ -34,4 +35,24 @@ class MembershipCleanTests(TestCase):
             role="LOADER",
         )
 
-        membership.full_clean()
+        membership.full_clean()
+
+
+class AdminUserCreateFormSecurityTests(TestCase):
+    def test_rejects_weak_passwords(self):
+        form = AdminUserCreateForm(
+            data={
+                "username": "form-user",
+                "first_name": "Form",
+                "last_name": "User",
+                "email": "form@example.com",
+                "password1": "12345678",
+                "password2": "12345678",
+                "role": "ADMIN",
+                "scope_mode": AdminUserCreateForm.SCOPE_ENTITY,
+                "viewer_profile_type": "STANDARD",
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("password1", form.errors)

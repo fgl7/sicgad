@@ -1,5 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.auth import password_validation
+from django.core.exceptions import ValidationError
 
 from .models import AccountProfile, Institution, Membership
 from structure.models import Category, Entity, Sector, Subsector
@@ -369,6 +371,16 @@ class AdminUserCreateForm(forms.ModelForm):
                 self.add_error("password2", "Debe confirmar la contrasena.")
             if p1 and p2 and p1 != p2:
                 self.add_error("password2", "Las contrasenas no coinciden.")
+            if p1 and p2 and p1 == p2:
+                password_user = self.instance if is_editing else User()
+                password_user.username = cleaned.get("username") or ""
+                password_user.email = cleaned.get("email") or ""
+                password_user.first_name = cleaned.get("first_name") or ""
+                password_user.last_name = cleaned.get("last_name") or ""
+                try:
+                    password_validation.validate_password(p1, password_user)
+                except ValidationError as exc:
+                    self.add_error("password1", exc)
 
         if selected_entities and not selected_categories:
             selected_categories = list(

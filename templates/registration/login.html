@@ -71,7 +71,7 @@
               </svg>
             </div>
 
-            <input type="text" name="username" required autofocus
+            <input type="text" name="username" required autofocus autocomplete="username"
               class="login-input block w-full !pl-11 pr-4 !py-4 bg-slate-900/50 border border-white/5 rounded-2xl text-white text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
               placeholder=" ">
             <span class="login-placeholder">Nombre de usuario o RUT</span>
@@ -91,7 +91,7 @@
               </svg>
             </div>
 
-            <input id="login-password" type="password" name="password" required
+            <input id="login-password" type="password" name="password" required autocomplete="current-password"
               class="login-input block w-full !pl-11 pr-12 !py-4 bg-slate-900/50 border border-white/5 rounded-2xl text-white text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
               placeholder=" ">
 
@@ -113,6 +113,9 @@
           class="w-full btn-primary py-4 rounded-2xl glow-emerald text-sm font-black uppercase tracking-widest">
           Iniciar Sesi&oacute;n
         </button>
+        {% if next %}
+        <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
       </form>
     </div>
 

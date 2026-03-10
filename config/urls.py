@@ -16,11 +16,11 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 
+from accounts.views import SecureLoginView, SecureLogoutView
 from kpis.views import home, landing, charts, dataset_data, performance_data
 
 urlpatterns = [
@@ -32,10 +32,10 @@ urlpatterns = [
     path("kpis/performance-data/<int:indicator_id>/", performance_data, name="kpis_performance_data"),
     path(
         "login/",
-        auth_views.LoginView.as_view(template_name="registration/login.html"),
+        SecureLoginView.as_view(),
         name="login",
     ),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("logout/", SecureLogoutView.as_view(), name="logout"),
     path("accounts/", include("accounts.urls")),
     path("schemas/", include("schemas.urls")),
     path("ingest/", include("ingest.urls")),
@@ -44,4 +44,7 @@ urlpatterns = [
     path("performance/", include("performance.urls")),
     path("projects/", include("projects.urls")),
     path("structure/", include("structure.urls")),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

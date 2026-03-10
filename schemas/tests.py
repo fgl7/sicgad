@@ -114,3 +114,64 @@ class SchemaSeededCreateTests(TestCase):
         )
         self.assertContains(response, "Este esquema se esta creando para")
         self.assertContains(response, "Requiere aprobacion admin")
+
+
+@override_settings(
+    ROOT_URLCONF="config.urls",
+    AUTO_INGEST_CLEANUP_ENABLED=False,
+)
+class SchemaAccessControlTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.loader_user = User.objects.create_user(
+            username="loader_scope",
+            password="test-pass-123",
+        )
+        self.loader_user.profile.must_change_password = False
+        self.loader_user.profile.save(update_fields=["must_change_password"])
+
+        self.other_user = User.objects.create_user(
+            username="other_scope",
+            password="test-pass-123",
+        )
+        self.other_user.profile.must_change_password = False
+        self.other_user.profile.save(update_fields=["must_change_password"])
+
+        sector = Sector.objects.create(name="Sector Access")
+        subsector = Subsector.objects.create(sector=sector, name="Subsector Access")
+        category = Category.objects.create(subsector=subsector, name="Categoria Access")
+        self.entity = Entity.objects.create(category=category, code="ACC", name="Entidad Access")
+        self.other_entity = Entity.objects.create(category=category, code="OTH", name="Entidad Other")
+
+        Membership.objects.create(
+            user=self.loader_user,
+            entity=self.entity,
+            role="LOADER",
+        )
+        Membership.objects.create(
+            user=self.other_user,
+            entity=self.other_entity,
+            role="LOADER",
+        )
+
+        self.dataset = DatasetType.objects.create(
+            name="Dataset Seguro",
+            version=1,
+            validation_frequency=DatasetType.DAILY,
+            entity=self.entity,
+            status=DatasetType.STATUS_APPROVED,
+            is_active=True,
+        )
+
+    def test_schema_list_requires_login(self):
+        response = self.client.get(reverse("schemas:schema_list"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response.url)
+
+    def test_schema_detail_returns_404_for_loader_outside_scope(self):
+        self.client.force_login(self.other_user)
+
+        response = self.client.get(reverse("schemas:schema_detail", args=[self.dataset.slug]))
+
+        self.assertEqual(response.status_code, 404)

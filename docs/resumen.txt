@@ -1,153 +1,50 @@
-OBJETIVO DEL PROYECTO
+Asunto: Puesta en linea del piloto SICGAD y acceso al sistema
 
-Implementar en el MHE un sistema institucional (SICGAD) para registrar, procesar, validar y almacenar datos historicos y actuales del sector energetico, con control de roles, trazabilidad y publicacion de datos validados. Esto permitira contar con una base de datos oficial y confiable, resguardada en la infraestructura del MHE con sus respaldos estandar, para apoyar el analisis tecnico, la planificacion y la toma de decisiones sobre la administracion de recursos energeticos en beneficio de la poblacion.
+Estimados compañeros,
 
-PRINCIPALES SISTEMAS / MODULOS DE SICGAD
+Se comunica que el piloto del Sistema Integral de Carga, Gestion y Analisis de Datos (SICGAD) ya se encuentra disponible en linea en el siguiente dominio:
 
-1. Autenticacion y control de acceso por roles
-- Gestion de usuarios con perfiles como administrador, cargador, validador y visualizador.
-- Control de permisos por entidad y por tipo de usuario.
+https://lfl.pythonanywhere.com/
 
-2. Gestion de estructura organizacional
-- Administracion de niveles: sector, subsector, categoria y entidad.
-- Base para asignar usuarios, esquemas y cargas de datos.
+El SICGAD es una plataforma institucional orientada a centralizar el registro, la carga, la validacion, el resguardo y la visualizacion de informacion sectorial. Su objetivo es contar con una base de datos oficial, trazable y confiable que facilite el seguimiento tecnico, la generacion de indicadores y la toma de decisiones oportunas y disminuya/elimine procedimientos burocraticos entre instituciones del Estado.
 
-3. Diseno flexible de esquemas de datos (fortaleza clave)
-- Cada cargador puede crear y mantener sus propios esquemas/tablas segun su necesidad operativa.
-- Permite adaptar SICGAD a distintos tipos de datos sin depender de una sola estructura fija.
+Actualmente, uno de los principales problemas en la gestion de informacion es la dispersion de datos entre distintas areas, formatos y responsables, lo que genera demoras, duplicidad de solicitudes, dificultades de trazabilidad y limitaciones para contar con informacion validada en el momento necesario/inmediato. El SICGAD busca resolver precisamente estos puntos mediante un flujo institucional ordenado y controlado.
 
-4. Carga de datos periodica e historica
-- Registro y envio de informacion actual y de historicos.
-- Soporte para cargas por archivo y flujos de seguimiento.
+De manera resumida, el sistema permite:
 
-5. Validacion de datos por niveles
-- Flujo de revision y aprobacion antes de publicar informacion.
-- Ayuda a asegurar calidad, consistencia y confiabilidad de los datos.
+- administrar usuarios y accesos segun rol;
+- organizar la estructura institucional por niveles y entidades;
+- definir esquemas de datos de forma flexible;
+- realizar cargas periodicas e historicas;
+- validar y publicar informacion oficial;
+- consultar indicadores y visualizaciones segun permisos;
+- mantener trazabilidad y auditoria de acciones relevantes.
 
-6. Publicacion de datos validados para analisis y KPIs
-- Los datos aprobados se consolidan en una base oficial para consultas, graficos y seguimiento de indicadores.
-- Soporta visualizacion para autoridades y equipos tecnicos segun permisos.
+Entre los beneficios mas importantes del SICGAD se destacan:
 
-7. Trazabilidad y auditoria
-- Registro de acciones relevantes (creacion, cambios, aprobaciones, gestion administrativa).
-- Facilita control institucional y seguimiento de procesos.
+- centralizacion de la informacion en un solo punto institucional;
+- reduccion/eliminacion de la burocracia en el intercambio de datos;
+- mayor continuidad operativa ante cambios de personal;
+- disponibilidad de informacion validada para analisis y seguimiento;
+- mejor soporte para la planificacion, el control y la toma de decisiones.
 
-PROBLEMAS ACTUALES DEL MHE (EN RECURSOS EVAPORITICOS)
+Los usuarios existentes a modo de prueba en el sistema son:
+Usuario cargador de datos:
+    usuario: cargador_kcl
+    contraseña: Ep123456**
+Usuario validador de datos:
+    usuario: jefe_kcl_li
+    contraseña: Ep123456**
+Usuario visualizador de datos MAE-MHE:
+    usuario: vmeere
+    contraseña: Ep123456**
+Usuario visualizador de datos MAE-externo:
+    usuario: mefp
+    contraseña: Ep123456**
 
-1. No existe un sistema oficial operativo unificado
-- No hay una plataforma institucional que centralice, procese y valide la informacion de recursos evaporiticos.
-- La informacion suele estar dispersa entre entidades, areas y funcionarios.
+(nota: los usuarios pueden realizar cambios reales, segun su rol)
 
-2. Flujo de informacion lento y dependiente de gestiones manuales
-- Muchas solicitudes de informacion se realizan mediante notas oficiales.
-- Se debe esperar la respuesta de YLB y otras instancias para consolidar datos.
-- La informacion puede llegar en formato impreso, CD o correo institucional, dificultando su integracion rapida.
+Se solicita ingresar al dominio indicado, revisar el sistema y utilizar las credenciales asignadas para las pruebas y actividades definidas. Sus observaciones seran importantes para fortalecer la puesta en marcha y la evolucion del SICGAD.
 
-3. Dificultad para trazabilidad y continuidad institucional
-- Es complejo rastrear el historial de informacion acumulada y sus versiones.
-- Con cambios de funcionarios, parte de la data puede no estar disponible o no estar organizada para el nuevo personal.
-
-4. Baja disponibilidad de visualizacion ejecutiva en tiempo oportuno
-- No existe un sistema visual para seguimiento de produccion, rendimiento de plantas, inversiones y otros indicadores clave.
-- Las autoridades dependen de solicitudes a equipos tecnicos para obtener analisis o vistas especificas de KPIs.
-- Esto puede demorar respuestas para decisiones economicas, estrategicas y de gestion.
-
-5. Multiples solicitudes para entidades externas
-- Ministerios e instancias rectoras (por ejemplo, Economia o Presidencia) deben solicitar informacion a varios actores.
-- La solicitud puede involucrar a YLB, MHE y distintas dependencias/viceministerios relacionados con recursos evaporiticos.
-- No existe un punto unico de consulta con acceso controlado para visualizar y descargar informacion oficial.
-
-COMO SICGAD RESUELVE ESTOS PROBLEMAS
-
-1. Centraliza la informacion en una plataforma institucional
-- Reune en un solo sistema la carga, procesamiento, validacion, publicacion y consulta de datos.
-- Establece una base de datos oficial con respaldo institucional en infraestructura del MHE.
-
-2. Estandariza y acelera el flujo de datos
-- Permite cargas periodicas e historicas con esquemas definidos y controlados.
-- Reduce la dependencia de intercambios manuales (papel, CD, correos dispersos) para consolidar informacion.
-
-3. Asegura trazabilidad y continuidad operativa
-- Registra acciones, cambios y validaciones (auditoria).
-- Facilita la continuidad del trabajo ante rotacion de personal, porque la informacion queda organizada en el sistema.
-
-4. Habilita visualizacion de KPIs para autoridades y equipos tecnicos
-- Publica datos validados para consulta y seguimiento de indicadores.
-- Permite acceso segun roles y permisos, con vistas adaptadas a necesidades institucionales.
-- Reduce tiempos de respuesta para analisis puntuales y soporte a decisiones.
-
-5. Mejora la coordinacion interinstitucional
-- Provee una fuente oficial de informacion validada para consulta interna y externa con control de acceso.
-- Disminuye la duplicacion de solicitudes y el envio repetido de informacion a multiples actores.
-
-ALCANCE Y ESCALABILIDAD
-
-Aunque el enfoque inicial se concentra en recursos evaporiticos, el modelo de SICGAD puede aplicarse a otros sectores energeticos del MHE, incluyendo hidrocarburos, electricidad, nuclear y energias alternativas.
-
-LOGICA / ENTREGABLES PRINCIPALES DE SICGAD (RESUMEN)
-
-1. Centralizacion del flujo de esquemas, cargas y validacion institucional
-- El sistema centraliza la revision y validacion de esquemas/tablas de datos creados por usuarios cargadores de instituciones como YLB.
-- Permite gestionar datos periodicos y certificaciones (por ejemplo, certificaciones de produccion u otra informacion que requiera validacion formal).
-- Controla el flujo de aprobacion/rechazo de datos, incluyendo trazabilidad de estados y acciones.
-- Reduce de forma significativa la burocracia de intercambio de informacion entre MHE y YLB.
-
-2. Acceso diferenciado para autoridades (MAE) y entidades externas
-- Permite que autoridades MAE accedan a visualizaciones de KPIs disenadas segun sus necesidades de seguimiento y decision.
-- Permite crear accesos para usuarios externos (por ejemplo, MEFP) con alcance controlado a informacion oficial/certificada, especialmente mensual.
-- Incluye capacidad de consulta y descarga de datos para analisis institucional interno de dichas entidades.
-- Reduce la burocracia de solicitudes repetidas de informacion externa, centralizando el acceso en un solo punto segun permisos.
-
-3. Base para eficiencia operativa y analisis avanzado
-- SICGAD concentra esfuerzos en reducir burocracia y mejorar la velocidad del analisis institucional.
-- Ordena y consolida la informacion para facilitar planificacion, seguimiento de hitos y evaluacion de desempeno.
-- Abre el camino para incorporar analisis avanzados y apoyo con agentes de inteligencia artificial sobre datos oficiales.
-- Este soporte puede fortalecer procesos de actualizacion, creacion o ajuste de normativa y decisiones tecnicas/estrategicas.
-
-PLAN A SEGUIR DESPUES DE LA SOCIALIZACION DEL PILOTO SICGAD (ENFOQUE VMEA)
-
-Luego de construir y socializar el piloto, el siguiente paso es poner en linea SICGAD para usuarios estrategicos y tecnicos que aporten mejoras funcionales, y especialmente para el Viceministro de Energias Alternativas (VMEA) del MHE. Esta etapa debe orientarse a convertir el piloto en una base operativa real para la gestion de informacion de recursos evaporiticos.
-
-El VMEA, con apoyo de sus equipos tecnicos, debe iniciar la identificacion y priorizacion de la data que el MHE necesita para cumplir sus atribuciones en recursos evaporiticos (DS 4857, Art. 54), incluyendo normativa, investigacion, planificacion, seguimiento, control, mercado regional y desarrollo integral de la cadena de valor.
-
-SUBTITULOS DEL PLAN POSTERIOR A LA SOCIALIZACION DEL PILOTO
-
-1. Puesta en linea controlada del piloto para usuarios clave
-- Habilitar acceso a usuarios tecnicos estrategicos y al VMEA.
-- Recoger observaciones operativas y mejoras prioritarias del sistema.
-
-2. Definicion de requerimientos de informacion del VMEA
-- Identificar que datos necesita actualmente el VMEA y que datos requerira a mediano plazo.
-- Priorizar datasets para cumplimiento de atribuciones en recursos evaporiticos.
-
-3. Mapa de datos para atribuciones del DS 4857 (Art. 54)
-- Relacionar cada atribucion (normativa, investigacion, planificacion, mercado, cadena de valor) con datos, indicadores y reportes necesarios.
-- Definir vacios de informacion y fuentes responsables de cada dato.
-
-4. Estandarizacion y catalogo institucional de datasets
-- Definir nombres, estructuras, periodicidades y responsables de carga/validacion.
-- Formalizar que datos seran oficiales, certificados y publicables.
-
-5. Plan de integracion interinstitucional (MHE - YLB y otros actores)
-- Definir flujo de intercambio de datos, responsables, tiempos y canales institucionales.
-- Establecer el esquema de adopcion progresiva para reducir solicitudes manuales.
-
-6. Diseno de KPIs y tableros para autoridades (VMEA/MAE)
-- Definir vistas ejecutivas para seguimiento de produccion, rendimiento, inversiones, hitos y alertas.
-- Alinear visualizaciones a decisiones reales de gestion, planificacion y normativa.
-
-7. Definicion de accesos para entidades externas prioritarias
-- Establecer que instituciones externas (por ejemplo, MEFP) tendran acceso, con que alcance y bajo que reglas.
-- Definir datasets/cortes oficiales para consulta y descarga controlada.
-
-8. Gobernanza de datos, validacion y certificacion
-- Definir reglas de validacion, niveles de aprobacion y criterios de certificacion.
-- Establecer roles, responsabilidades y trazabilidad institucional.
-
-9. Hoja de ruta de mejoras del piloto a version operativa
-- Consolidar backlog de mejoras funcionales, tecnicas y UX/copy.
-- Priorizar entregables por impacto institucional y facilidad de implementacion.
-
-10. Ruta de analisis avanzado e inteligencia artificial (fase posterior)
-- Preparar datos y procesos para analisis avanzados sobre base oficial validada.
-- Evaluar uso de agentes de IA como apoyo para analisis normativo, planificacion y seguimiento de hitos (no sustitucion de decision institucional).
+Saludos cordiales.
+FGL

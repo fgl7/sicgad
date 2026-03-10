@@ -1,0 +1,142 @@
+3.1 Avance del modulo de formulas de desempeno
+
+En el marco de la evolucion funcional del SICGAD, se ha desarrollado el modulo de formulas de desempeno como un componente orientado a transformar datos validados en indicadores calculados con utilidad analitica e institucional. Este avance responde a una necesidad concreta: no basta con registrar y publicar informacion, sino que tambien es necesario disponer de mecanismos que permitan interpretarla, relacionarla y convertirla en medidas de rendimiento, eficiencia, avance o comportamiento de variables relevantes para la gestion.
+
+Tradicionalmente, este tipo de calculos suele realizarse fuera de los sistemas institucionales, mediante hojas de calculo separadas, archivos personales o formulas construidas manualmente por distintos usuarios. Esa situacion genera varios problemas: dependencia de personas especificas, dificultad para replicar el calculo de manera consistente, escasa trazabilidad sobre la metodologia aplicada y riesgo de trabajar con datos no oficiales o desactualizados. Frente a ello, el modulo de formulas de desempeno del SICGAD representa un avance significativo al incorporar dentro del propio sistema la capacidad de definir, calcular, revisar y conservar indicadores derivados sobre una base formal y controlada.
+
+3.1.1 Finalidad del modulo
+
+El objetivo principal de este modulo es permitir la construccion de indicadores de desempeno a partir de datos que ya han sido validados y publicados en el flujo ordinario del SICGAD. En lugar de depender de calculos externos o informales, el sistema ofrece un entorno institucional donde las formulas pueden ser definidas, revisadas y aplicadas directamente sobre informacion oficial.
+
+En este sentido, el modulo permite:
+
+- aprovechar datos ya publicados como base para nuevos indicadores;
+- construir relaciones entre variables de manera ordenada y reutilizable;
+- reducir la dependencia de hojas de calculo o procesos externos;
+- fortalecer la capacidad analitica del sistema sobre informacion oficial.
+
+3.1.2 Problematica que atiende
+
+El desarrollo de este modulo permite atender de manera progresiva las siguientes limitaciones:
+
+- realizacion de calculos manuales fuera del sistema;
+- falta de estandarizacion en la construccion de indicadores;
+- baja trazabilidad sobre como se obtiene un resultado analitico;
+- riesgo de usar informacion no validada como base de calculo;
+- dificultad para repetir o actualizar indicadores de forma consistente.
+
+En consecuencia, el modulo contribuye a institucionalizar el calculo de indicadores, de modo que estos dejen de depender de practicas aisladas y pasen a formar parte del ecosistema formal de gestion de datos.
+
+3.1.3 Logica general de funcionamiento
+
+La logica del modulo parte de un principio central: un indicador de desempeno debe construirse sobre datos confiables y previamente publicados. Por ello, las formulas no se calculan sobre informacion provisional, sino sobre datos que ya han atravesado el flujo de carga, validacion y publicacion del SICGAD.
+
+De manera general, el proceso funciona de la siguiente forma:
+
+- se selecciona una entidad sobre la cual se desea construir el indicador;
+- se eligen variables disponibles desde esquemas aprobados y activos;
+- se define una expresion matematica que relaciona dichas variables;
+- el sistema genera una vista preliminar del resultado;
+- una vez aprobada la formula, el resultado puede materializarse como un dataset derivado;
+- el indicador queda disponible para consulta y reutilizacion dentro del sistema.
+
+Esta logica convierte al modulo en una extension natural del flujo institucional del SICGAD, ya que toma datos oficiales y los transforma en informacion analitica tambien formalizada.
+
+3.1.4 Avance funcional del modulo
+
+3.1.4.1 Seleccion flexible de variables
+
+Uno de los avances mas relevantes del modulo es la flexibilidad para elegir variables de calculo. El sistema no obliga a trabajar con un conjunto rigido de indicadores predefinidos, sino que permite seleccionar distintas columnas numericas provenientes de esquemas aprobados y activos de una entidad.
+
+Este enfoque ofrece las siguientes ventajas:
+
+- adaptacion a diferentes necesidades de gestion y analisis;
+- posibilidad de construir indicadores especificos segun el problema institucional;
+- aprovechamiento de datos ya disponibles dentro del sistema;
+- mayor autonomia para el diseno de indicadores sin requerir desarrollos separados.
+
+En terminos practicos, si existen variables relacionadas con produccion, costos, volumenes, rendimiento, avance u otras magnitudes cuantificables, estas pueden convertirse en insumos para el calculo de nuevos indicadores.
+
+3.1.4.2 Construccion de formulas con expresiones definidas por el usuario
+
+El modulo permite definir formulas de manera clara mediante aliases o referencias simples, lo que facilita su construccion y comprension. En lugar de trabajar con expresiones complejas basadas en nombres extensos de columnas, el sistema permite componer la formula usando variables identificadas de manera sencilla.
+
+Este mecanismo aporta:
+
+- mayor claridad en la definicion del calculo;
+- facilidad de lectura y revision de la formula;
+- menor riesgo de errores durante la configuracion;
+- mayor accesibilidad para usuarios responsables del analisis.
+
+3.1.4.3 Validacion de consistencia
+
+La flexibilidad del modulo se complementa con reglas de control que preservan la consistencia tecnica del indicador. Una de las validaciones mas importantes es la relacionada con la periodicidad de las variables. El sistema evita combinar libremente datos que pertenecen a frecuencias incompatibles, como registros diarios y mensuales dentro de una misma formula.
+
+Este control permite:
+
+- proteger la calidad metodologica del indicador;
+- evitar resultados tecnicamente inconsistentes;
+- asegurar que la interpretacion del resultado sea valida;
+- mantener coherencia entre la formula y la naturaleza de los datos utilizados.
+
+3.1.4.4 Calculo sobre periodos comunes
+
+Otro aspecto relevante del avance funcional consiste en que el sistema calcula resultados sobre periodos comunes con datos completos. Esto significa que no se generan indicadores a partir de cruces incompletos o de informacion parcial, sino sobre la interseccion real donde todas las variables requeridas disponen de datos publicados.
+
+Este criterio aporta:
+
+- mayor consistencia en el resultado final;
+- reduccion del riesgo de calculos sobre vacios o faltantes;
+- mejor interpretacion de la serie resultante;
+- mayor confianza en el uso posterior del indicador.
+
+3.1.4.5 Vista preliminar o preview
+
+Antes de aprobar una formula, el sistema permite visualizar un adelanto de sus resultados mediante un grafico y una tabla compacta. Esta funcionalidad constituye una etapa de comprobacion previa, orientada a verificar si el comportamiento del indicador es coherente con la logica esperada.
+
+El preview resulta valioso porque:
+
+- permite revisar la formula antes de su aprobacion definitiva;
+- ayuda a identificar inconsistencias o comportamientos no esperados;
+- ofrece una comprobacion visual del resultado;
+- fortalece la confianza del usuario en el calculo realizado.
+
+3.1.4.6 Materializacion del indicador
+
+Una vez aprobada la formula, el sistema puede materializar el resultado como un dataset derivado propio del SICGAD. Este aspecto representa un avance institucional importante, porque el indicador deja de ser un calculo temporal y pasa a formar parte del patrimonio informativo del sistema.
+
+La materializacion permite:
+
+- conservar resultados por periodo dentro del entorno institucional;
+- reutilizar el indicador en consultas y analisis posteriores;
+- evitar recalculos manuales repetitivos;
+- consolidar el indicador como informacion derivada formal y trazable.
+
+3.1.4.7 Recalculo sobre nueva informacion publicada
+
+El modulo tambien contempla la posibilidad de recalcular formulas aprobadas cuando se publican nuevos datos de origen. Esto implica que el indicador no queda congelado, sino que puede evolucionar de acuerdo con la actualizacion de la base oficial del sistema.
+
+Este avance contribuye a:
+
+- mantener vigencia en los resultados;
+- reducir trabajo manual de actualizacion;
+- asegurar consistencia entre datos base e indicador derivado;
+- fortalecer el uso continuo del modulo en la operacion institucional.
+
+3.1.5 Valor institucional del avance alcanzado
+
+Desde una perspectiva institucional, el valor principal del modulo radica en que combina flexibilidad y control. Es flexible porque permite elegir variables y construir formulas adaptadas a necesidades reales. Pero al mismo tiempo es controlado, porque trabaja sobre datos validados, aplica reglas de consistencia, ofrece una etapa previa de revision y conserva trazabilidad sobre el resultado final.
+
+El modulo fortalece la capacidad del SICGAD para:
+
+- transformar datos operativos en conocimiento util;
+- construir indicadores de rendimiento, eficiencia, avance o relacion entre variables;
+- reducir la dependencia de procesos analiticos externos;
+- institucionalizar metodologias de calculo dentro de una plataforma comun;
+- ampliar el valor de la informacion ya cargada, validada y publicada.
+
+En ese sentido, este avance proyecta al SICGAD no solo como una herramienta de registro y validacion, sino tambien como una plataforma capaz de apoyar procesos de interpretacion y medicion del desempeno institucional.
+
+3.1.6 Estado actual
+
+En sintesis, el modulo de formulas de desempeno constituye un avance funcional relevante dentro del SICGAD, al permitir la construccion de indicadores calculados de manera ordenada, trazable y reutilizable. Gracias a la flexibilidad para seleccionar variables, a la posibilidad de definir expresiones propias y a la materializacion de resultados como datasets derivados, el sistema amplía de manera significativa su capacidad analitica y fortalece su utilidad institucional como herramienta integral de gestion, validacion, analisis y seguimiento de informacion.

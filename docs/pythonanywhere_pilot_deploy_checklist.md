@@ -12,6 +12,10 @@ Guia completa:
 - WSGI: `/var/www/lfl_pythonanywhere_com_wsgi.py`
 - Dominio: `https://lfl.pythonanywhere.com/`
 
+Nota:
+- para cuenta gratuita, este flujo se ejecuta desde `Consoles -> Bash`
+- no requiere SSH
+
 ## 1. Bash (primera vez)
 ```bash
 cd ~
@@ -132,10 +136,42 @@ Validar tambien:
 - `Web` -> `server log`
 
 ## 10. Redeploy rapido (nuevo commit)
+
+Antes de `git pull`, elegir estrategia para `db.sqlite3`.
+
+### 10.A Preservar base actual del servidor
+Usar cuando PythonAnywhere ya contiene datos del piloto que quieres mantener.
+
 ```bash
 cd ~/sicgad
 source ~/.virtualenvs/sicgad-pilot/bin/activate
 
+cp db.sqlite3 ~/db.sqlite3.prod.backup.$(date +%Y%m%d_%H%M%S)
+git update-index --no-skip-worktree db.sqlite3 || true
+mv db.sqlite3 ~/db.sqlite3.prod.current
+git pull
+cp ~/db.sqlite3.prod.current ~/sicgad/db.sqlite3
+git update-index --skip-worktree db.sqlite3
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+python manage.py check --deploy
+```
+
+Luego:
+- `Web` -> `Reload`
+
+### 10.B Reemplazar base del servidor con la del repo
+Usar cuando tu fuente de verdad es el `db.sqlite3` que acabas de subir al repo.
+
+```bash
+cd ~/sicgad
+source ~/.virtualenvs/sicgad-pilot/bin/activate
+
+cp db.sqlite3 ~/db.sqlite3.before_repo_pull.$(date +%Y%m%d_%H%M%S)
+git update-index --no-skip-worktree db.sqlite3 || true
+git restore db.sqlite3
 git pull
 pip install -r requirements.txt
 python manage.py migrate
@@ -151,6 +187,8 @@ Si el reload falla justo despues del update:
 - revisar `error log`
 - confirmar `SECRET_KEY`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` y flags HTTPS en `.env`
 - confirmar que `.env` no fue reemplazado por una plantilla insegura
+- confirmar que elegiste la estrategia correcta para `db.sqlite3`
+- si faltan datos del modulo `projects`, datasets o cargas, revisar primero si la base activa fue preservada o reemplazada
 
 ## 11. Backup SQLite (recomendado)
 ```bash

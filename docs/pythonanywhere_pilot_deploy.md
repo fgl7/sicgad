@@ -63,6 +63,10 @@ Si luego necesitas migrar archivos reales:
 
 ## 2. Crear el entorno en PythonAnywhere (Bash)
 
+Nota para cuenta gratuita:
+- esta guia asume uso desde la consola `Bash` del panel de PythonAnywhere
+- no depende de acceso SSH
+
 Abre una consola `Bash` en PythonAnywhere y ejecuta:
 
 ```bash
@@ -145,6 +149,13 @@ Importante:
 
 ### 4.1 SQLite
 Como `db.sqlite3` esta en Git, ya llega al clonar.
+
+Regla operativa importante:
+- en este piloto existen dos estrategias validas para `db.sqlite3`
+- `preservar base del servidor`: usar cuando PythonAnywhere ya tiene datos operativos que quieres mantener
+- `reemplazar con snapshot del repo`: usar cuando tu fuente de verdad actual es la base local versionada en Git y quieres llevarla completa al piloto
+
+No mezcles ambas estrategias en el mismo redeploy sin tener claro el objetivo.
 
 Verificar:
 ```bash
@@ -300,13 +311,66 @@ npm run build:tailwind
 Y sube el archivo generado:
 - `static/css/tailwind.generated.css`
 
-### 10.1 En PythonAnywhere
+Si tambien cambiaste datos del piloto y quieres que PythonAnywhere reciba exactamente tu estado local:
+- incluir `db.sqlite3` en el commit/push
+- confirmar que realmente deseas reemplazar la base actual del servidor
+
+### 10.1 Elegir estrategia para `db.sqlite3`
+Antes de hacer `git pull`, decide una de estas rutas:
+
+#### Opcion A. Preservar la base actual del servidor
+Usa esta opcion si PythonAnywhere ya tiene datos mas recientes o si no quieres sobrescribirlos con la base del repo.
+
 ```bash
 cd ~/sicgad
 source ~/.virtualenvs/sicgad-pilot/bin/activate
 
+cp db.sqlite3 ~/db.sqlite3.prod.backup.$(date +%Y%m%d_%H%M%S)
+git update-index --no-skip-worktree db.sqlite3 || true
+mv db.sqlite3 ~/db.sqlite3.prod.current
+git pull
+cp ~/db.sqlite3.prod.current ~/sicgad/db.sqlite3
+git update-index --skip-worktree db.sqlite3
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+python manage.py check --deploy
+```
+
+Resultado:
+- el codigo y assets se actualizan desde Git
+- la base de datos activa sigue siendo la del servidor
+
+#### Opcion B. Reemplazar la base del servidor con la del repo
+Usa esta opcion si tu fuente de verdad es `db.sqlite3` local versionada en Git y quieres que PythonAnywhere quede exactamente igual a ese snapshot.
+
+```bash
+cd ~/sicgad
+source ~/.virtualenvs/sicgad-pilot/bin/activate
+
+cp db.sqlite3 ~/db.sqlite3.before_repo_pull.$(date +%Y%m%d_%H%M%S)
+git update-index --no-skip-worktree db.sqlite3 || true
+git restore db.sqlite3
 git pull
 pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py check
+python manage.py check --deploy
+```
+
+Resultado:
+- entra el `db.sqlite3` del commit recien subido
+- la base anterior del servidor queda solo como backup
+
+### 10.2 Comandos comunes post-update
+En ambos casos, el bloque minimo de validacion sigue siendo:
+
+```bash
+cd ~/sicgad
+source ~/.virtualenvs/sicgad-pilot/bin/activate
+
 python manage.py migrate
 python manage.py collectstatic --noinput
 python manage.py check
@@ -321,8 +385,10 @@ Si falla justo despues del update:
 - revisar que `.env` siga intacto
 - confirmar `SECRET_KEY`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`
 - confirmar que `Force HTTPS` siga activo
+- confirmar que elegiste la estrategia correcta para `db.sqlite3`
+- si faltan proyectos/datasets/cargas tras el redeploy, revisar primero si la base activa del servidor fue preservada o reemplazada
 
-### 10.2 Si cambian datos o archivos
+### 10.3 Si cambian datos o archivos
 Si necesitas reemplazar el snapshot:
 - respaldar primero `db.sqlite3`
 - luego subir el archivo nuevo o ejecutar la migracion/carga definida por el proyecto

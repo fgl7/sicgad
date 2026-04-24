@@ -1,149 +1,70 @@
 3.1 Avance del sistema
 
-En el marco del fortalecimiento de la gestión institucional de información, se ha desarrollado el Sistema Integral de Carga, Gestión y Análisis de Datos (SICGAD), concebido como una plataforma orientada a centralizar, ordenar, validar, resguardar y poner a disposición información oficial para fines de seguimiento, análisis y toma de decisiones. El avance alcanzado a la fecha permite afirmar que el sistema ya no se encuentra en una etapa meramente conceptual, sino en una fase operativa funcional, con módulos integrados y una lógica de trabajo alineada a necesidades institucionales concretas.
+En el marco de una demostración institucional para la Agencia Boliviana de Energía Nuclear (ABEN), el Sistema Integral de Carga, Gestión, Validación y Análisis de Datos Institucionales (SICGAD) se presenta como una plataforma orientada a centralizar, ordenar, validar, resguardar y poner a disposición información oficial para seguimiento, análisis y toma de decisiones ejecutivas.
 
-La implementación del SICGAD responde a limitaciones recurrentes en la gestión de información. Entre ellas destacan la dispersión de datos en archivos, correos y distintos medios; la dependencia de solicitudes manuales para obtener información de otras áreas o entidades; la dificultad para identificar con certeza cuál es la versión oficial de un dato; la ausencia de trazabilidad completa sobre quién carga, revisa o aprueba información; y la falta de una base consolidada que permita disponer de indicadores, visualizaciones y mecanismos de consulta y descarga en tiempo oportuno. A ello se suma un problema de continuidad operativa, ya que cuando la información no se encuentra organizada en un entorno común, la rotación de personal puede afectar la recuperación, comprensión y uso eficiente de los datos.
-
-Frente a este escenario, el SICGAD constituye un avance significativo porque establece una lógica institucional completa para el tratamiento de la información. El sistema permite que los datos no solo sean almacenados, sino que sigan un flujo ordenado desde su registro inicial hasta su validación y posterior publicación como información oficial. Este enfoque contribuye a reducir la burocracia asociada al intercambio de información, mejora la confiabilidad de los registros y genera condiciones para un uso más eficiente de los datos en procesos técnicos, operativos y ejecutivos. Asimismo, habilita que usuarios cargadores y usuarios externos autorizados, como el Ministerio de Economía y Finanzas Públicas (MEFP), puedan consultar y descargar información oficial directamente desde la plataforma, sin necesidad de canalizar notas formales de solicitud a distintas instancias del sector energético, incluido el MHE y sus entidades bajo tuición.
+La demostración muestra cómo SICGAD puede apoyar a la Dirección General Ejecutiva de la ABEN en el seguimiento de medicina nuclear y radioterapia, investigación y desarrollo nuclear, radiofarmacia, irradiación multipropósito, mantenimiento de equipos críticos, proyectos estratégicos, seguridad radiológica, calidad y cumplimiento.
 
 3.1.1 Problemática que atiende el sistema
 
-El desarrollo del SICGAD permite atender de manera progresiva los siguientes problemas institucionales:
+SICGAD atiende problemas frecuentes de gestión institucional:
 
-- dispersión de información en diferentes medios y formatos;
+- dispersión de información en archivos, correos y repositorios aislados;
 - dependencia de gestiones manuales para solicitar, recibir y consolidar datos;
-- necesidad de remitir notas o solicitudes formales a diferentes instancias para obtener información oficial requerida;
 - dificultad para identificar la versión oficial y vigente de la información;
-- escasa trazabilidad sobre cargas, revisiones, aprobaciones y cambios;
-- limitada disponibilidad de indicadores y reportes oportunos para autoridades y equipos técnicos;
-- riesgo de pérdida de continuidad operativa ante cambios de personal o rotación de funciones.
-
-En este sentido, el sistema representa una respuesta concreta orientada a ordenar el ciclo de vida de la información, establecer responsabilidades y habilitar un entorno común de trabajo institucional.
+- baja trazabilidad sobre cargas, revisiones, aprobaciones y cambios;
+- limitada disponibilidad de indicadores oportunos para autoridades y equipos técnicos;
+- riesgo de pérdida de continuidad operativa ante cambios de personal.
 
 3.1.2 Lógica general de funcionamiento
 
-El SICGAD ha sido estructurado sobre una base organizacional que reconoce niveles institucionales y entidades responsables. Esta estructura constituye el eje de ordenamiento del sistema, ya que sobre ella se asignan usuarios, se delimitan alcances, se vinculan esquemas de datos y se controla el acceso a la información.
+El sistema se organiza sobre una estructura institucional de sector, subsector, categoría y entidad. Sobre esta estructura se asignan usuarios, se delimitan alcances, se vinculan esquemas de datos y se controla el acceso a la información.
 
-La lógica de funcionamiento puede resumirse en la siguiente secuencia:
+La secuencia operativa es:
 
-- organización de la estructura institucional y definición de entidades responsables;
+- organización de estructura institucional y entidades responsables;
 - creación de usuarios con perfiles y alcances diferenciados;
-- definición de esquemas de datos según la necesidad operativa;
+- definición de esquemas de datos según la necesidad institucional;
 - carga de información periódica, histórica o manual;
-- revisión y validación institucional de los registros;
+- revisión y validación institucional de registros;
 - publicación de información oficial para visualización, consulta, descarga y análisis;
-- registro de trazabilidad y auditoría sobre las acciones efectuadas.
-
-Esta secuencia ordenada constituye uno de los principales aportes del sistema, ya que permite pasar de una gestión fragmentada de la información a un modelo institucional más coherente, controlado y reutilizable.
+- trazabilidad y auditoría de acciones relevantes.
 
 3.1.3 Avance por módulos
 
-3.1.3.1 Módulo de gestión de usuarios y accesos
+3.1.3.1 Gestión de usuarios y accesos
 
-Este módulo permite crear usuarios y asignar perfiles diferenciados según la función que desempeñan dentro del flujo institucional. El sistema contempla perfiles de administración, carga, validación y visualización, cada uno con permisos y alcances específicos.
+El sistema contempla perfiles de administración, carga, validación y visualización, cada uno con permisos y alcances específicos. Esto fortalece el control interno, evita accesos no pertinentes y permite que cada actor interactúe con las funciones y datos que le corresponden.
 
-Su aporte institucional se expresa en los siguientes aspectos:
+3.1.3.2 Estructura institucional
 
-- fortalece el control interno sobre la información;
-- evita accesos no pertinentes;
-- permite que cada actor interactúe únicamente con las funciones y datos que le corresponden;
-- facilita la configuración de perfiles de visualización adaptados a necesidades institucionales específicas.
+SICGAD permite representar la organización institucional mediante niveles jerárquicos y entidades responsables. Esta base ordena responsabilidades, define alcances de usuarios y vincula correctamente cargas, esquemas y consultas.
 
-3.1.3.2 Módulo de gestión de estructura organizacional
+3.1.3.3 Esquemas de datos
 
-El sistema incorpora la administración de niveles como sector, subsector, categoría y entidad. Aunque se trata de una funcionalidad de base, su importancia es estructural, ya que permite representar la organización real sobre la cual se sustenta la gestión de datos.
+El sistema permite definir estructuras flexibles para distintos tipos de información institucional. Los esquemas aprobados establecen columnas, tipos de dato, periodicidades y flujos de validación.
 
-Este módulo permite:
+3.1.3.4 Carga de información
 
-- ordenar responsabilidades institucionales;
-- definir el alcance real de usuarios y procesos;
-- vincular correctamente cargas, esquemas y consultas;
-- asegurar consistencia entre la estructura organizacional y la operación del sistema.
+SICGAD admite cargas históricas, periódicas y manuales. El uso de plantillas y validaciones de formato reduce errores y mejora la consistencia de los registros.
 
-3.1.3.3 Módulo de diseño y administración de esquemas de datos
+3.1.3.5 Validación
 
-Uno de los avances más importantes del SICGAD es la posibilidad de definir esquemas de datos acordes a distintas necesidades operativas. El sistema no depende de una única estructura fija, sino que admite tablas y configuraciones específicas según el tipo de información que debe registrarse.
+La información cargada no se publica automáticamente. Debe ser revisada y aprobada por responsables definidos, garantizando que los indicadores y visualizaciones se alimenten de registros verificados.
 
-Este módulo aporta:
+3.1.3.6 Visualización, consulta e indicadores
 
-- flexibilidad para adaptarse a diferentes realidades operativas;
-- orden en la definición de columnas, tipos de dato y periodicidades;
-- control institucional mediante flujos de revisión y aprobación de esquemas;
-- base formal para estandarizar progresivamente la información institucional.
+La información validada se transforma en tablas, gráficos, indicadores y mecanismos de descarga según el perfil y alcance de cada usuario. Para la demo ABEN se priorizan KPIs ejecutivos de servicios nucleares, mantenimiento, proyectos y cumplimiento.
 
-3.1.3.4 Módulo de carga de datos
+3.1.3.7 Auditoría y trazabilidad
 
-El SICGAD dispone de capacidades para registrar información mediante cargas históricas, periódicas, manuales y según la necesidad del proceso. Esto permite tanto la operación continua del sistema como la incorporación de datos acumulados de períodos anteriores de manera obligatoria para construir un histórico oficial de datos.
+El sistema registra acciones relevantes como creación, modificación, envío, aprobación o rechazo de información y configuraciones. Esta capacidad permite reconstruir el historial institucional del dato.
 
-Los principales avances en este módulo son:
+3.1.3.8 Proyectos y convenios
 
-- ingreso ordenado de información dentro de un entorno institucional;
-- uso de plantillas y flujos definidos para reducir errores;
-- menor dependencia de medios informales de intercambio;
-- el set de datos históricos es el primero en validarse;
-- mejora de la consistencia y calidad de los registros.
+El módulo de proyectos permite registrar iniciativas estratégicas, vincularlas con información validada y habilitar reportes ejecutivos para seguimiento físico, financiero y operativo.
 
-3.1.3.5 Módulo de validación
+3.1.4 Valor institucional
 
-El sistema incorpora un flujo formal mediante el cual la información cargada no pasa automáticamente a ser considerada oficial, sino que debe ser revisada y aprobada por los responsables correspondientes. Esta etapa constituye un control previo a la publicación de datos.
+SICGAD permite pasar de procesos manuales, datos dispersos y reportes tardíos a una gestión institucional digital, trazable, validada y orientada a decisiones ejecutivas.
 
-Desde la perspectiva institucional, este módulo permite:
-
-- fortalecer la confiabilidad de la información;
-- asegurar responsabilidad sobre los datos publicados;
-- reducir el riesgo de utilizar información no confirmada;
-- garantizar que reportes, indicadores y visualizaciones se alimenten de registros previamente verificados.
-
-3.1.3.6 Módulo de visualización, consulta e indicadores
-
-Sobre la base de información ya validada, el SICGAD incorpora un módulo de visualización y consulta que transforma los datos aprobados en tablas, gráficos, vistas de seguimiento y mecanismos de descarga accesibles según el perfil y alcance de cada usuario.
-
-Este módulo tiene especial valor porque:
-
-- facilita a las autoridades la observación de indicadores de interés;
-- permite a los equipos técnicos trabajar sobre una base oficial ya consolidada;
-- permite que usuarios cargadores y usuarios externos autorizados accedan y descarguen información oficial según su alcance, sin recurrir a requerimientos formales entre distintas instancias;
-- reduce tiempos de recopilación y preparación de información para análisis;
-- mejora la disponibilidad de insumos para seguimiento y toma de decisiones.
-
-3.1.3.7 Módulo de auditoría y trazabilidad
-
-El sistema registra acciones relevantes como la creación, modificación, envío, aprobación o rechazo de información y configuraciones. Esta capacidad fortalece la transparencia del proceso y permite reconstruir el historial de acciones efectuadas dentro del sistema.
-
-Su aporte institucional se refleja en:
-
-- mayor control interno sobre el ciclo de vida de la información;
-- capacidad de seguimiento sobre decisiones y cambios realizados;
-- fortalecimiento de la transparencia y la responsabilidad funcional;
-- mejora de la continuidad operativa al conservar memoria institucional del proceso.
-
-3.1.3.8 Módulo de proyectos y convenios
-
-El SICGAD incorpora además un módulo orientado al registro y seguimiento de proyectos y convenios, permitiendo vincular iniciativas con esquemas de datos relacionados y habilitar reportes asociados a información validada.
-
-Este componente amplía el alcance del sistema debido a que:
-
-- permite ordenar iniciativas específicas dentro de un entorno institucional;
-- somete dichas iniciativas a flujos de aprobación;
-- facilita la vinculación entre proyectos, datos y reportes;
-- aporta una orientación adicional de gestión y monitoreo ejecutivo.
-
-3.1.4 Valor institucional del avance alcanzado
-
-Los avances descritos permiten identificar una lógica de funcionamiento ya consolidada, donde la estructura institucional define responsables y alcances; los usuarios operan según perfiles diferenciados; los esquemas de datos establecen la forma en que la información debe registrarse; la carga incorpora datos periódicos, históricos o manuales; la validación asegura control previo a la publicación; la visualización transforma los datos validados en información útil para seguimiento; y la auditoría conserva la trazabilidad integral del proceso.
-
-Desde una perspectiva institucional, el avance del sistema debe valorarse no solo por la existencia de módulos funcionales, sino por la manera en que estos se articulan para resolver problemas reales. En particular, el SICGAD contribuye a:
-
-- centralizar información previamente dispersa;
-- reducir tiempos de respuesta y consolidación;
-- disminuir la necesidad de solicitudes formales para acceder a información oficial entre el MHE, sus entidades bajo tuición y usuarios externos autorizados;
-- ordenar responsabilidades entre quienes cargan, validan y consumen información;
-- fortalecer la confiabilidad de los datos;
-- mejorar la disponibilidad de insumos para análisis y toma de decisiones;
-- favorecer la continuidad operativa dentro de la institución.
-
-En este contexto, puede señalarse que el SICGAD representa un avance concreto hacia la modernización de la gestión de información, al proporcionar una base oficial, trazable y estructurada para el trabajo institucional.
-
-3.1.5 Estado actual
-
-Finalmente, corresponde mencionar que este avance ya ha sido materializado en una puesta en producción piloto del sistema, la cual ha permitido habilitar un entorno funcional para su uso inicial. Del mismo modo, el sistema ya ha sido socializado con usuarios dentro del VMEERE, aspecto que constituye un paso relevante para recoger observaciones, fortalecer la apropiación institucional de la herramienta y continuar su consolidación progresiva como plataforma de gestión, validación y análisis de información.
+En la demostración ABEN, todo dato es ficticio y tiene fines exclusivamente demostrativos.

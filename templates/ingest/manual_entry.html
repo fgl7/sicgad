@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Captura manual de datos - SICGAD{% endblock %}
-{% block page_title %}Captura manual de datos{% endblock %}
+{% block title %}Captura manual de información - SICGAD{% endblock %}
+{% block page_title %}Captura manual de información{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
@@ -12,11 +12,11 @@
   <div class="page-shell fade-in">
     <div class="page-hero">
       <div class="page-hero__content">
-        <p class="page-kicker">Ingest</p>
+        <p class="page-kicker">Carga institucional</p>
         <h2 class="page-title">Ingreso manual</h2>
         <p class="page-subtitle">
-          Completa los valores directamente en la tabla. Cada fila representa un registro del dataset diario seleccionado.
-          Despues podras revisar el borrador desde el historial y enviarlo a validacion.
+          Complete los valores directamente en la tabla. Cada fila representa un registro del conjunto diario seleccionado.
+          Después podrá revisar el borrador desde el historial y enviarlo a validación.
         </p>
       </div>
     </div>
@@ -58,16 +58,16 @@
         {% if row_formset %}
           {{ row_formset.management_form }}
           <div class="section-heading">
-            <span class="text-[11px] text-slate-400">Completa al menos una fila. Los campos marcados como requeridos deben llenarse.</span>
+            <span class="text-[11px] text-slate-400">Complete al menos una fila. Los campos marcados como requeridos deben llenarse.</span>
             <div class="flex flex-wrap items-center gap-3 text-[11px]">
               {% if can_remove_rows %}
                 <a href="?dataset_type={{ selected_dataset.pk }}&rows={{ rows_less_value }}" class="text-amber-300 hover:underline">
-                  Quitar ultima fila
+                  Quitar última fila
                 </a>
               {% endif %}
               {% if can_add_rows %}
                 <a href="?dataset_type={{ selected_dataset.pk }}&rows={{ rows_more_value }}" class="text-emerald-400 hover:underline">
-                  Agregar mas filas vacias
+                  Agregar más filas vacías
                 </a>
               {% endif %}
             </div>
@@ -130,7 +130,7 @@
           {% endif %}
         {% else %}
           <div class="rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-slate-300">
-            Selecciona un dataset base para mostrar los campos disponibles y capturar datos manualmente.
+            Seleccione un conjunto base para mostrar los campos disponibles y capturar datos manualmente.
           </div>
         {% endif %}
 
@@ -139,16 +139,16 @@
             Volver a carga por archivo
           </a>
           <button type="submit" class="btn-primary" {% if not row_formset %}disabled{% endif %}>
-            Guardar dataset manual
+            Guardar información manual
           </button>
         </div>
       </form>
     </section>
 
     <section class="glass-card rounded-[1.75rem] p-4 sm:p-6 text-xs">
-      <h2 class="mb-3 text-sm font-semibold">Ultimas cargas</h2>
+      <h2 class="mb-3 text-sm font-semibold">Últimas cargas</h2>
       <p class="mb-3 text-[11px] text-slate-400">
-        Consulta rapidamente los ultimos borradores o envios recientes.
+        Consulte rápidamente los últimos borradores o envíos recientes.
       </p>
       <div class="space-y-2">
         {% for inst in instances %}
@@ -162,7 +162,7 @@
             </div>
           </div>
         {% empty %}
-          <p class="text-slate-500">Aun no registras cargas.</p>
+          <p class="text-slate-500">Aún no existen cargas registradas para este usuario.</p>
         {% endfor %}
       </div>
     </section>

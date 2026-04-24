@@ -4,28 +4,27 @@
 {% block title %}SICGAD para ABEN | Demo Institucional{% endblock %}
 
 {% block extra_head %}
-<!-- Opcional si landing.css sigue vivo -->
-<link rel="stylesheet" href="{% static 'css/landing.css' %}?v=8" />
+<link rel="stylesheet" href="{% static 'css/landing.css' %}?v=10" />
 {% endblock %}
 
-{% block body_class %}min-h-screen bg-[#140a28] text-slate-200 antialiased font-sans{% endblock %}
+{% block body_class %}min-h-screen saas-hybrid sicgad-landing text-slate-700 antialiased font-sans{% endblock %}
+
+{% block background_layer %}
+<div class="sicgad-background-layer fixed inset-0 -z-10" aria-hidden="true"></div>
+{% endblock %}
 
 {% block page_layout %}
-{% block background_layer %}
-{{ block.super }}
-{% endblock %}
-
 <a href="#contenido" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-full focus:bg-primary focus:text-white">
   Saltar al contenido
 </a>
 
 <div class="app-shell">
-  <main id="contenido" class="relative z-10 min-h-screen flex flex-col justify-center px-4 sm:px-6 py-12 lg:px-8">
+  <main id="contenido" class="landing-main relative z-10 min-h-screen flex flex-col justify-center px-4 sm:px-6 py-12 lg:px-8">
     
     <!-- Top System Status -->
     <div class="absolute top-8 right-8 flex justify-end">
-      <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.3em] bg-surface backdrop-blur border border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(16,185,129,0.8)] animate-pulse" aria-hidden="true"></span>
+      <div class="landing-demo-badge inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.3em] bg-surface backdrop-blur border border-emerald-500/30 text-emerald-400">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true"></span>
         <span>Entorno demostrativo con datos ficticios</span>
       </div>
     </div>
@@ -35,7 +34,7 @@
       
       <!-- Headers -->
       <div class="text-center space-y-6">
-        <div class="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-surface-light border border-primary/40 shadow-neon">
+        <div class="landing-emblem mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-surface-light border border-primary/40">
           <img src="{% static 'escudo.png' %}" alt="Escudo del Estado Plurinacional de Bolivia" class="h-24 w-24 drop-shadow-2xl" />
         </div>
         
@@ -47,7 +46,7 @@
         <div class="space-y-4 max-w-3xl mx-auto">
           <p class="text-xs sm:text-sm text-slate-400 tracking-wider">Plataforma demostrativa para gesti&oacute;n institucional.</p>
           <h1 class="text-3xl sm:text-4xl lg:text-6xl font-bold text-white tracking-tight leading-tight">
-            SICGAD para ABEN
+            SICGAD
           </h1>
           <p class="text-sm sm:text-base font-semibold uppercase tracking-[0.28em] text-accent">
             Sistema Integral de Carga, Gesti&oacute;n, Validaci&oacute;n y An&aacute;lisis de Datos Institucionales
@@ -61,12 +60,12 @@
         <div class="pt-8 flex justify-center">
           {% if user.is_authenticated %}
           <a href="{% url 'home' %}"
-            class="inline-flex items-center justify-center rounded-full bg-surface border border-primary text-sm font-semibold text-white px-8 py-4 transition-all hover:bg-primary/20 hover:shadow-neon hover:border-primary/80">
+            class="landing-primary-cta inline-flex items-center justify-center rounded-full bg-surface border border-primary text-sm font-semibold text-white px-8 py-4 transition-all hover:bg-primary/20 hover:border-primary/80">
             Volver al Panel de control
           </a>
           {% else %}
           <a href="{% url 'login' %}" 
-             class="group relative inline-flex items-center justify-center rounded-full overflow-hidden border border-primary bg-primary/10 px-8 py-4 text-sm font-semibold tracking-wider text-white shadow-neon transition duration-300 ease-out hover:bg-primary/30">
+             class="landing-primary-cta group relative inline-flex items-center justify-center rounded-full overflow-hidden border border-primary bg-primary/10 px-8 py-4 text-sm font-semibold tracking-wider text-white transition duration-300 ease-out hover:bg-primary/30">
             <span class="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-100%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(100%)]">
               <div class="relative h-full w-8 bg-white/20"></div>
             </span>
@@ -86,10 +85,10 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
         
         <!-- Official Publications -->
-        <div class="bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-primary/50 hover:shadow-neon transition-all duration-300 group flex flex-col justify-between">
+        <div class="landing-stat-card landing-stat-card--taupe bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-primary/50 transition-all duration-300 group flex flex-col justify-between">
           <div>
             <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(176,82,255,0.8)]"></span>
+              <span class="w-2 h-2 rounded-full bg-primary"></span>
               Publicaciones oficiales
             </p>
             <p class="text-4xl lg:text-5xl font-bold text-white tracking-tight group-hover:text-primary transition-colors">{{ landing_stats.published_total|default:"0" }}</p>
@@ -98,11 +97,11 @@
         </div>
 
         <!-- Datasets -->
-        <div class="bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-accent/50 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)] transition-all duration-300 group flex flex-col justify-between">
+        <div class="landing-stat-card landing-stat-card--blue bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-accent/50 transition-all duration-300 group flex flex-col justify-between">
           <div>
              <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_rgba(0,212,255,0.8)]"></span>
-              Datasets con datos
+              <span class="w-2 h-2 rounded-full bg-accent"></span>
+              Conjuntos de datos
             </p>
             <p class="text-4xl lg:text-5xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">{{ landing_stats.published_datasets|default:"0" }}</p>
           </div>
@@ -112,10 +111,10 @@
         </div>
 
         <!-- Coverage -->
-        <div class="bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-secondary/50 hover:shadow-neon-pink transition-all duration-300 group flex flex-col justify-between">
+        <div class="landing-stat-card landing-stat-card--teal bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-secondary/50 transition-all duration-300 group flex flex-col justify-between">
           <div>
              <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(255,42,133,0.8)]"></span>
+              <span class="w-2 h-2 rounded-full bg-secondary"></span>
               Cobertura Publicada
             </p>
             <p class="text-4xl lg:text-5xl font-bold text-white tracking-tight group-hover:text-secondary transition-colors">{{ landing_stats.published_sectors|default:"0" }}</p>
@@ -126,10 +125,10 @@
         </div>
 
         <!-- Institutions -->
-        <div class="bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300 group flex flex-col justify-between">
+        <div class="landing-stat-card landing-stat-card--green bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-emerald-500/50 transition-all duration-300 group flex flex-col justify-between">
           <div>
              <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
               Instituciones
             </p>
             <p class="text-4xl lg:text-5xl font-bold text-white tracking-tight group-hover:text-emerald-400 transition-colors">{{ landing_stats.institutions_total|default:"0" }}</p>

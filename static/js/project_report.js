@@ -62,12 +62,16 @@ document.addEventListener("DOMContentLoaded", function () {
     return {
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(15, 23, 42, 0.95)",
-        borderColor: "#1f2937",
-        textStyle: { color: "#e2e8f0", fontSize: isCompact ? 10 : 11 },
+        backgroundColor: "rgba(255, 253, 251, 0.96)",
+        borderColor: "rgba(146, 117, 99, 0.22)",
+        borderWidth: 1,
+        borderRadius: 12,
+        extraCssText: "box-shadow: 0 14px 34px rgba(48,43,38,.14); backdrop-filter: blur(12px);",
+        textStyle: { color: "#28292f", fontSize: isCompact ? 10 : 11 },
         axisPointer: {
           type: isBar ? "shadow" : "line",
-          lineStyle: { color: "#38bdf8", width: 1 },
+          lineStyle: { color: "#5b8dcc", width: 1 },
+          shadowStyle: { color: "rgba(91, 141, 204, 0.12)" },
         },
         valueFormatter: valueFormatter,
       },
@@ -77,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
         itemWidth: isCompact ? 10 : 14,
         itemHeight: isCompact ? 8 : 10,
         textStyle: {
-          color: "#cbd5e1",
+          color: "#6e717a",
           fontSize: isCompact ? 10 : 11,
           fontWeight: 700,
         },
@@ -92,10 +96,10 @@ document.addEventListener("DOMContentLoaded", function () {
       xAxis: {
         type: "category",
         data: labels,
-        axisLine: { lineStyle: { color: "rgba(148, 163, 184, 0.2)" } },
+        axisLine: { lineStyle: { color: "rgba(80, 70, 64, 0.16)" } },
         axisTick: { show: false },
         axisLabel: {
-          color: "#94a3b8",
+          color: "#6e717a",
           fontSize: isCompact ? 9 : 11,
           fontWeight: 700,
           interval: 0,
@@ -108,13 +112,13 @@ document.addEventListener("DOMContentLoaded", function () {
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
-          color: "#94a3b8",
+          color: "#6e717a",
           fontSize: isCompact ? 9 : 10,
           formatter: valueFormatter,
         },
         splitLine: {
           show: true,
-          lineStyle: { color: "rgba(148, 163, 184, 0.12)" },
+          lineStyle: { color: "rgba(80, 70, 64, 0.10)" },
         },
       },
       series: [
@@ -126,15 +130,15 @@ document.addEventListener("DOMContentLoaded", function () {
           symbol: "circle",
           symbolSize: isCompact ? 5 : 7,
           barMaxWidth: isBar ? (isCompact ? 22 : 36) : null,
-          lineStyle: { width: isCompact ? 2.2 : 3, color: "#38bdf8" },
+          lineStyle: { width: isCompact ? 2.2 : 3, color: "#5b8dcc" },
           itemStyle: {
-            color: "#38bdf8",
+            color: "#5b8dcc",
             borderRadius: isBar ? [8, 8, 0, 0] : 0,
           },
           label: {
             show: shouldShowPointLabels,
             position: "top",
-            color: "#7dd3fc",
+            color: "#5b8dcc",
             fontSize: 10,
             fontWeight: 700,
             formatter: ({ value }) => valueFormatter(value),
@@ -149,15 +153,15 @@ document.addEventListener("DOMContentLoaded", function () {
           symbol: "circle",
           symbolSize: isCompact ? 5 : 7,
           barMaxWidth: isBar ? (isCompact ? 22 : 36) : null,
-          lineStyle: { width: isCompact ? 2.2 : 3, color: "#34d399" },
+          lineStyle: { width: isCompact ? 2.2 : 3, color: "#34aa9a" },
           itemStyle: {
-            color: "#34d399",
+            color: "#34aa9a",
             borderRadius: isBar ? [8, 8, 0, 0] : 0,
           },
           label: {
             show: shouldShowPointLabels,
             position: "top",
-            color: "#6ee7b7",
+            color: "#149c79",
             fontSize: 10,
             fontWeight: 700,
             formatter: ({ value }) => valueFormatter(value),

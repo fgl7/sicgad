@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function () {
     "nov",
     "dic",
   ];
-  const authorityPalette = ["#f5b14f", "#33b6ff", "#23d3a6", "#8b7dff"];
+  const authorityPalette = ["#b89b86", "#5b8dcc", "#34aa9a", "#927563"];
 
   function parseDateValue(raw) {
     if (!raw && raw !== 0) {
@@ -308,7 +308,7 @@ document.addEventListener("DOMContentLoaded", function () {
     hint.setAttribute("data-presentation-hint", "kpi");
     hint.className =
       "pointer-events-none absolute left-1/2 top-14 z-20 -translate-x-1/2 rounded-full border border-cyan-300/20 bg-slate-950/85 px-3 py-1.5 text-[11px] font-medium text-cyan-100 shadow-lg shadow-black/30 opacity-0 transition-opacity duration-200";
-    hint.textContent = "Presiona Esc para salir de presentacion";
+    hint.textContent = "Presione Esc para salir de presentación";
     chartStage.appendChild(hint);
     return hint;
   }
@@ -724,7 +724,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const card = document.createElement("article");
         card.className = "authority-kpi-card authority-kpi-card-empty";
         card.innerHTML =
-          '<div class="authority-kpi-label">Métrica</div><div class="authority-kpi-value">--</div><div class="authority-kpi-trend">Selecciona un dataset</div>';
+          '<div class="authority-kpi-label">Indicador</div><div class="authority-kpi-value">--</div><div class="authority-kpi-trend">Seleccione información validada</div>';
         authorityCards.appendChild(card);
       }
       return;
@@ -990,8 +990,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const seriesColors = isAuthorityView
-      ? ["#f5b14f", "#33b6ff", "#23d3a6", "#8b7dff", "#f97393", "#39d1ff"]
-      : ["#6366f1", "#10b981", "#8b5cf6", "#f43f5e", "#f59e0b", "#06b6d4"];
+      ? ["#b89b86", "#5b8dcc", "#34aa9a", "#927563", "#b15c68", "#7f8e90"]
+      : ["#5b8dcc", "#34aa9a", "#b89b86", "#b15c68", "#a77f2d", "#7f8e90"];
     const showArea = seriesType === "line" && !stack && yCols.length === 1 && !executiveMode;
     const showSymbols = !executiveMode && rows.length <= 36;
     const barMaxWidth =
@@ -1043,9 +1043,9 @@ document.addEventListener("DOMContentLoaded", function () {
         baseSeries.lineStyle = {
           width: isAuthorityView ? 2.8 : 3,
           color: color,
-          shadowColor: isAuthorityView ? "rgba(0, 0, 0, 0.38)" : "rgba(0, 0, 0, 0.28)",
-          shadowBlur: executiveMode ? 6 : 10,
-          shadowOffsetY: executiveMode ? 2 : 4,
+          shadowColor: isAuthorityView ? "rgba(48, 43, 38, 0.14)" : "rgba(48, 43, 38, 0.12)",
+          shadowBlur: executiveMode ? 3 : 6,
+          shadowOffsetY: executiveMode ? 1 : 3,
           cap: "round",
           join: "round",
         };
@@ -1090,14 +1090,14 @@ document.addEventListener("DOMContentLoaded", function () {
       animationEasingUpdate: "cubicOut",
       tooltip: {
         trigger: "axis",
-        backgroundColor: isAuthorityView ? "rgba(6, 16, 32, 0.97)" : "rgba(15, 23, 42, 0.95)",
-        borderColor: isAuthorityView ? "rgba(51, 182, 255, 0.35)" : "rgba(99, 102, 241, 0.2)",
+        backgroundColor: isAuthorityView ? "rgba(255, 253, 251, 0.96)" : "rgba(255, 253, 251, 0.96)",
+        borderColor: isAuthorityView ? "rgba(146, 117, 99, 0.22)" : "rgba(91, 141, 204, 0.20)",
         borderWidth: 1,
         borderRadius: executiveMode ? 12 : 14,
         padding: executiveMode ? [8, 10] : [10, 12],
         extraCssText:
-          "box-shadow: 0 10px 30px rgba(2,6,23,.35); backdrop-filter: blur(8px);",
-        textStyle: { color: "#f8fafc", fontSize: 12, fontFamily: "Lexend" },
+          "box-shadow: 0 14px 34px rgba(48,43,38,.14); backdrop-filter: blur(12px);",
+        textStyle: { color: "#28292f", fontSize: 12, fontFamily: "Lexend" },
         formatter: function (params) {
           const items = Array.isArray(params) ? params : [params];
           if (!items.length) {
@@ -1121,11 +1121,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 value == null || value === "" ? null : Number.isFinite(Number(value)) ? Number(value) : null;
               return (
                 `<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:220px;margin-top:6px;">` +
-                `<div style="display:flex;align-items:center;gap:8px;color:#dbeafe;">` +
+                `<div style="display:flex;align-items:center;gap:8px;color:#6e717a;">` +
                 `<span style="width:8px;height:8px;border-radius:999px;background:${color};box-shadow:0 0 0 3px ${color}22;"></span>` +
                 `<span style="opacity:.95;">${seriesName}</span>` +
                 `</div>` +
-                `<div style="font-weight:700;color:#ffffff;">${formatMetricValue(numericValue)}${unit}</div>` +
+                `<div style="font-weight:700;color:#28292f;">${formatMetricValue(numericValue)}${unit}</div>` +
                 `</div>`
               );
             })
@@ -1133,8 +1133,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
           return (
             `<div style="font-family:Lexend, sans-serif;">` +
-            `<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#93c5fd;opacity:.9;margin-bottom:2px;">${xCol.label || xCol.name}</div>` +
-            `<div style="font-size:13px;font-weight:700;color:#f8fafc;">${title}</div>` +
+            `<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#927563;opacity:.9;margin-bottom:2px;">${xCol.label || xCol.name}</div>` +
+            `<div style="font-size:13px;font-weight:700;color:#28292f;">${title}</div>` +
             rowsHtml +
             `</div>`
           );
@@ -1142,11 +1142,11 @@ document.addEventListener("DOMContentLoaded", function () {
         axisPointer: {
           type: tooltipPointerType,
           lineStyle: {
-            color: isAuthorityView ? "rgba(51, 182, 255, 0.45)" : "rgba(99, 102, 241, 0.4)",
+            color: isAuthorityView ? "rgba(146, 117, 99, 0.42)" : "rgba(91, 141, 204, 0.40)",
             width: executiveMode ? 1.5 : 2,
           },
           shadowStyle: {
-            color: isAuthorityView ? "rgba(51, 182, 255, 0.08)" : "rgba(99, 102, 241, 0.06)",
+            color: isAuthorityView ? "rgba(184, 155, 134, 0.12)" : "rgba(91, 141, 204, 0.08)",
           },
           label: {
             show: false,
@@ -1162,7 +1162,7 @@ document.addEventListener("DOMContentLoaded", function () {
         itemHeight: executiveMode ? 6 : 8,
         itemGap: executiveMode ? 10 : 14,
         textStyle: {
-          color: isAuthorityView ? "#aec5e8" : "#475569",
+          color: isAuthorityView ? "#6e717a" : "#6e717a",
           fontSize: executiveMode ? 10 : 11,
           fontWeight: 600
         },
@@ -1185,36 +1185,36 @@ document.addEventListener("DOMContentLoaded", function () {
           brushSelect: false,
           borderRadius: 10,
           backgroundColor: isAuthorityView
-            ? "rgba(11, 24, 44, 0.7)"
-            : "rgba(15, 23, 42, 0.42)",
+            ? "rgba(255, 255, 255, 0.58)"
+            : "rgba(255, 255, 255, 0.50)",
           handleStyle: {
-            color: isAuthorityView ? "#1bc9ff" : "#6366f1",
-            borderColor: isAuthorityView ? "#0f2745" : "#1e293b",
-            shadowBlur: 8,
-            shadowColor: "rgba(0,0,0,.25)",
+            color: isAuthorityView ? "#b89b86" : "#5b8dcc",
+            borderColor: isAuthorityView ? "#927563" : "#5b8dcc",
+            shadowBlur: 6,
+            shadowColor: "rgba(48,43,38,.16)",
           },
           textStyle: {
-            color: isAuthorityView ? "#7ea1cc" : "#64748b",
+            color: isAuthorityView ? "#8a8d96" : "#8a8d96",
           },
           fillerColor: isAuthorityView
-            ? "rgba(27, 201, 255, 0.14)"
-            : "rgba(99, 102, 241, 0.08)",
+            ? "rgba(184, 155, 134, 0.18)"
+            : "rgba(91, 141, 204, 0.12)",
           dataBackground: {
             lineStyle: {
-              color: isAuthorityView ? "rgba(125, 162, 214, 0.35)" : "rgba(148, 163, 184, 0.3)",
+              color: isAuthorityView ? "rgba(146, 117, 99, 0.24)" : "rgba(110, 113, 122, 0.24)",
               width: 1,
             },
             areaStyle: {
-              color: isAuthorityView ? "rgba(59, 130, 246, 0.08)" : "rgba(99, 102, 241, 0.06)",
+              color: isAuthorityView ? "rgba(184, 155, 134, 0.08)" : "rgba(91, 141, 204, 0.07)",
             },
           },
           selectedDataBackground: {
             lineStyle: {
-              color: isAuthorityView ? "rgba(125, 162, 214, 0.65)" : "rgba(165, 180, 252, 0.55)",
+              color: isAuthorityView ? "rgba(146, 117, 99, 0.52)" : "rgba(91, 141, 204, 0.46)",
               width: 1.2,
             },
             areaStyle: {
-              color: isAuthorityView ? "rgba(51, 182, 255, 0.1)" : "rgba(99, 102, 241, 0.1)",
+              color: isAuthorityView ? "rgba(184, 155, 134, 0.12)" : "rgba(91, 141, 204, 0.10)",
             },
           },
           labelFormatter: xIsTime
@@ -1225,8 +1225,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 return truncateAxisLabel(value, 12);
               },
           borderColor: isAuthorityView
-            ? "rgba(27, 201, 255, 0.2)"
-            : "rgba(255, 255, 255, 0.03)",
+            ? "rgba(146, 117, 99, 0.16)"
+            : "rgba(80, 70, 64, 0.10)",
           showDataShadow: !executiveMode,
         },
       ],
@@ -1244,14 +1244,14 @@ document.addEventListener("DOMContentLoaded", function () {
         boundaryGap: seriesType === "bar",
         name: executiveMode ? "" : xCol.label || xCol.name,
         nameTextStyle: {
-          color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
+          color: isAuthorityView ? "#6e717a" : "#6e717a",
           fontSize: executiveMode ? 9 : 10,
           fontWeight: 600,
           padding: [12, 0, 0, 0],
         },
         axisLine: {
           lineStyle: {
-            color: isAuthorityView ? "rgba(72, 108, 153, 0.55)" : "rgba(148, 163, 184, 0.18)",
+            color: isAuthorityView ? "rgba(80, 70, 64, 0.18)" : "rgba(80, 70, 64, 0.16)",
             width: 1,
           },
         },
@@ -1260,7 +1260,7 @@ document.addEventListener("DOMContentLoaded", function () {
           rotate: xAxisRotate,
           fontSize: executiveMode ? 9 : 10,
           lineHeight: executiveMode ? 10 : 12,
-          color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
+          color: isAuthorityView ? "#6e717a" : "#6e717a",
           margin: executiveMode ? 6 : 10,
           hideOverlap: true,
           interval: xLabelInterval,
@@ -1283,7 +1283,7 @@ document.addEventListener("DOMContentLoaded", function () {
             : "Valores",
         minInterval: 0,
         nameTextStyle: {
-          color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
+          color: isAuthorityView ? "#6e717a" : "#6e717a",
           fontSize: executiveMode ? 9 : 10,
           fontWeight: 600,
           padding: [0, 0, executiveMode ? 2 : 6, 0],
@@ -1294,7 +1294,7 @@ document.addEventListener("DOMContentLoaded", function () {
         axisLabel: {
           margin: executiveMode ? 6 : 10,
           fontSize: executiveMode ? 9 : 10,
-          color: isAuthorityView ? "#8ba6cb" : "#94a3b8",
+          color: isAuthorityView ? "#6e717a" : "#6e717a",
           formatter: function (value) {
             return formatMetricValue(value);
           },
@@ -1304,11 +1304,11 @@ document.addEventListener("DOMContentLoaded", function () {
           lineStyle: {
             color: isAuthorityView
               ? executiveMode
-                ? "rgba(101, 141, 189, 0.1)"
-                : "rgba(101, 141, 189, 0.16)"
+                ? "rgba(80, 70, 64, 0.07)"
+                : "rgba(80, 70, 64, 0.12)"
               : executiveMode
-                ? "rgba(148, 163, 184, 0.06)"
-                : "rgba(148, 163, 184, 0.1)",
+                ? "rgba(80, 70, 64, 0.06)"
+                : "rgba(80, 70, 64, 0.10)",
             width: 1,
             type: executiveMode ? [3, 6] : [4, 4],
           },
@@ -1347,7 +1347,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!rows.length) {
       const empty = document.createElement("div");
       empty.className = "p-3 text-[11px] text-slate-400";
-      empty.textContent = "No hay datos para mostrar.";
+      empty.textContent = "No existen datos validados para el filtro seleccionado.";
       tableContainer.appendChild(empty);
       updateExportState([]);
       return;
@@ -1748,7 +1748,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!rows.length) {
       const empty = document.createElement("div");
       empty.className = "p-3 text-[11px] text-slate-400";
-      empty.textContent = "No hay datos para mostrar.";
+      empty.textContent = "No existen datos validados para el filtro seleccionado.";
       relatedPerformanceTableContainer.appendChild(empty);
       setRelatedPerformanceExportState([]);
       return;
@@ -1827,10 +1827,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function buildRelatedPerformanceIndicatorLabel(indicator) {
     if (!indicator) {
-      return "Formula";
+      return "Indicador calculado";
     }
     const prefix = indicator.entity_code ? `[${indicator.entity_code}] ` : "";
-    return `${prefix}${indicator.label || indicator.key || "Formula"}`;
+    return `${prefix}${indicator.label || indicator.key || "Indicador calculado"}`;
   }
 
   function normalizeRelatedPerformanceFrequency(value) {
@@ -1888,7 +1888,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const chartType = (relatedPerformanceChartTypeSelect && relatedPerformanceChartTypeSelect.value) || "line";
     const seriesType = chartType === "bar" ? "bar" : "line";
     const granularity = inferDateGranularity(labels);
-    const color = "#22d3ee";
+    const color = "#34aa9a";
     const indicator = payload.indicator || {};
 
     return {
@@ -1896,12 +1896,12 @@ document.addEventListener("DOMContentLoaded", function () {
       animationEasingUpdate: "cubicOut",
       tooltip: {
         trigger: "axis",
-        backgroundColor: "rgba(15, 23, 42, 0.95)",
-        borderColor: "rgba(34, 211, 238, 0.2)",
+        backgroundColor: "rgba(255, 253, 251, 0.96)",
+        borderColor: "rgba(52, 170, 154, 0.20)",
         borderWidth: 1,
         borderRadius: 12,
         padding: [10, 12],
-        textStyle: { color: "#f8fafc", fontSize: 12, fontFamily: "Lexend" },
+        textStyle: { color: "#28292f", fontSize: 12, fontFamily: "Lexend" },
         formatter: function (params) {
           const item = Array.isArray(params) ? params[0] : params;
           if (!item) return "";
@@ -1909,11 +1909,11 @@ document.addEventListener("DOMContentLoaded", function () {
           const unit = indicator.unit ? ` ${indicator.unit}` : "";
           return (
             `<div style="font-family:Lexend, sans-serif;">` +
-            `<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#67e8f9;opacity:.9;margin-bottom:2px;">Periodo</div>` +
-            `<div style="font-size:13px;font-weight:700;color:#f8fafc;">${formatDateLong(item.axisValue)}</div>` +
+            `<div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#149c79;opacity:.9;margin-bottom:2px;">Periodo</div>` +
+            `<div style="font-size:13px;font-weight:700;color:#28292f;">${formatDateLong(item.axisValue)}</div>` +
             `<div style="display:flex;justify-content:space-between;gap:12px;margin-top:6px;">` +
-            `<span style="color:#cbd5e1;">Valor</span>` +
-            `<span style="font-weight:700;color:#fff;">${formatMetricValue(numericValue)}${unit}</span>` +
+            `<span style="color:#6e717a;">Valor</span>` +
+            `<span style="font-weight:700;color:#28292f;">${formatMetricValue(numericValue)}${unit}</span>` +
             `</div>` +
             `</div>`
           );
@@ -1924,10 +1924,10 @@ document.addEventListener("DOMContentLoaded", function () {
         type: "category",
         data: labels,
         boundaryGap: seriesType === "bar",
-        axisLine: { lineStyle: { color: "rgba(148,163,184,0.18)" } },
+        axisLine: { lineStyle: { color: "rgba(80,70,64,0.14)" } },
         axisTick: { show: false },
         axisLabel: {
-          color: "#94a3b8",
+          color: "#6e717a",
           fontSize: 10,
           margin: 10,
           hideOverlap: true,
@@ -1940,11 +1940,11 @@ document.addEventListener("DOMContentLoaded", function () {
         type: "value",
         name: indicator.unit ? `(${indicator.unit})` : "Valores",
         nameGap: 18,
-        nameTextStyle: { color: "#94a3b8", fontSize: 10, fontWeight: 600, padding: [0, 0, 8, 0] },
+        nameTextStyle: { color: "#6e717a", fontSize: 10, fontWeight: 600, padding: [0, 0, 8, 0] },
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
-          color: "#94a3b8",
+          color: "#6e717a",
           fontSize: 10,
           formatter: function (value) {
             return formatMetricValue(value);
@@ -1952,7 +1952,7 @@ document.addEventListener("DOMContentLoaded", function () {
         },
         splitLine: {
           show: true,
-          lineStyle: { color: "rgba(148,163,184,0.1)", type: [4, 4] },
+          lineStyle: { color: "rgba(80,70,64,0.10)", type: [4, 4] },
         },
       },
       dataZoom: [
@@ -1965,16 +1965,16 @@ document.addEventListener("DOMContentLoaded", function () {
           showDetail: false,
           brushSelect: false,
           borderRadius: 10,
-          backgroundColor: "rgba(15,23,42,0.42)",
-          handleStyle: { color: "#22d3ee", borderColor: "#1e293b" },
-          fillerColor: "rgba(34,211,238,0.08)",
-          borderColor: "rgba(255,255,255,0.03)",
+          backgroundColor: "rgba(255,255,255,0.56)",
+          handleStyle: { color: "#34aa9a", borderColor: "#149c79" },
+          fillerColor: "rgba(52,170,154,0.12)",
+          borderColor: "rgba(80,70,64,0.10)",
           labelFormatter: function (value) { return formatDateShort(value, granularity); },
         },
       ],
       series: [
         {
-          name: indicator.label || indicator.key || "Formula",
+          name: indicator.label || indicator.key || "Indicador calculado",
           type: seriesType,
           data: values,
           smooth: seriesType === "line",
@@ -1986,8 +1986,8 @@ document.addEventListener("DOMContentLoaded", function () {
             color:
               seriesType === "bar"
                 ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: "#22d3eedd" },
-                    { offset: 1, color: "#0891b2aa" },
+                    { offset: 0, color: "#34aa9add" },
+                    { offset: 1, color: "#149c79aa" },
                   ])
                 : color,
             borderRadius: seriesType === "bar" ? [7, 7, 0, 0] : 0,
@@ -1997,8 +1997,8 @@ document.addEventListener("DOMContentLoaded", function () {
               ? {
                   opacity: 0.14,
                   color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: "#22d3ee66" },
-                    { offset: 1, color: "#22d3ee00" },
+                    { offset: 0, color: "#34aa9a44" },
+                    { offset: 1, color: "#34aa9a00" },
                   ]),
                 }
               : undefined,
@@ -2038,8 +2038,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const indicator = payload && payload.indicator ? payload.indicator : getRelatedPerformanceSelectedIndicator();
     if (relatedPerformanceHelp) {
       relatedPerformanceHelp.textContent = indicator
-        ? `Formula seleccionada: ${buildRelatedPerformanceIndicatorLabel(indicator)}`
-        : "Se muestra cuando el dataset seleccionado participa en una formula aprobada.";
+        ? `Indicador seleccionado: ${buildRelatedPerformanceIndicatorLabel(indicator)}`
+        : "Se muestra cuando el conjunto seleccionado participa en un indicador calculado aprobado.";
     }
   }
 
@@ -2071,7 +2071,7 @@ document.addEventListener("DOMContentLoaded", function () {
     fetch(`/kpis/performance-data/${encodeURIComponent(indicator.id)}/?${params.toString()}`)
       .then(function (resp) {
         if (!resp.ok) {
-          throw new Error("Error al cargar formula relacionada");
+          throw new Error("Error al cargar indicador relacionado");
         }
         return resp.json();
       })
@@ -2137,10 +2137,10 @@ document.addEventListener("DOMContentLoaded", function () {
   function buildRelatedPerformanceExportBaseName() {
     const indicator = getRelatedPerformanceSelectedIndicator() || (relatedPerformancePayload && relatedPerformancePayload.indicator);
     const freq = normalizeRelatedPerformanceFrequency(relatedPerformanceCurrentFrequency);
-    const indicatorName = sanitizeFileName((indicator && (indicator.label || indicator.key)) || "formula");
+    const indicatorName = sanitizeFileName((indicator && (indicator.label || indicator.key)) || "indicador");
     const entityCode = sanitizeFileName((indicator && indicator.entity_code) || (currentData && currentData.dataset && currentData.dataset.entity_code) || "");
     const range = [dateStartInput && dateStartInput.value, dateEndInput && dateEndInput.value].filter(Boolean).join("_a_");
-    return ["sicgad", entityCode, "formula", indicatorName, freq.toLowerCase(), sanitizeFileName(range)]
+    return ["sicgad", entityCode, "indicador", indicatorName, freq.toLowerCase(), sanitizeFileName(range)]
       .filter(Boolean)
       .join("_");
   }
@@ -2170,7 +2170,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         const worksheet = window.XLSX.utils.aoa_to_sheet([data.columns, ...data.rows]);
         const workbook = window.XLSX.utils.book_new();
-        window.XLSX.utils.book_append_sheet(workbook, worksheet, "Formula");
+        window.XLSX.utils.book_append_sheet(workbook, worksheet, "Indicador");
         window.XLSX.writeFile(workbook, `${buildRelatedPerformanceExportBaseName()}.xlsx`);
       })
       .catch(function (err) {
@@ -2216,7 +2216,7 @@ document.addEventListener("DOMContentLoaded", function () {
     )}`)
       .then((resp) => {
         if (!resp.ok) {
-          throw new Error("Error al cargar datos");
+          throw new Error("No fue posible cargar la información validada.");
         }
         return resp.json();
       })

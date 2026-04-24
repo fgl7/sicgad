@@ -4,47 +4,67 @@
 {% block title %}Acceso Seguro | SICGAD{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/login.css' %}?v=8">
+<link rel="stylesheet" href="{% static 'css/login.css' %}?v=9">
+<link rel="stylesheet" href="{% static 'css/login_glass.css' %}?v=3">
 {% endblock %}
 
-{% block body_class %}flex items-center justify-center min-h-screen bg-[#140a28] antialiased font-sans{% endblock %}
+{% block body_class %}flex items-center justify-center min-h-screen saas-hybrid sicgad-login antialiased font-sans{% endblock %}
 
 {% block background_layer %}
-<div class="fixed inset-0 -z-10" aria-hidden="true" style="pointer-events:none;">
-  <div class="absolute -top-40 -left-40 h-[40rem] w-[40rem] rounded-full bg-[#b052ff]/20 blur-[150px]"></div>
-  <div class="absolute bottom-10 right-1/4 h-[50rem] w-[50rem] rounded-full bg-[#ff2a85]/10 blur-[200px]"></div>
-  <div class="absolute bottom-0 right-0 h-[30rem] w-[30rem] rounded-full bg-pink-600/20 blur-[150px]"></div>
-  <div class="absolute inset-0 bg-black/40"></div>
-</div>
+<div class="sicgad-background-layer fixed inset-0 -z-10" aria-hidden="true"></div>
 {% endblock %}
 
 {% block page_layout %}
-<div class="relative z-10 w-full max-w-md px-6 login-stagger mx-auto py-12">
+<main class="login-page-shell relative z-10 w-full px-4 py-6 sm:px-6 lg:px-8">
+  <section class="login-panel glass-login login-stagger mx-auto">
+    <aside class="login-brand-panel">
+      <a href="{% url 'landing' %}" class="login-brand-mark" aria-label="Volver a la portada SICGAD">
+        <span class="login-emblem">
+          <img src="{% static 'escudo.png' %}" alt="Escudo Bolivia">
+        </span>
+        <span class="login-brand-copy">
+          <span class="login-brand-name">SICGAD</span>
+          <span class="login-brand-subtitle">SICGAD para ABEN</span>
+        </span>
+      </a>
 
-  <div class="flex flex-col items-center mb-10">
-    <div class="w-20 h-20 mb-6 relative group">
-      <div class="absolute inset-0 bg-[#b052ff] rounded-full blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
-      <div class="relative z-10 w-full h-full rounded-full border border-[#b052ff]/40 bg-[#b052ff]/10 flex items-center justify-center shadow-[0_0_20px_rgba(176,82,255,0.5)]">
-        <img src="{% static 'escudo.png' %}" alt="Escudo Bolivia"
-          class="w-14 h-14 object-contain filter drop-shadow-2xl">
+      <div class="login-brand-content">
+        <p class="login-kicker">Acceso institucional</p>
+        <h1>Bienvenido</h1>
+        <p>
+          Ingresa tus credenciales para acceder al entorno demostrativo de seguimiento ejecutivo ABEN.
+        </p>
       </div>
-    </div>
-    <a href="{% url 'landing' %}">
-      <h1 class="text-3xl font-black text-white tracking-tighter mb-1 hover:text-[#b052ff] transition-colors">SICGAD</h1>
-    </a>
-    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] text-center">
-      SICGAD para ABEN
-    </p>
-  </div>
 
-  <div class="glass-login rounded-[2rem] p-10 space-y-8 login-card-stagger">
-    <div class="space-y-1">
-      <h2 class="text-xl font-bold text-white tracking-tight">Bienvenido</h2>
-      <p class="text-slate-400 text-xs">Ingresa tus credenciales para acceder a la demo institucional ABEN.</p>
-    </div>
+      <div class="login-demo-box">
+        <p class="login-demo-title">Accesos de demostraci&oacute;n</p>
+        <dl>
+          <div>
+            <dt>Director</dt>
+            <dd><code>director_aben</code></dd>
+          </div>
+          <div>
+            <dt>Administrador</dt>
+            <dd><code>admin_aben</code></dd>
+          </div>
+          <div>
+            <dt>Contrase&ntilde;a</dt>
+            <dd><code>REMOVED!!!</code></dd>
+          </div>
+        </dl>
+        <p class="login-demo-note">Credenciales ficticias, solo para entorno demostrativo.</p>
+      </div>
+    </aside>
+
+    <div class="login-form-panel login-card-stagger">
+      <div class="login-form-heading">
+        <p class="login-kicker">Sistema seguro</p>
+        <h2>Iniciar sesi&oacute;n</h2>
+        <p>Autenticaci&oacute;n requerida para continuar.</p>
+      </div>
 
     {% if form.errors %}
-    <div class="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex gap-3">
+    <div class="login-error p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex gap-3">
       <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
           d="M12 9v2m0 4h.01m-6.938 4h13.876c.54 0 .899-.596.63-1.026L13.03 4.062a1.012 1.012 0 00-1.817 0l-7.73 13.912c-.269.43-.269.946.063 1.026z"></path>
@@ -55,7 +75,7 @@
     </div>
     {% endif %}
 
-    <form method="post" class="space-y-6">
+    <form method="post" class="login-form space-y-5">
       {% csrf_token %}
 
       <div class="space-y-2">
@@ -64,14 +84,14 @@
         </label>
         <div class="relative group login-field">
           <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <svg class="h-4 w-4 text-slate-600 group-focus-within:text-[#b052ff] transition-colors" fill="none"
+            <svg class="h-4 w-4 text-slate-600 group-focus-within:text-[#5b8dcc] transition-colors" fill="none"
               stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
             </svg>
           </div>
           <input type="text" name="username" required autofocus autocomplete="username"
-            class="login-input block w-full !pl-11 pr-4 !py-4 bg-[#1a0e35]/60 border border-[#b052ff]/20 rounded-2xl text-white text-sm font-medium focus:ring-2 focus:ring-[#b052ff]/30 focus:border-[#b052ff]/60 transition-all"
+            class="login-input block w-full !pl-11 pr-4 !py-4 bg-white/70 border border-white/60 rounded-2xl text-slate-900 text-sm font-medium focus:ring-2 focus:ring-[#5b8dcc]/20 focus:border-[#5b8dcc]/50 transition-all"
             placeholder=" ">
           <span class="login-placeholder">Nombre de usuario o RUT</span>
         </div>
@@ -83,14 +103,14 @@
         </label>
         <div class="relative group login-field">
           <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <svg class="h-4 w-4 text-slate-600 group-focus-within:text-[#b052ff] transition-colors" fill="none"
+            <svg class="h-4 w-4 text-slate-600 group-focus-within:text-[#5b8dcc] transition-colors" fill="none"
               stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
             </svg>
           </div>
           <input id="login-password" type="password" name="password" required autocomplete="current-password"
-            class="login-input block w-full !pl-11 pr-12 !py-4 bg-[#1a0e35]/60 border border-[#b052ff]/20 rounded-2xl text-white text-sm font-medium focus:ring-2 focus:ring-[#b052ff]/30 focus:border-[#b052ff]/60 transition-all"
+            class="login-input block w-full !pl-11 pr-12 !py-4 bg-white/70 border border-white/60 rounded-2xl text-slate-900 text-sm font-medium focus:ring-2 focus:ring-[#5b8dcc]/20 focus:border-[#5b8dcc]/50 transition-all"
             placeholder=" ">
           <button type="button" class="login-toggle" data-toggle-password="login-password"
             aria-label="Mostrar contrase&ntilde;a" tabindex="-1">
@@ -106,19 +126,20 @@
       </div>
 
       <button type="submit"
-        class="w-full py-4 rounded-full text-sm font-black uppercase tracking-widest text-white bg-[#b052ff] border border-[#b052ff]/80 shadow-[0_0_20px_rgba(176,82,255,0.5)] hover:shadow-[0_0_30px_rgba(176,82,255,0.7)] hover:brightness-110 transition-all duration-300">
+        class="login-submit w-full py-4 rounded-full text-sm font-black uppercase tracking-widest text-white bg-[#927563] border border-[#927563]/40 transition-all duration-300">
         Iniciar Sesi&oacute;n
       </button>
       {% if next %}
       <input type="hidden" name="next" value="{{ next }}">
       {% endif %}
     </form>
-  </div>
 
-  <p class="mt-8 text-center text-slate-600 text-[10px] font-bold uppercase tracking-widest">
-    &copy; {% now "Y" %} SICGAD &mdash; Sistema de Gesti&oacute;n de Datos
-  </p>
-</div>
+      <p class="login-footnote">
+        &copy; {% now "Y" %} SICGAD &mdash; Sistema de Gesti&oacute;n de Datos
+      </p>
+    </div>
+  </section>
+</main>
 {% endblock %}
 
 {% block extra_js %}

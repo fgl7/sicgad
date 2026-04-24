@@ -50,18 +50,18 @@ class DatasetType(models.Model):
         null=True,
         blank=True,
         related_name="derived_certifications",
-        help_text="Dataset base diario utilizado para consolidaciones de certificación.",
+        help_text="Conjunto base diario utilizado para consolidaciones de certificación.",
     )
     name = models.CharField(
         max_length=255,
-        help_text="Nombre del dataset, por ejemplo 'Atenciones mensuales en Medicina Nuclear'.",
+        help_text="Nombre del conjunto, por ejemplo 'Atenciones mensuales en Medicina Nuclear'.",
     )
     version = models.PositiveIntegerField(default=1)
     validation_frequency = models.CharField(
         max_length=20,
         choices=VALIDATION_FREQUENCY_CHOICES,
         default=DAILY,
-        help_text="Define si este dataset se valida a diario, semanal o como consolidado mensual.",
+        help_text="Define si este conjunto se valida a diario, semanal o como consolidado mensual.",
     )
     is_certification = models.BooleanField(
         default=False,
@@ -69,7 +69,7 @@ class DatasetType(models.Model):
     )
     is_active = models.BooleanField(
         default=True,
-        help_text="Solo un esquema por familia (planta/proyecto + nombre) deberia estar activo a la vez.",
+        help_text="Solo un esquema por familia (entidad/proyecto + nombre) deberia estar activo a la vez.",
     )
     is_one_time = models.BooleanField(
         default=False,
@@ -115,7 +115,7 @@ class DatasetType(models.Model):
         max_length=255,
         unique=True,
         blank=True,
-        help_text="Slug legible para URLs, basado en planta, nombre y versión.",
+        help_text="Slug legible para URLs, basado en entidad, nombre y versión.",
     )
 
     def save(self, *args, **kwargs):

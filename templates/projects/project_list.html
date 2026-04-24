@@ -11,13 +11,13 @@
 <div class="page-shell fade-in">
     <div class="page-hero">
         <div class="page-hero__content">
-            <p class="page-kicker">Projects</p>
-            <h2 class="page-title">Catalogo de Proyectos y Convenios</h2>
+            <p class="page-kicker">Proyectos</p>
+            <h2 class="page-title">Catálogo de proyectos y convenios</h2>
             <p class="page-subtitle">
                 {% if is_admin %}
-                Revision y aprobacion administrativa de registros operativos.
+                Revisión y aprobación administrativa de registros operativos.
                 {% else %}
-                Registro operativo de proyectos, convenios y otros instrumentos sujetos a aprobacion.
+                Registro operativo de proyectos, convenios y otros instrumentos sujetos a aprobación.
                 {% endif %}
             </p>
         </div>
@@ -25,7 +25,7 @@
         {% if can_create_project %}
         <a href="{% url 'projects:project_create' %}" class="btn-primary glow-emerald">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-            Registrar Proyecto
+            Registrar proyecto
         </a>
         {% endif %}
         </div>
@@ -33,8 +33,8 @@
 
     {% if not is_admin %}
     <div class="surface-note surface-note--info">
-        Flujo operativo: <span class="font-black uppercase">Borrador</span> -> enviar a revision ->
-        <span class="font-black uppercase">Pendiente</span> -> decision administrativa.
+        Flujo operativo: <span class="font-black uppercase">Borrador</span> -> enviar a revisión ->
+        <span class="font-black uppercase">Pendiente</span> -> decisión administrativa.
     </div>
     {% endif %}
 
@@ -43,9 +43,9 @@
             <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <th class="px-6 py-4">Codigo / Registro</th>
-                        <th class="px-6 py-4">Entidades Vinculadas</th>
-                        <th class="px-6 py-4">Workflow</th>
+                        <th class="px-6 py-4">Código / Registro</th>
+                        <th class="px-6 py-4">Entidades vinculadas</th>
+                        <th class="px-6 py-4">Flujo</th>
                         <th class="px-6 py-4">Responsable</th>
                         <th class="px-6 py-4 text-right">Acciones</th>
                     </tr>
@@ -53,11 +53,11 @@
                 <tbody class="text-sm">
                     {% for project in projects %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-6 py-4" data-label="Codigo / Registro">
+                        <td class="px-6 py-4" data-label="Código / Registro">
                             <div class="responsive-table-meta">
                                 <span class="font-mono text-[10px] text-sky-400 font-bold uppercase">{{ project.code|default:"SIN-COD" }}</span>
                                 <span class="responsive-table-meta__title text-slate-200">{{ project.name }}</span>
-                                <span class="responsive-table-meta__detail text-[10px] uppercase tracking-widest">{{ project.category.name|default:"Sin categoria" }}</span>
+                                <span class="responsive-table-meta__detail text-[10px] uppercase tracking-widest">{{ project.category.name|default:"Sin categoría" }}</span>
                             </div>
                         </td>
                         <td class="px-6 py-4" data-label="Entidades">
@@ -66,12 +66,12 @@
                                 {% for entity in entity_list %}
                                 <span class="px-2 py-0.5 rounded bg-slate-800 text-[9px] font-black text-slate-400 border border-white/5">{{ entity.code|default:entity.name }}</span>
                                 {% empty %}
-                                <span class="text-slate-600 italic text-[10px]">Sin vinculacion</span>
+                                <span class="text-slate-600 italic text-[10px]">Sin vinculación</span>
                                 {% endfor %}
                             </div>
                             {% endwith %}
                         </td>
-                        <td class="px-6 py-4" data-label="Workflow">
+                        <td class="px-6 py-4" data-label="Flujo">
                             <div class="flex flex-col gap-2">
                                 {% if project.workflow_status == "DRAFT" %}
                                 <span class="inline-flex w-fit px-2 py-0.5 rounded-full bg-slate-700/30 text-slate-300 text-[10px] font-black uppercase tracking-widest border border-white/10">Borrador</span>
@@ -91,9 +91,9 @@
                             <div class="responsive-table-meta">
                                 <span class="text-slate-300 text-xs font-semibold">{{ project.created_by.username|default:"Sin creador" }}</span>
                                 {% if project.approved_by %}
-                                <span class="responsive-table-meta__detail text-[10px]">Revision: {{ project.approved_by.username }}</span>
+                                <span class="responsive-table-meta__detail text-[10px]">Revisión: {{ project.approved_by.username }}</span>
                                 {% elif project.workflow_status == "PENDING" %}
-                                <span class="responsive-table-meta__detail text-[10px] text-amber-400">En bandeja de revision</span>
+                                <span class="responsive-table-meta__detail text-[10px] text-amber-400">En bandeja de revisión</span>
                                 {% endif %}
                             </div>
                         </td>
@@ -119,7 +119,7 @@
                                     <form method="post" action="{% url 'projects:project_submit' project.pk %}" class="responsive-inline-form">
                                         {% csrf_token %}
                                         <button type="submit" class="px-3 py-1.5 rounded-lg bg-sky-500/10 text-sky-300 text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:bg-sky-500/20">
-                                            Enviar a revision
+                                            Enviar a revisión
                                         </button>
                                     </form>
                                     {% endif %}
@@ -131,11 +131,11 @@
                                     </a>
                                 {% elif not is_admin and project.workflow_status == "PENDING" %}
                                     <span class="px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-300 text-[10px] font-black uppercase tracking-widest border border-amber-500/20">
-                                        En revision admin
+                                        En revisión admin
                                     </span>
                                 {% elif not is_admin and project.workflow_status == "APPROVED" %}
                                     <a href="{{ project.schema_seed_url }}" class="px-3 py-1.5 rounded-lg bg-sky-500/10 text-sky-300 text-[10px] font-black uppercase tracking-widest border border-sky-500/20 hover:bg-sky-500/20">
-                                        Crear Esquemas
+                                        Crear esquemas
                                     </a>
                                 {% else %}
                                     <span class="text-[10px] text-slate-600 uppercase tracking-widest">Sin acciones</span>
@@ -145,7 +145,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="responsive-empty-state">No se encontraron registros.</td>
+                        <td colspan="5" class="responsive-empty-state">No existen proyectos o convenios registrados para el alcance actual.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

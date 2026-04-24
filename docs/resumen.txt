@@ -1,54 +1,35 @@
-Asunto: Puesta en línea del piloto SICGAD y acceso al sistema
+Asunto: Demo institucional SICGAD para ABEN
 
-Estimados compañeros:
+El Sistema Integral de Carga, Gestión, Validación y Análisis de Datos Institucionales (SICGAD) se encuentra preparado como entorno demostrativo para la Agencia Boliviana de Energía Nuclear (ABEN).
 
-Se comunica que el piloto del Sistema Integral de Carga, Gestión y Análisis de Datos (SICGAD) ya se encuentra disponible en línea en el siguiente dominio:
+La demo presenta una plataforma institucional para centralizar información, validar datos oficiales, reducir procesos manuales, generar indicadores ejecutivos y mantener trazabilidad sobre acciones relevantes. El objetivo es mostrar cómo la ABEN puede contar con información validada para seguimiento de servicios nucleares, proyectos estratégicos, mantenimiento de equipos críticos, seguridad radiológica, calidad y cumplimiento.
 
-https://lfl.pythonanywhere.com/
-
-El SICGAD es una plataforma institucional orientada a centralizar el registro, la carga, la validación, el resguardo y la visualización de información sectorial. Su objetivo es contar con una base de datos oficial, trazable y confiable que facilite el seguimiento técnico, la generación de indicadores y la toma de decisiones oportunas, y que disminuya o elimine procedimientos burocráticos entre instituciones del Estado.
-
-Actualmente, uno de los principales problemas en la gestión de información es la dispersión de datos entre distintas áreas, formatos y responsables, lo que genera demoras, duplicidad de solicitudes, dificultades de trazabilidad y limitaciones para contar con información validada en el momento necesario o inmediato. El SICGAD busca resolver precisamente estos puntos mediante un flujo institucional ordenado y controlado.
-
-De manera resumida, el sistema permite:
+La demostración permite:
 
 - administrar usuarios y accesos según rol;
-- organizar la estructura institucional por niveles y entidades;
-- definir esquemas de datos de forma flexible;
-- realizar cargas periódicas e históricas;
+- organizar la estructura institucional por sector, subsector, categoría y entidad;
+- definir esquemas de datos institucionales;
+- realizar cargas periódicas, históricas y manuales;
 - validar y publicar información oficial;
-- consultar indicadores y visualizaciones según permisos;
-- mantener trazabilidad y auditoría de acciones relevantes.
+- consultar indicadores ejecutivos según permisos;
+- mantener trazabilidad y auditoría de acciones relevantes;
+- revisar proyectos y convenios estratégicos.
 
-Entre los beneficios más importantes del SICGAD se destacan:
+Usuarios de demostración:
 
-- centralización de la información en un solo punto institucional;
-- reducción o eliminación de la burocracia en el intercambio de datos;
-- mayor continuidad operativa ante cambios de personal;
-- disponibilidad de información validada para análisis y seguimiento;
-- mejor soporte para la planificación, el control y la toma de decisiones.
+- Director ABEN: director_aben
+- Administrador institucional: admin_aben
+- Cargador Medicina Nuclear: cargador_cmnyr
+- Cargador CIDTN: cargador_cidtn
+- Cargador Mantenimiento: cargador_mantenimiento
+- Cargador Proyectos: cargador_proyectos
+- Validador Salud Nuclear: validador_salud_nuclear
+- Validador Técnico ABEN: validador_tecnico_aben
+- Validador Planificación: validador_planificacion
+- Seguimiento externo: seguimiento_mhe
+- Auditoría ABEN: auditoria_aben
 
-Los usuarios existentes a modo de prueba en el sistema son:
-Usuario cargador de datos:
-    usuario: cargador_kcl
-    contraseña: Ep123456**
-Usuario validador de datos:
-    usuario: jefe_kcl_li
-    contraseña: Ep123456**
-Usuario visualizador de datos MAE-MHE:
-    usuario: vmeere
-    contraseña: Ep123456**
-Usuario visualizador de datos MAE-externo:
-    usuario: mefp
-    contraseña: Ep123456**
+Contraseña demo para todos los usuarios:
+REMOVED!!!
 
-(Nota: los usuarios pueden realizar cambios reales, según su rol).
-
-Se solicita ingresar al dominio indicado, revisar el sistema y utilizar las credenciales asignadas para las pruebas y actividades definidas. Sus observaciones serán importantes para fortalecer la puesta en marcha y la evolución del SICGAD.
-
-Finalmente, se adjuntan informes explicativos presentados en la UPREI como guia general de manejo.
-
-Quedo atento a cualquier consulta.
-
-Saludos cordiales.
-FGL
+Nota: los usuarios y datos son ficticios y se usan exclusivamente para fines demostrativos.

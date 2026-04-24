@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Reportes de proyectos - SICGAD{% endblock %}
-{% block page_title %}Reportes de proyectos{% endblock %}
+{% block title %}Seguimiento de proyectos y convenios - SICGAD{% endblock %}
+{% block page_title %}Seguimiento de proyectos y convenios{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
@@ -12,9 +12,9 @@
 <div class="page-shell fade-in">
   <div class="page-hero">
     <div class="page-hero__content">
-      <p class="page-kicker">Projects</p>
-      <h2 class="page-title">Reportes disponibles</h2>
-      <p class="page-subtitle">Acceso a reportes ejecutivos por proyecto o convenio segun configuracion vigente y alcance del usuario.</p>
+      <p class="page-kicker">Proyectos</p>
+      <h2 class="page-title">Seguimiento ejecutivo</h2>
+      <p class="page-subtitle">Acceso a reportes ejecutivos por proyecto o convenio según configuración vigente y alcance del usuario.</p>
     </div>
     <div class="page-hero__actions">
       {% if is_admin %}
@@ -39,11 +39,11 @@
         </a>
       {% empty %}
         <div class="responsive-empty-state col-span-full">
-          No hay reportes configurados.
+          No existen reportes ejecutivos configurados para el alcance actual.
           {% if is_admin %}
             <div class="mt-3">
               <a href="{% url 'projects:report_config_create' %}" class="text-xs text-emerald-400 hover:underline">
-                Crear configuracion de reporte
+                Crear configuración de reporte
               </a>
             </div>
           {% endif %}

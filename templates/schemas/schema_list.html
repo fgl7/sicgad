@@ -15,27 +15,27 @@
 <div class="page-shell fade-in">
     <div class="page-hero">
         <div class="page-hero__content">
-            <p class="page-kicker">Schemas</p>
-            <h2 class="page-title">Esquemas de Datos</h2>
-            <p class="page-subtitle">Definicion de estructuras, frecuencias y flujos de validacion para la captura operativa.</p>
+            <p class="page-kicker">Esquemas</p>
+            <h2 class="page-title">Esquemas institucionales</h2>
+            <p class="page-subtitle">Definición de estructuras, frecuencias y flujos de validación para la carga de información institucional.</p>
         </div>
         <div class="page-hero__actions">
             {% if is_admin %}
             <a href="{% url 'schemas:certification_schema_create' %}" class="btn-primary glow-emerald">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                Nueva Certificacion
+                Nueva certificación
             </a>
             {% elif can_create_schemas %}
             <a href="{% url 'schemas:schema_create' %}" class="btn-primary glow-emerald">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                Nuevo Esquema
+                Nuevo esquema
             </a>
             {% endif %}
         </div>
     </div>
 
     <div class="surface-note surface-note--info">
-        Los esquemas aprobados habilitan la ingesta y alimentan validacion, publicacion y analitica posterior.
+        Los esquemas aprobados habilitan la carga institucional y alimentan validación, publicación y analítica posterior.
     </div>
 
     <div class="glass-card rounded-3xl overflow-hidden border-white/5">
@@ -43,7 +43,7 @@
             <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <th class="px-6 py-4 text-center">Unidad</th>
+                        <th class="px-6 py-4 text-center">Entidad</th>
                         <th class="px-6 py-4">Nombre del esquema</th>
                         <th class="px-6 py-4 text-center">Frecuencia</th>
                         <th class="px-6 py-4 text-center">Estado</th>
@@ -53,7 +53,7 @@
                 <tbody class="text-sm">
                     {% for ds in datasets %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-6 py-4 text-center" data-label="Unidad">
+                        <td class="px-6 py-4 text-center" data-label="Entidad">
                             <span class="inline-flex px-2 py-1 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400 group-hover:text-emerald-400 transition-colors">
                                 {{ ds.entity.code|default:ds.entity.name|default:"SYS" }}
                             </span>
@@ -66,10 +66,10 @@
                                 </a>
                                 <div class="responsive-chip-list">
                                     {% if ds.is_one_time %}
-                                    <span class="text-[9px] font-black uppercase tracking-widest text-indigo-400">Carga unica</span>
+                                    <span class="text-[9px] font-black uppercase tracking-widest text-indigo-400">Carga única</span>
                                     {% endif %}
                                     {% if ds.is_certification %}
-                                    <span class="text-[9px] font-black uppercase tracking-widest text-amber-500">Certificacion mensual</span>
+                                    <span class="text-[9px] font-black uppercase tracking-widest text-amber-500">Certificación mensual</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -124,7 +124,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="responsive-empty-state">No se encontraron esquemas de datos.</td>
+                        <td colspan="5" class="responsive-empty-state">No existen esquemas institucionales para el alcance seleccionado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -143,7 +143,7 @@
             {% csrf_token %}
             <div class="space-y-2">
                 <label for="schema-reject-comment" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Motivo del rechazo</label>
-                <textarea id="schema-reject-comment" name="comment" rows="4" placeholder="Indica los cambios necesarios..."></textarea>
+                <textarea id="schema-reject-comment" name="comment" rows="4" placeholder="Indique los ajustes requeridos para aprobar el esquema..."></textarea>
             </div>
 
             <div class="form-footer-actions pt-2">

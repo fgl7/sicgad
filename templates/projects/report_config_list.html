@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Configuracion de Reportes - SICGAD{% endblock %}
+{% block title %}Configuración de reportes - SICGAD{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
@@ -11,14 +11,14 @@
 <div class="page-shell fade-in">
     <div class="page-hero">
         <div class="page-hero__content">
-            <p class="page-kicker">Projects</p>
-            <h2 class="page-title">Arquitectura de Reportabilidad</h2>
-            <p class="page-subtitle">Configura datasets, frecuencia y variante de cada visor de proyectos sin perder trazabilidad operativa.</p>
+            <p class="page-kicker">Proyectos</p>
+            <h2 class="page-title">Configuración de reportabilidad</h2>
+            <p class="page-subtitle">Configure conjuntos, frecuencia y variante de cada visor de proyectos sin perder trazabilidad operativa.</p>
         </div>
         <div class="page-hero__actions">
             <a href="{% url 'projects:report_config_create' %}" class="btn-primary glow-emerald">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m-6 0h6m6 0h-6"></path></svg>
-                Nueva Configuracion
+                Nueva configuración
             </a>
         </div>
     </div>
@@ -28,8 +28,8 @@
             <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-black/20 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
-                        <th class="px-8 py-5">Proyecto Asociado</th>
-                        <th class="px-8 py-5">Identificador Reporte</th>
+                        <th class="px-8 py-5">Proyecto asociado</th>
+                        <th class="px-8 py-5">Identificador de reporte</th>
                         <th class="px-8 py-5">Variante</th>
                         <th class="px-8 py-5">Frecuencia Curva-S</th>
                         <th class="px-8 py-5 text-center">Estado</th>
@@ -79,7 +79,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="responsive-empty-state">No se han definido vinculaciones de reportes analiticos.</td>
+                        <td colspan="6" class="responsive-empty-state">No se han definido vinculaciones de reportes analíticos.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -88,9 +88,9 @@
     </div>
 
     <div class="surface-note surface-note--info">
-        <strong>Nota tecnica:</strong>
-        la variante define la composicion del visor. Hoy existen layouts para <span class="text-slate-200">project</span> y <span class="text-slate-200">agreement</span>.
-        Si registras otra variante, el sistema la conserva y la mostrara temporalmente con el layout base hasta implementar su plantilla dedicada.
+        <strong>Nota técnica:</strong>
+        la variante define la composición del visor. Hoy existen layouts para <span class="text-slate-200">project</span> y <span class="text-slate-200">agreement</span>.
+        Si registra otra variante, el sistema la conserva y la mostrará temporalmente con el layout base hasta implementar su plantilla dedicada.
     </div>
 </div>
 {% endblock %}

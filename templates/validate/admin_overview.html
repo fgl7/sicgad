@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}Resumen de validaciones - SICGAD{% endblock %}
-{% block page_title %}Validacion - Administracion{% endblock %}
+{% block page_title %}Validación - Administración{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
@@ -12,9 +12,9 @@
   <div class="page-shell fade-in">
     <div class="page-hero">
       <div class="page-hero__content">
-        <p class="page-kicker">Validation</p>
-        <h2 class="page-title">Resumen de Validaciones</h2>
-        <p class="page-subtitle">Vista administrativa para revisar cargas diarias, semanales, mensuales y el estado de consolidacion de certificaciones.</p>
+        <p class="page-kicker">Validación</p>
+        <h2 class="page-title">Resumen de validaciones</h2>
+        <p class="page-subtitle">Vista administrativa para revisar cargas diarias, semanales, mensuales y el estado de consolidación de certificaciones.</p>
       </div>
     </div>
 
@@ -22,7 +22,7 @@
       <section class="glass-card rounded-[1.5rem] p-4 text-xs">
         <h2 class="text-sm font-semibold mb-2">Validaciones diarias</h2>
         <p class="text-[11px] text-slate-400 mb-3">
-          Incluye datasets de frecuencia <strong>diaria</strong> (operacion diaria).
+          Incluye conjuntos de frecuencia <strong>diaria</strong> para operación institucional.
         </p>
 
         <div class="responsive-table-shell">
@@ -31,7 +31,7 @@
               <tr>
                 <th class="px-3 py-2 text-left font-semibold">Fecha</th>
                 <th class="px-3 py-2 text-left font-semibold">Entidad</th>
-                <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+                <th class="px-3 py-2 text-left font-semibold">Conjunto</th>
                 <th class="px-3 py-2 text-left font-semibold">Periodo</th>
                 <th class="px-3 py-2 text-left font-semibold">Estado</th>
               </tr>
@@ -41,14 +41,14 @@
                 <tr class="border-t border-slate-800 hover:bg-slate-900/60">
                   <td class="px-3 py-2 align-top" data-label="Fecha">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
                   <td class="px-3 py-2 align-top" data-label="Entidad">{{ inst.entity.code|default:inst.entity.name }}</td>
-                  <td class="px-3 py-2 align-top" data-label="Dataset">{{ inst.dataset_type.name }}</td>
+                  <td class="px-3 py-2 align-top" data-label="Conjunto">{{ inst.dataset_type.name }}</td>
                   <td class="px-3 py-2 align-top" data-label="Periodo">{{ inst.period }}</td>
                   <td class="px-3 py-2 align-top" data-label="Estado">{{ inst.get_state_display }}</td>
                 </tr>
               {% empty %}
                 <tr>
                   <td colspan="5" class="responsive-empty-state">
-                    No hay registros de validacion diaria.
+                    No existen registros de validación diaria para el alcance actual.
                   </td>
                 </tr>
               {% endfor %}
@@ -60,7 +60,7 @@
       <section class="glass-card rounded-[1.5rem] p-4 text-xs">
         <h2 class="text-sm font-semibold mb-2">Validaciones semanales y mensuales</h2>
         <p class="text-[11px] text-slate-400 mb-3">
-          Incluye datasets de frecuencia <strong>semanal</strong> y <strong>mensual</strong>, por ejemplo esquemas de certificacion.
+          Incluye conjuntos de frecuencia <strong>semanal</strong> y <strong>mensual</strong>, incluidos esquemas de certificación.
         </p>
 
         <div class="responsive-table-shell">
@@ -69,7 +69,7 @@
               <tr>
                 <th class="px-3 py-2 text-left font-semibold">Fecha</th>
                 <th class="px-3 py-2 text-left font-semibold">Entidad</th>
-                <th class="px-3 py-2 text-left font-semibold">Dataset</th>
+                <th class="px-3 py-2 text-left font-semibold">Conjunto</th>
                 <th class="px-3 py-2 text-left font-semibold">Periodo</th>
                 <th class="px-3 py-2 text-left font-semibold">Estado</th>
               </tr>
@@ -79,14 +79,14 @@
                 <tr class="border-t border-slate-800 hover:bg-slate-900/60">
                   <td class="px-3 py-2 align-top" data-label="Fecha">{{ inst.created_at|date:"Y-m-d H:i" }}</td>
                   <td class="px-3 py-2 align-top" data-label="Entidad">{{ inst.entity.code|default:inst.entity.name }}</td>
-                  <td class="px-3 py-2 align-top" data-label="Dataset">{{ inst.dataset_type.name }}</td>
+                  <td class="px-3 py-2 align-top" data-label="Conjunto">{{ inst.dataset_type.name }}</td>
                   <td class="px-3 py-2 align-top" data-label="Periodo">{{ inst.period }}</td>
                   <td class="px-3 py-2 align-top" data-label="Estado">{{ inst.get_state_display }}</td>
                 </tr>
               {% empty %}
                 <tr>
                   <td colspan="5" class="responsive-empty-state">
-                    No hay registros de validacion semanal/mensual.
+                    No existen registros de validación semanal o mensual para el alcance actual.
                   </td>
                 </tr>
               {% endfor %}
@@ -98,9 +98,9 @@
 
     {% if certification_status %}
       <section class="glass-card rounded-[1.5rem] p-4 text-xs">
-        <h2 class="text-sm font-semibold mb-2">Cobertura de esquemas de certificacion</h2>
+        <h2 class="text-sm font-semibold mb-2">Cobertura de esquemas de certificación</h2>
         <p class="text-[11px] text-slate-400 mb-3">
-          Muestra la ultima fecha diaria disponible en el dataset base y la ultima consolidacion mensual generada.
+          Muestra la última fecha diaria disponible en el conjunto base y la última consolidación mensual generada.
         </p>
         <div class="responsive-table-shell">
           <table class="responsive-data-table w-full text-[11px]">
@@ -108,8 +108,8 @@
               <tr>
                 <th class="px-3 py-2 text-left font-semibold">Entidad</th>
                 <th class="px-3 py-2 text-left font-semibold">Esquema</th>
-                <th class="px-3 py-2 text-left font-semibold">Ultimo diario publicado</th>
-                <th class="px-3 py-2 text-left font-semibold">Ultimo mes consolidado</th>
+                <th class="px-3 py-2 text-left font-semibold">Último diario publicado</th>
+                <th class="px-3 py-2 text-left font-semibold">Último mes consolidado</th>
               </tr>
             </thead>
             <tbody>
@@ -117,18 +117,18 @@
                 <tr class="border-t border-slate-800 hover:bg-slate-900/60">
                   <td class="px-3 py-2 align-top" data-label="Entidad">{{ status.schema.entity.code|default:status.schema.entity.name }}</td>
                   <td class="px-3 py-2 align-top" data-label="Esquema">{{ status.schema.name }}</td>
-                  <td class="px-3 py-2 align-top" data-label="Ultimo diario publicado">
+                  <td class="px-3 py-2 align-top" data-label="Último diario publicado">
                     {% if status.latest_daily_period %}
                       {{ status.latest_daily_period }}
                     {% else %}
                       <span class="text-slate-500">Sin datos publicados</span>
                     {% endif %}
                   </td>
-                  <td class="px-3 py-2 align-top" data-label="Ultimo mes consolidado">
+                  <td class="px-3 py-2 align-top" data-label="Último mes consolidado">
                     {% if status.last_consolidated_period %}
                       {{ status.last_consolidated_period }}
                     {% else %}
-                      <span class="text-slate-500">Sin consolidacion</span>
+                      <span class="text-slate-500">Sin consolidación</span>
                     {% endif %}
                   </td>
                 </tr>

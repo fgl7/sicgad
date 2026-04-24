@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         setStage(payload);
         if (statusTextEl && payload.message) {
-          statusTextEl.textContent = "Aprobando historico...";
+          statusTextEl.textContent = "Aprobando lote histórico...";
         }
         if (detailTextEl && payload.message) {
           detailTextEl.textContent = payload.message;
@@ -146,7 +146,7 @@ document.addEventListener("DOMContentLoaded", function () {
     stopProgressSimulation();
     stopProgressPolling();
     if (statusTextEl) {
-      statusTextEl.textContent = message || "No se pudo aprobar el historico.";
+      statusTextEl.textContent = message || "No se pudo aprobar el lote histórico.";
     }
     if (detailTextEl) {
       detailTextEl.textContent = "Puedes intentar nuevamente desde la bandeja.";
@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (activeButton) {
       activeButton.disabled = false;
       activeButton.classList.remove("opacity-70", "cursor-not-allowed");
-      activeButton.textContent = "Aprobar Pack";
+      activeButton.textContent = "Aprobar lote";
     }
     submitting = false;
   }
@@ -178,12 +178,12 @@ document.addEventListener("DOMContentLoaded", function () {
       }
 
       if (statusTextEl) {
-        statusTextEl.textContent = "Aprobando historico...";
+        statusTextEl.textContent = "Aprobando lote histórico...";
       }
       if (detailTextEl) {
-        detailTextEl.textContent = "Preparando aprobacion del historico...";
+        detailTextEl.textContent = "Preparando aprobación del histórico...";
       }
-      setStage({ stage_index: 1, stage_total: 4, stage_label: "Preparacion" });
+      setStage({ stage_index: 1, stage_total: 4, stage_label: "Preparación" });
       modal.classList.remove("hidden");
       document.body.classList.add("overflow-hidden");
       stopProgressPolling();
@@ -207,7 +207,7 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(function (response) {
           activeApproveRequest = null;
           if (!response.ok) {
-            throw new Error("Error al aprobar el historico.");
+            throw new Error("Error al aprobar el lote histórico.");
           }
           const contentType = response.headers.get("content-type") || "";
           if (contentType.indexOf("application/json") === -1) {
@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", function () {
           stopProgressPolling();
           setProgress(100);
           if (statusTextEl) {
-            statusTextEl.textContent = "Aprobacion completada. Redirigiendo...";
+            statusTextEl.textContent = "Aprobación completada. Redirigiendo...";
           }
           setStage(payload || { stage_index: 4, stage_total: 4, stage_label: "Completado" });
           if (detailTextEl) {
@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", function () {
         .catch(function (error) {
           activeApproveRequest = null;
           console.error(error);
-          resetUiAfterError("No se pudo aprobar el historico. Intenta nuevamente.");
+          resetUiAfterError("No se pudo aprobar el lote histórico. Intente nuevamente.");
           window.setTimeout(function () {
             activeProgressUrl = "";
             setStage(null);

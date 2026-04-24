@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}KPIs Externos - SICGAD{% endblock %}
-{% block page_title %}KPIs externos (mensual){% endblock %}
+{% block title %}Información Mensual Validada - SICGAD{% endblock %}
+{% block page_title %}Información mensual validada{% endblock %}
 
 {% block content %}
 <section class="glass-effect mb-5 px-4 sm:px-5 py-3 relative overflow-hidden">
@@ -15,19 +15,19 @@
             </select>
         </div>
         <div class="md:col-span-4 lg:col-span-5 min-w-0">
-            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Dataset mensual</label>
+            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Conjunto mensual</label>
             <select id="kpi-instance-select" class="w-full h-10">
-                <option value="">Selecciona un dataset...</option>
+                <option value="">Seleccione un conjunto de datos institucional...</option>
                 {% for ds in datasets %}
                 <option value="{{ ds.id }}">
                     [{{ ds.entity.code|default:ds.entity.name }}] {{ ds.name }} ({{ ds.get_validation_frequency_display }})
                 </option>
                 {% endfor %}
             </select>
-            <p class="mt-1 text-[10px] text-slate-500 italic">Este perfil visualiza solamente datos mensuales publicados y el listado se actualiza segun la navegacion jerarquica del sidebar.</p>
+            <p class="mt-1 text-[10px] text-slate-500 italic">Este perfil visualiza solamente información mensual publicada y validada dentro de su alcance institucional.</p>
             {% if not datasets %}
             <p class="mt-2 text-[11px] text-amber-300">
-                No hay datasets mensuales disponibles para tu alcance actual.
+                No existen datos mensuales validados para el alcance actual.
             </p>
             {% endif %}
         </div>
@@ -136,7 +136,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="{% static 'js/kpis_charts.js' %}?v=31"></script>
+<script src="{% static 'js/kpis_charts.js' %}?v=32"></script>
 {% endblock %}
 
 

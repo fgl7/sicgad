@@ -6,26 +6,26 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "#b052ff",
-        secondary: "#ff2a85",
-        accent: "#00d4ff",
+        primary: "#b89b86",
+        secondary: "#5b8dcc",
+        accent: "#34aa9a",
         emerald: {
           DEFAULT: "#10b981",
           500: "#10b981",
         },
         slate: {
-          950: "#140a28",
+          950: "#28292f",
         },
-        surface: "rgba(255, 255, 255, 0.03)",
-        "surface-light": "rgba(255, 255, 255, 0.08)",
+        surface: "rgba(255, 255, 255, 0.42)",
+        "surface-light": "rgba(255, 255, 255, 0.66)",
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
-        heading: ["Inter", "sans-serif"],
+        sans: ["Source Sans 3", "sans-serif"],
+        heading: ["Lexend", "Source Sans 3", "sans-serif"],
       },
       boxShadow: {
-        neon: "0 0 15px rgba(176, 82, 255, 0.5)",
-        "neon-pink": "0 0 15px rgba(255, 42, 133, 0.5)",
+        neon: "0 10px 28px rgba(48, 43, 38, 0.10)",
+        "neon-pink": "0 10px 28px rgba(48, 43, 38, 0.10)",
       }
     },
   },

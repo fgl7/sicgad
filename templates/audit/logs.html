@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Auditoria - SICGAD{% endblock %}
+{% block title %}Trazabilidad institucional - SICGAD{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
@@ -11,12 +11,12 @@
 <div class="page-shell fade-in">
     <div class="page-hero">
         <div class="page-hero__content">
-            <p class="page-kicker">Audit</p>
-            <h2 class="page-title">Trazabilidad del Sistema</h2>
-            <p class="page-subtitle">Registro inmutable de actividades operativas y cambios de configuracion ejecutados en la plataforma.</p>
+            <p class="page-kicker">Trazabilidad</p>
+            <h2 class="page-title">Trazabilidad institucional</h2>
+            <p class="page-subtitle">Registro de acciones relevantes realizadas en la plataforma, con usuario, fecha, módulo y detalle institucional.</p>
         </div>
         <div class="page-hero__actions">
-            <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Monitoreo realtime</span>
+            <span class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">Registro institucional</span>
         </div>
     </div>
 
@@ -28,7 +28,7 @@
             </div>
 
             <div class="space-y-2 xl:col-span-1">
-                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Accion ejecutada</label>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Acción ejecutada</label>
                 <select name="action">
                     <option value="">Todas las actividades</option>
                     {% for code, label in actions %}
@@ -50,7 +50,7 @@
             <div class="flex items-center gap-3 pt-2 xl:pt-0">
                 <label class="flex items-center gap-2 cursor-pointer group">
                     <input type="checkbox" id="only_mine" name="only_mine" value="1" {% if only_mine %}checked{% endif %} class="rounded bg-slate-800 border-white/10" />
-                    <span class="text-[10px] font-bold text-slate-500 uppercase group-hover:text-slate-300 transition-colors">Solo mias</span>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase group-hover:text-slate-300 transition-colors">Solo mis acciones</span>
                 </label>
             </div>
 
@@ -66,17 +66,17 @@
             <table class="responsive-data-table w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        <th class="px-6 py-4">Timestamp</th>
+                        <th class="px-6 py-4">Fecha y hora</th>
                         <th class="px-6 py-4">Actor</th>
-                        <th class="px-6 py-4">Accion / Modulo</th>
+                        <th class="px-6 py-4">Acción / Módulo</th>
                         <th class="px-6 py-4">Objeto</th>
-                        <th class="px-6 py-4">Detalle tecnico</th>
+                        <th class="px-6 py-4">Detalle</th>
                     </tr>
                 </thead>
                 <tbody class="text-sm">
                     {% for log in logs %}
                     <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
-                        <td class="px-6 py-4 font-mono text-[10px] text-slate-500" data-label="Timestamp">{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
+                        <td class="px-6 py-4 font-mono text-[10px] text-slate-500" data-label="Fecha y hora">{{ log.created_at|date:"d/m/Y H:i:s" }}</td>
                         <td class="px-6 py-4" data-label="Actor">
                             <div class="flex items-center gap-2">
                                 <span class="w-6 h-6 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-[8px] font-black uppercase text-slate-400">
@@ -85,7 +85,7 @@
                                 <span class="text-slate-300 font-bold text-xs">{{ log.username|default:"Sistema" }}</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4" data-label="Accion / Modulo">
+                        <td class="px-6 py-4" data-label="Acción / Módulo">
                             <div class="responsive-table-meta">
                                 <span class="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">{{ log.get_action_display }}</span>
                                 <span class="responsive-table-meta__detail text-[9px] font-black uppercase tracking-tighter">{{ log.module|default:"Core" }}</span>
@@ -94,13 +94,13 @@
                         <td class="px-6 py-4" data-label="Objeto">
                             <span class="text-[10px] font-bold text-sky-500/80">{{ log.object_repr|default:"-"|truncatechars:30 }}</span>
                         </td>
-                        <td class="px-6 py-4" data-label="Detalle tecnico">
+                        <td class="px-6 py-4" data-label="Detalle">
                             <p class="text-[10px] text-slate-500 leading-tight">{{ log.details|truncatechars:120 }}</p>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="responsive-empty-state">No se encontraron registros de auditoria.</td>
+                        <td colspan="5" class="responsive-empty-state">No se encontraron registros de trazabilidad para los filtros seleccionados.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

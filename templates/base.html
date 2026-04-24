@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
   <link rel="stylesheet" href="{% static 'css/base_shell.css' %}?v=4" />
   <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=10" />
+  <link rel="stylesheet" href="{% static 'css/theme-glass.css' %}?v=6" />
   <!-- HTMX -->
   <script src="{% static 'vendor/htmx-2.0.3.min.js' %}"></script>
   <!-- Alpine.js -->
@@ -19,14 +20,9 @@
   {% block extra_head %}{% endblock %}
 </head>
 
-<body class="{% block body_class %}min-h-screen bg-[#140a28] text-slate-100 selection:bg-primary/30 antialiased font-sans{% endblock %}">
+<body class="{% block body_class %}min-h-screen saas-hybrid antialiased font-sans{% endblock %}">
   {% block background_layer %}
-  <div class="fixed inset-0 -z-10" aria-hidden="true" style="pointer-events: none;">
-    <div class="absolute -top-40 -left-40 h-[40rem] w-[40rem] rounded-full blur-[150px] bg-primary/20"></div>
-    <div class="absolute bottom-0 right-1/4 h-[50rem] w-[50rem] rounded-full blur-[200px] bg-secondary/10"></div>
-    <div class="absolute bottom-0 right-0 h-[30rem] w-[30rem] rounded-full blur-[150px] bg-pink-600/20"></div>
-    <div class="absolute inset-0 bg-black/40"></div>
-  </div>
+  <div class="sicgad-background-layer fixed inset-0 -z-10" aria-hidden="true"></div>
   {% endblock %}
 
   {% block system_messages %}

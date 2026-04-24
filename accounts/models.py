@@ -106,7 +106,7 @@ class AccountProfile(models.Model):
     VIEWER_PROFILE_CHOICES = [
         (VIEWER_STANDARD, "Visualizador estandar"),
         (VIEWER_EXTERNAL_MONTHLY, "Visualizador externo (mensual)"),
-        (VIEWER_AUTHORITY_MHE, "Visualizador autoridad MHE"),
+        (VIEWER_AUTHORITY_MHE, "Visualizador autoridad institucional"),
     ]
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,

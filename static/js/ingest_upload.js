@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
       btn.addEventListener("click", function () {
         const value = select.value;
         if (!value) {
-          alert("Primero selecciona un tipo de dataset para generar la plantilla.");
+          alert("Primero seleccione un conjunto de datos institucional para generar la plantilla.");
           return;
         }
 
@@ -28,27 +28,27 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (isCertification && freq === "MONTHLY") {
           hint.textContent =
-            "Este dataset es de certificación mensual. Al enviarlo se genera una consolidación automática.";
+            "Este conjunto es de certificación mensual. Al enviarlo se genera una consolidación automática.";
           return;
         }
         if (freq === "DAILY") {
           hint.textContent =
-            "Este dataset se valida de forma diaria. Recuerda enviarlo después de cargarlo.";
+            "Este conjunto se valida de forma diaria. Recuerde enviarlo después de cargarlo.";
           return;
         }
         if (freq === "WEEKLY") {
           hint.textContent =
-            "Este dataset se valida de forma semanal. Recuerda enviarlo después de cargarlo.";
+            "Este conjunto se valida de forma semanal. Recuerde enviarlo después de cargarlo.";
           return;
         }
         if (freq === "MONTHLY") {
           hint.textContent =
-            "Este dataset se valida de forma mensual. Recuerda enviarlo después de cargarlo.";
+            "Este conjunto se valida de forma mensual. Recuerde enviarlo después de cargarlo.";
           return;
         }
         if (freq === "FLEXIBLE") {
           hint.textContent =
-            "Este dataset es de proyecciones (periodicidad no definida). Se valida con el flujo mensual.";
+            "Este conjunto es de proyecciones institucionales. Se valida con el flujo mensual.";
           return;
         }
       }
@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
       );
 
       importLink.classList.remove("hidden");
-      importLink.textContent = "Importar historico";
+      importLink.textContent = "Importar histórico";
       importLink.classList.remove(
         "pointer-events-none",
         "opacity-60",
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
         "text-slate-300"
       );
       importLink.classList.add("bg-fuchsia-600", "hover:bg-fuchsia-500", "animate-pulse");
-      importLink.setAttribute("title", "Importa el historico para habilitar la carga periodica");
+      importLink.setAttribute("title", "Importe el histórico para habilitar la carga periódica");
       return;
     }
 
@@ -257,7 +257,7 @@ document.addEventListener("DOMContentLoaded", function () {
           }
 
           if (typeof data.percent === "number") {
-            setProgress(data.percent, data.message || "Procesando historico en servidor...");
+            setProgress(data.percent, data.message || "Procesando histórico en servidor...");
           }
 
           if (data.status === "DONE") {
@@ -405,7 +405,7 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
 
-        const csrfMessage = xhr.status === 403 ? "La sesión de seguridad expiró (CSRF). Recarga la página e intenta de nuevo." : "No se pudo completar la importación. Revisa el formulario.";
+        const csrfMessage = xhr.status === 403 ? "La sesión de seguridad expiró (CSRF). Recargue la página e intente de nuevo." : "No fue posible procesar la carga. Revise el formato de la plantilla y vuelva a intentarlo.";
         setProgress(0, csrfMessage);
         setBackendPhase(false, "");
         resetInFlight();

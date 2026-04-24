@@ -112,8 +112,8 @@ class SchemaSeededCreateTests(TestCase):
             response.context["form"].fields["entity"].initial,
             self.entity,
         )
-        self.assertContains(response, "Este esquema se esta creando para")
-        self.assertContains(response, "Requiere aprobacion admin")
+        self.assertContains(response, "Este esquema se está creando para")
+        self.assertContains(response, "Requiere aprobación admin")
 
 
 @override_settings(

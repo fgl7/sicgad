@@ -11,9 +11,9 @@
 <div class="page-shell page-shell--narrow fade-in">
     <div class="page-hero">
         <div class="page-hero__content">
-            <p class="page-kicker">Projects</p>
-            <h2 class="page-title">{% if config %}Sincronizacion de Reporte{% else %}Arquitectura Analitica{% endif %}</h2>
-            <p class="page-subtitle">Vincula datasets operativos con el visor ejecutivo y define su variante de presentacion con una estructura mas clara para mantenimiento.</p>
+            <p class="page-kicker">Proyectos</p>
+            <h2 class="page-title">{% if config %}Sincronización de reporte{% else %}Arquitectura analítica{% endif %}</h2>
+            <p class="page-subtitle">Vincule conjuntos institucionales con el visor ejecutivo y defina su variante de presentación con una estructura clara para mantenimiento.</p>
         </div>
         <div class="page-hero__actions">
             <a href="{% url 'projects:report_config_list' %}" class="page-back-link">
@@ -30,31 +30,31 @@
                 <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 </div>
-                <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest">General y Variante</h3>
+                <h3 class="text-xs font-bold text-indigo-400 uppercase tracking-widest">General y variante</h3>
             </div>
 
             <div class="grid gap-6 md:grid-cols-2 lg:gap-8">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Proyecto Objetivo</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Proyecto objetivo</label>
                     {{ form.project }}
                     {% if form.project.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.project.errors.0 }}</p>{% endif %}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Alias del Reporte</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Alias del reporte</label>
                     {{ form.name }}
                     {% if form.name.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.name.errors.0 }}</p>{% endif %}
                 </div>
             </div>
 
             <div class="space-y-2">
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Variante del Visor</label>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Variante del visor</label>
                 {{ form.report_variant }}
                 {% if form.report_variant.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.report_variant.errors.0 }}</p>{% endif %}
                 <p class="text-[9px] text-slate-600 font-bold uppercase tracking-tighter">{{ form.report_variant.help_text }}</p>
             </div>
 
             <div class="space-y-2">
-                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Dataset de Resumen Ejecutivo</label>
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Conjunto de resumen ejecutivo</label>
                 {{ form.report_dataset }}
                 <p class="text-[9px] text-slate-600 font-bold uppercase tracking-tighter">Debe concentrar metadatos, texto narrativo y los KPIs base del reporte.</p>
                 {% if form.report_dataset.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.report_dataset.errors.0 }}</p>{% endif %}
@@ -66,17 +66,17 @@
                 <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
                 </div>
-                <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Datasets de Seguimiento</h3>
+                <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Conjuntos de seguimiento</h3>
             </div>
 
             <div class="grid gap-6 md:grid-cols-2 lg:gap-8">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Dataset Curva Programada</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Conjunto de curva programada</label>
                     {{ form.curve_program_dataset }}
                     {% if form.curve_program_dataset.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.curve_program_dataset.errors.0 }}</p>{% endif %}
                 </div>
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Dataset Curva Ejecutada</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Conjunto de curva ejecutada</label>
                     {{ form.curve_executed_dataset }}
                     {% if form.curve_executed_dataset.errors %}<p class="mt-1 text-red-500 text-[10px]">{{ form.curve_executed_dataset.errors.0 }}</p>{% endif %}
                 </div>
@@ -84,15 +84,15 @@
 
             <div class="grid gap-6 md:grid-cols-2 lg:gap-8">
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Notas Internas</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Notas internas</label>
                     {{ form.notes }}
                 </div>
                 <div class="p-5 rounded-3xl bg-slate-950/40 border border-white/5 space-y-3">
-                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Convencion Recomendada</p>
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Convención recomendada</p>
                     <ul class="space-y-2 text-[11px] text-slate-400">
                         <li><span class="text-slate-200 font-semibold">project</span>: usa resumen ejecutivo + curva S mensual.</li>
                         <li><span class="text-slate-200 font-semibold">agreement</span>: usa resumen contractual + avance por hitos o porcentajes.</li>
-                        <li><span class="text-slate-200 font-semibold">auto</span>: detecta segun campos disponibles y nombre del reporte.</li>
+                        <li><span class="text-slate-200 font-semibold">auto</span>: detecta según campos disponibles y nombre del reporte.</li>
                         <li>Cualquier otro slug se guarda y hoy cae en el layout base hasta que se implemente su plantilla propia.</li>
                     </ul>
                 </div>
@@ -104,8 +104,8 @@
                         {{ form.is_active }}
                     </div>
                     <div>
-                        <span class="block text-xs font-bold text-slate-300 group-hover:text-white transition-colors">Estado Activo</span>
-                        <span class="block text-[9px] text-slate-600 font-bold uppercase tracking-widest">La configuracion sera visible en el menu ejecutivo.</span>
+                        <span class="block text-xs font-bold text-slate-300 group-hover:text-white transition-colors">Estado activo</span>
+                        <span class="block text-[9px] text-slate-600 font-bold uppercase tracking-widest">La configuración será visible en el menú ejecutivo.</span>
                     </div>
                 </label>
             </div>
@@ -113,7 +113,7 @@
 
         <div class="form-footer-actions pt-2 pb-8">
             <button type="submit" class="btn-primary glow-emerald px-12 py-4 text-xs font-black uppercase tracking-widest">
-                {% if config %}Confirmar Cambios Operativos{% else %}Finalizar Configuracion de Reporte{% endif %}
+                {% if config %}Confirmar cambios operativos{% else %}Finalizar configuración de reporte{% endif %}
             </button>
         </div>
     </form>

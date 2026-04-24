@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Validacion - {{ instance.dataset_type.name }} - SICGAD{% endblock %}
+{% block title %}Validación - {{ instance.dataset_type.name }} - SICGAD{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
@@ -12,27 +12,27 @@
     <div class="page-hero">
         <div class="page-hero__content">
             <div class="flex flex-wrap items-center gap-3">
-                <h2 class="page-title">Modulo de Validacion</h2>
+                <h2 class="page-title">Validación institucional</h2>
                 <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-[10px] font-black text-emerald-500 border border-emerald-500/20 uppercase">Nivel {{ user_validation_level|default:"Auto" }}</span>
             </div>
-            <p class="page-subtitle">Auditoria y certificacion de integridad para el dataset propuesto.</p>
+            <p class="page-subtitle">Revisión y certificación de integridad para la información institucional propuesta.</p>
         </div>
         <div class="page-hero__actions">
-            <a href="{% url 'validation:inbox' %}" class="page-back-link">Volver al buzon</a>
+            <a href="{% url 'validation:inbox' %}" class="page-back-link">Volver a bandeja</a>
         </div>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-4">
         <div class="space-y-4 lg:col-span-1">
             <div class="glass-card rounded-3xl p-6 border-white/5 bg-white/[0.01] space-y-4">
-                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Informacion de la Carga</h3>
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Información de la carga</h3>
                 <div class="space-y-3">
                     <div>
-                        <p class="text-[9px] font-bold text-slate-600 uppercase">Dataset</p>
+                        <p class="text-[9px] font-bold text-slate-600 uppercase">Conjunto de datos</p>
                         <p class="text-sm font-bold text-white leading-tight">{{ instance.dataset_type.name }}</p>
                     </div>
                     <div>
-                        <p class="text-[9px] font-bold text-slate-600 uppercase">Origen</p>
+                        <p class="text-[9px] font-bold text-slate-600 uppercase">Entidad</p>
                         <p class="text-sm font-bold text-sky-400">{{ instance.entity.name }}</p>
                     </div>
                     <div class="flex justify-between gap-3">
@@ -48,17 +48,17 @@
                 </div>
                 <div class="pt-4 border-t border-white/5">
                     <a href="{% url 'ingest:instance_detail' instance.pk %}" class="w-full inline-flex items-center justify-center p-3 rounded-xl bg-slate-800 text-[10px] font-black text-slate-300 hover:text-white hover:bg-slate-700 transition-all uppercase tracking-widest">
-                        Explorar Datos RAW
+                        Ver información cargada
                     </a>
                 </div>
             </div>
 
             <div class="glass-card rounded-3xl p-6 border-white/5 bg-emerald-500/5 ring-1 ring-emerald-500/20">
-                <h3 class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4">Registro de Decision</h3>
+                <h3 class="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-4">Registro de decisión</h3>
                 <form method="post" class="space-y-4">
                     {% csrf_token %}
                     <div class="space-y-2">
-                        <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Estado Final</label>
+                        <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-widest">Decisión</label>
                         {{ form.decision }}
                     </div>
                     <div class="space-y-2">
@@ -66,7 +66,7 @@
                         {{ form.comment }}
                     </div>
                     <button type="submit" class="w-full btn-primary py-3 rounded-xl glow-emerald font-black uppercase tracking-widest text-[10px]">
-                        Emitir Sentencia
+                        Registrar decisión
                     </button>
                 </form>
             </div>
@@ -76,14 +76,14 @@
             {% if monthly_review %}
             <div class="glass-card rounded-3xl overflow-hidden border-white/5 shadow-2xl">
                 <div class="border-b border-white/5 bg-white/[0.02] px-5 py-5 sm:px-8 sm:py-6">
-                    <h3 class="text-xs font-bold text-white uppercase tracking-widest">Analisis Consolidado Mensual</h3>
+                    <h3 class="text-xs font-bold text-white uppercase tracking-widest">Análisis consolidado mensual</h3>
                 </div>
 
                 <div class="space-y-8 p-5 sm:p-8">
                     <div class="space-y-3">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Trazabilidad Diaria</h4>
-                            <span class="text-[9px] text-amber-500 font-bold uppercase">Filas ambar indican ajustes manuales</span>
+                            <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Trazabilidad diaria</h4>
+                            <span class="text-[9px] text-amber-500 font-bold uppercase">Filas ámbar indican ajustes manuales</span>
                         </div>
                         <div class="matrix-table-shell rounded-2xl border border-white/5 custom-scrollbar">
                             <table class="matrix-table text-left">
@@ -109,7 +109,7 @@
                                             {% elif row.has_instance %}
                                                 <span class="text-emerald-500/60">OK</span>
                                             {% else %}
-                                                <span class="text-slate-700">Missing</span>
+                                                <span class="text-slate-700">Sin registro</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -120,7 +120,7 @@
                     </div>
 
                     <div class="space-y-3">
-                        <h4 class="text-[10px] font-black text-sky-500 uppercase tracking-[0.2em]">Cifras Oficiales para Certificacion</h4>
+                        <h4 class="text-[10px] font-black text-sky-500 uppercase tracking-[0.2em]">Cifras oficiales para certificación</h4>
                         <div class="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
                             {% for item in monthly_review.monthly_values %}
                             <div class="rounded-2xl border border-sky-500/10 bg-sky-500/5 p-4 text-center space-y-1">
@@ -137,7 +137,7 @@
 
             {% if change_requests %}
             <div class="section-stack">
-                <h3 class="section-heading__title text-slate-500">Justificaciones y Soportes</h3>
+                <h3 class="section-heading__title text-slate-500">Justificaciones y soportes</h3>
                 <div class="grid gap-4">
                     {% for req in change_requests %}
                     <div class="glass-card rounded-2xl p-6 border-white/5 bg-white/[0.01] space-y-4">
@@ -172,7 +172,7 @@
             {% endif %}
 
             <div class="glass-card rounded-3xl p-6 sm:p-8 border-white/5 bg-slate-900/10 space-y-4">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Historico de Acciones</h3>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Histórico de acciones</h3>
                 <div class="relative space-y-4">
                     <div class="absolute bottom-2 left-[15px] top-2 w-px bg-slate-800"></div>
                     {% for act in actions %}
@@ -193,7 +193,7 @@
                         </div>
                     </div>
                     {% empty %}
-                    <p class="py-4 text-xs italic text-slate-600">Aun no se han registrado acciones de validacion en este flujo.</p>
+                    <p class="py-4 text-xs italic text-slate-600">Aún no se han registrado acciones de validación en este flujo.</p>
                     {% endfor %}
                 </div>
             </div>

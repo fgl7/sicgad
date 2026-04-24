@@ -11,9 +11,9 @@
 <div class="page-shell fade-in">
     <div class="page-hero">
         <div class="page-hero__content">
-            <p class="page-kicker">Ingest</p>
-            <h2 class="page-title">Detalle de Ingesta</h2>
-            <p class="page-subtitle">Exploracion de datos RAW procesados para el periodo configurado.</p>
+            <p class="page-kicker">Carga institucional</p>
+            <h2 class="page-title">Detalle de carga</h2>
+            <p class="page-subtitle">Previsualización de la información procesada para el período configurado.</p>
         </div>
         <div class="page-hero__actions">
             <a href="{{ back_url }}" class="page-back-link">
@@ -25,26 +25,26 @@
 
     <div class="info-card-grid md:grid-cols-4">
         <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Unidad Operativa</p>
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Entidad institucional</p>
             <p class="text-sm font-bold text-white">{{ instance.entity.code|default:instance.entity.name }}</p>
         </div>
         <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Dataset</p>
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Conjunto de datos</p>
             <p class="text-sm font-bold text-white">{{ instance.dataset_type.name }}</p>
         </div>
         <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Periodo Operativo</p>
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Periodo operativo</p>
             <p class="text-sm font-bold text-sky-400">{{ instance.period }}</p>
         </div>
         <div class="glass-card rounded-2xl p-4 border-white/5 bg-white/[0.02]">
-            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado Validacion</p>
+            <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado de validación</p>
             <p class="text-sm font-bold text-emerald-400">{{ instance.get_state_display }}</p>
         </div>
     </div>
 
     <section class="section-stack">
         <div class="section-heading">
-            <h3 class="section-heading__title text-slate-400">Previsualizacion de Datos (Top 100)</h3>
+            <h3 class="section-heading__title text-slate-400">Previsualización de información (primeras 100 filas)</h3>
             <span class="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic break-all text-left sm:text-right">Archivo: {{ instance.raw_file.name|default:"Memoria RAM" }}</span>
         </div>
 
@@ -68,7 +68,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="{{ header|length }}" class="responsive-empty-state">No se encontraron filas de datos en esta ingesta.</td>
+                            <td colspan="{{ header|length }}" class="responsive-empty-state">No se encontraron filas de información en esta carga.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -78,8 +78,8 @@
             <div class="py-20 text-center space-y-4">
                 <div class="text-slate-700">
                     <svg class="w-12 h-12 mx-auto mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.876c.54 0 .899-.596.63-1.026L13.03 4.062a1.012 1.012 0 00-1.817 0l-7.73 13.912c-.269.43-.269.946.063 1.026z"></path></svg>
-                    <p class="text-sm font-bold uppercase tracking-widest">No se pudo materializar la vista previa</p>
-                    <p class="text-xs text-slate-600">El archivo fuente podria estar vacio o en un formato no binario compatible.</p>
+                    <p class="text-sm font-bold uppercase tracking-widest">No se pudo generar la vista previa</p>
+                    <p class="text-xs text-slate-600">Revise que el archivo no esté vacío y que respete el formato de la plantilla institucional.</p>
                 </div>
             </div>
             {% endif %}

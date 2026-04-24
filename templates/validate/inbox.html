@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Bandeja de validacion - SICGAD{% endblock %}
+{% block title %}Bandeja de validación - SICGAD{% endblock %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/data_workbench.css' %}?v=1">
@@ -11,9 +11,9 @@
 <div class="page-shell fade-in">
     <div class="page-hero">
         <div class="page-hero__content">
-            <p class="page-kicker">Validation</p>
-            <h2 class="page-title">Centro de Validacion</h2>
-            <p class="page-subtitle">Gestiona la oficializacion de datos operativos y certificaciones mensuales sin perder trazabilidad por entidad, dataset y periodo.</p>
+            <p class="page-kicker">Validación</p>
+            <h2 class="page-title">Centro de validación institucional</h2>
+            <p class="page-subtitle">Gestiona la oficialización de información institucional y certificaciones mensuales con trazabilidad por entidad, conjunto de datos y período.</p>
         </div>
     </div>
 
@@ -21,7 +21,7 @@
     <section class="section-stack">
         <h3 class="section-heading__title text-sky-400">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Validacion de Datos Historicos
+            Validación de información histórica
         </h3>
         <div class="glass-card rounded-3xl overflow-hidden border-white/5 bg-sky-500/5">
             <div class="responsive-table-shell">
@@ -29,8 +29,8 @@
                     <thead>
                         <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
                             <th class="px-6 py-4">Creado</th>
-                            <th class="px-6 py-4 text-center">Unidad</th>
-                            <th class="px-6 py-4">Dataset / Rango</th>
+                            <th class="px-6 py-4 text-center">Entidad</th>
+                            <th class="px-6 py-4">Conjunto / Rango</th>
                             <th class="px-6 py-4 text-center">Cargas</th>
                             <th class="px-6 py-4 text-right">Accion</th>
                         </tr>
@@ -39,10 +39,10 @@
                         {% for batch in pending_historical_batches %}
                         <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors">
                             <td class="px-6 py-4 font-mono text-[10px] text-slate-400" data-label="Creado">{{ batch.created_at|date:"d/m/Y H:i" }}</td>
-                            <td class="px-6 py-4 text-center" data-label="Unidad">
+                            <td class="px-6 py-4 text-center" data-label="Entidad">
                                 <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400">{{ batch.entity.code|default:batch.entity.name }}</span>
                             </td>
-                            <td class="px-6 py-4" data-label="Dataset / Rango">
+                            <td class="px-6 py-4" data-label="Conjunto / Rango">
                                 <div class="responsive-table-meta">
                                     <span class="responsive-table-meta__title text-slate-200">{{ batch.dataset_type.name }}</span>
                                     <span class="responsive-table-meta__detail text-[10px] uppercase">
@@ -55,11 +55,11 @@
                             <td class="px-6 py-4 text-center" data-label="Cargas">
                                 <span class="text-xs font-bold text-sky-400">{{ batch.pending_count }}</span>
                             </td>
-                            <td class="px-6 py-4 text-right responsive-data-table__actions" data-label="Accion">
+                            <td class="px-6 py-4 text-right responsive-data-table__actions" data-label="Acción">
                                 <form method="post" action="{% url 'validation:approve_historical_batch' batch.id %}" data-historical-approve-form data-historical-approve-progress-url="{% url 'validation:approve_historical_batch_progress' batch.id %}" class="responsive-inline-form">
                                     {% csrf_token %}
                                     <button type="submit" class="btn-primary py-1 px-4 glow-emerald" data-historical-approve-btn>
-                                        Aprobar Pack
+                                        Aprobar lote
                                     </button>
                                 </form>
                             </td>
@@ -76,7 +76,7 @@
     <section class="section-stack">
         <h3 class="section-heading__title text-amber-500">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.876c.54 0 .899-.596.63-1.026L13.03 4.062a1.012 1.012 0 00-1.817 0l-7.73 13.912c-.269.43-.269.946.063 1.026z"></path></svg>
-            Alertas de Certificacion Mensual
+            Alertas de certificación mensual
         </h3>
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {% for alert in certification_alerts %}
@@ -87,7 +87,7 @@
                 </div>
                 <h4 class="font-bold text-slate-200 mb-4 group-hover:text-amber-400 transition-colors">{{ alert.dataset_type.name }}</h4>
                 <a href="{% url 'validation:detail' alert.pk %}" class="flex items-center justify-center w-full py-2 rounded-xl bg-amber-500/10 text-amber-500 text-xs font-bold hover:bg-amber-500 hover:text-white transition-all">
-                    Analizar Certificacion
+                    Revisar certificación
                 </a>
             </div>
             {% endfor %}
@@ -98,7 +98,7 @@
     <section class="section-stack">
         <h3 class="section-heading__title text-emerald-400">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0a2 2 0 01-2 2H6a2 2 0 01-2-2m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-            Bandeja de Pendientes
+            Cargas pendientes de validación
         </h3>
         <div class="glass-card rounded-3xl overflow-hidden border-white/5">
             <div class="responsive-table-shell">
@@ -106,8 +106,8 @@
                     <thead>
                         <tr class="bg-white/[0.02] text-[10px] font-black text-slate-500 uppercase tracking-widest">
                             <th class="px-6 py-4">Fecha Carga</th>
-                            <th class="px-6 py-4 text-center">Unidad</th>
-                            <th class="px-6 py-4">Dataset / Periodo</th>
+                            <th class="px-6 py-4 text-center">Entidad</th>
+                            <th class="px-6 py-4">Conjunto / Período</th>
                             <th class="px-6 py-4">Frecuencia</th>
                             <th class="px-6 py-4 text-right">Acciones</th>
                         </tr>
@@ -116,10 +116,10 @@
                         {% for inst in items %}
                         <tr class="border-t border-white/5 hover:bg-white/[0.01] transition-colors group">
                             <td class="px-6 py-4 font-mono text-[10px] text-slate-400" data-label="Fecha carga">{{ inst.created_at|date:"d/m/Y H:i" }}</td>
-                            <td class="px-6 py-4 text-center" data-label="Unidad">
+                            <td class="px-6 py-4 text-center" data-label="Entidad">
                                 <span class="px-2 py-0.5 rounded bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-400 group-hover:text-emerald-400 transition-colors">{{ inst.entity.code|default:inst.entity.name }}</span>
                             </td>
-                            <td class="px-6 py-4" data-label="Dataset / Periodo">
+                            <td class="px-6 py-4" data-label="Conjunto / Período">
                                 <div class="responsive-table-meta">
                                     <span class="responsive-table-meta__title text-slate-200">{{ inst.dataset_type.name }}</span>
                                     <span class="responsive-table-meta__detail text-[10px] font-bold text-emerald-500/80 uppercase tracking-tighter">{{ inst.period }}</span>
@@ -136,7 +136,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="responsive-empty-state">Bandeja de entrada vacia.</td>
+                            <td colspan="5" class="responsive-empty-state">No existen cargas pendientes para su alcance de validación.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -148,7 +148,7 @@
     <section class="section-stack">
         <h3 class="section-heading__title text-slate-500">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-            Mis Decisiones Recientes
+            Decisiones recientes
         </h3>
         <div class="glass-card rounded-3xl overflow-hidden border-white/5 opacity-80">
             <div class="responsive-table-shell">
@@ -156,8 +156,8 @@
                     <thead>
                         <tr class="bg-white/[0.01] text-[10px] font-black text-slate-600 uppercase tracking-widest">
                             <th class="px-6 py-3">Fecha</th>
-                            <th class="px-6 py-3">Dataset</th>
-                            <th class="px-6 py-3 text-center">Decision</th>
+                            <th class="px-6 py-3">Conjunto</th>
+                            <th class="px-6 py-3 text-center">Decisión</th>
                             <th class="px-6 py-3">Comentario</th>
                         </tr>
                     </thead>
@@ -165,13 +165,13 @@
                         {% for act in history_actions|slice:":10" %}
                         <tr class="border-t border-white/5 text-slate-400">
                             <td class="px-6 py-3 text-[10px]" data-label="Fecha">{{ act.created_at|date:"d/m/Y H:i" }}</td>
-                            <td class="px-6 py-3" data-label="Dataset">
+                            <td class="px-6 py-3" data-label="Conjunto">
                                 <div class="responsive-table-meta">
                                     <span class="font-bold text-slate-400 text-xs">{{ act.dataset_instance.dataset_type.name }}</span>
                                     <span class="responsive-table-meta__detail text-[9px] uppercase">{{ act.dataset_instance.entity.code|default:act.dataset_instance.entity.name }} - {{ act.dataset_instance.period }}</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-3 text-center" data-label="Decision">
+                            <td class="px-6 py-3 text-center" data-label="Decisión">
                                 <span class="px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tight {% if act.decision == 'APPROVE' %}text-emerald-500{% else %}text-red-400{% endif %}">
                                     {{ act.get_decision_display }}
                                 </span>
@@ -182,7 +182,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="responsive-empty-state">No hay acciones registradas.</td>
+                            <td colspan="4" class="responsive-empty-state">No existen decisiones registradas para este usuario.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -199,7 +199,7 @@
             <div class="flex items-center justify-between gap-3">
                 <div class="inline-flex items-center gap-2 text-sky-200 text-sm font-semibold">
                     <span class="inline-block w-3.5 h-3.5 border-2 border-sky-300 border-t-transparent rounded-full animate-spin"></span>
-                    <span id="historical-approve-status-text">Aprobando historico...</span>
+                    <span id="historical-approve-status-text">Aprobando lote histórico...</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <span id="historical-approve-stage" class="hidden px-2 py-0.5 rounded-md text-[10px] font-semibold"></span>
@@ -209,7 +209,7 @@
             <div class="w-full h-2 rounded bg-slate-800/80 overflow-hidden">
                 <div id="historical-approve-progress" class="h-full w-0 bg-sky-400 transition-all duration-150"></div>
             </div>
-            <p id="historical-approve-detail-text" class="text-[11px] text-sky-200">Procesando y publicando datos. Por favor espera...</p>
+            <p id="historical-approve-detail-text" class="text-[11px] text-sky-200">Procesando y publicando información validada. Por favor espere...</p>
         </div>
     </div>
 </div>

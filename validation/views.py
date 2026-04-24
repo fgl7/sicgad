@@ -304,7 +304,7 @@ def inbox(request):
         messages.info(
             request,
             "La bandeja de validaciÃ³n estÃ¡ disponible solo para validadores. "
-            "Puedes revisar el estado y comentarios de tus cargas en el historial.",
+            "Puede revisar el estado y comentarios de sus cargas en el historial.",
         )
         return redirect("ingest:upload_history")
 
@@ -519,7 +519,7 @@ def approve_historical_batch(request, batch_id: int):
 
 
     if not membership:
-        messages.error(request, "No tiene permisos de validaciÃ³n diaria para este histÃ³rico.")
+        messages.error(request, "No tiene permisos de validación diaria para este histórico.")
         return _json_or_redirect(request, "validation:inbox")
 
     approval_subquery = ValidationAction.objects.filter(
@@ -555,7 +555,7 @@ def approve_historical_batch(request, batch_id: int):
         .values_list("id", flat=True)
     )
     if not instance_ids and not rematerialize_ids:
-        messages.info(request, "No hay instancias pendientes para aprobar en este histÃ³rico.")
+        messages.info(request, "No existen registros pendientes para aprobar en este histórico.")
         _set_historical_approve_progress(
             user_id=user.id,
             batch_id=batch.id,
@@ -605,7 +605,7 @@ def approve_historical_batch(request, batch_id: int):
         )
 
     push_progress(
-        "Preparando aprobacion del historico...",
+        "Preparando aprobación del histórico...",
         percent_override=1,
         stage_index=1,
         stage_label="Preparacion",
@@ -622,7 +622,7 @@ def approve_historical_batch(request, batch_id: int):
                 user=user,
                 level=level,
                 decision=ValidationAction.DECISION_APPROVE,
-                comment="AprobaciÃ³n masiva de histÃ³rico.",
+                comment="Aprobación masiva de histórico.",
             )
             for instance_id in instance_ids
         ]
@@ -702,7 +702,7 @@ def approve_historical_batch(request, batch_id: int):
     )
 
     if instance_ids:
-        messages.success(request, f"HistÃ³rico aprobado: {len(instance_ids)} dÃ­as.")
+        messages.success(request, f"Histórico aprobado: {len(instance_ids)} días.")
     if rematerialize_ids:
         messages.info(
             request,
@@ -730,7 +730,7 @@ def approve_historical_batch(request, batch_id: int):
             )
             messages.warning(
                 request,
-                "El historico se aprobo, pero fallo la consolidacion mensual automatica.",
+                "El histórico se aprobó, pero falló la consolidación mensual automática.",
             )
         else:
             if consolidated_count:
@@ -759,7 +759,7 @@ def approve_historical_batch(request, batch_id: int):
     )
     progress_done_units += 1
     push_progress(
-        "Aprobacion historica completada.",
+        "Aprobación histórica completada.",
         status="DONE",
         percent_override=100,
         stage_index=4,
@@ -873,7 +873,7 @@ def detail(request, pk):
 
 
     if not membership:
-        messages.error(request, "No tiene permisos de validacion sobre este dataset.")
+        messages.error(request, "No tiene permisos de validación sobre este conjunto de datos.")
         return redirect(reverse("validation:inbox"))
 
     if (
@@ -942,7 +942,7 @@ def detail(request, pk):
                                 request,
                                 "El dia fue aprobado, pero fallo la consolidacion mensual automatica.",
                             )
-                messages.success(request, "Dataset aprobado correctamente.")
+                messages.success(request, "Conjunto de datos aprobado correctamente.")
                 record_action(
                     "VALIDATION",
                     request=request,
@@ -959,7 +959,7 @@ def detail(request, pk):
                 instance.last_error_summary = error_summary
                 instance.submitted_at = None
                 instance.save()
-                messages.warning(request, "Dataset rechazado y devuelto a borrador.")
+                messages.warning(request, "Conjunto de datos rechazado y devuelto a borrador.")
                 record_action(
                     "VALIDATION",
                     request=request,

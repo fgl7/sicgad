@@ -15,9 +15,9 @@
 <div class="page-shell fade-in">
     <div class="page-hero">
         <div class="page-hero__content">
-            <p class="page-kicker">Schemas</p>
-            <h2 class="page-title">{% if dataset %}Configurar Arquitectura de Datos{% else %}Definir Nuevo Esquema{% endif %}</h2>
-            <p class="page-subtitle">Define entidad, frecuencia y columnas del esquema sin romper el flujo actual de aprobacion.</p>
+            <p class="page-kicker">Esquemas</p>
+            <h2 class="page-title">{% if dataset %}Configurar arquitectura de datos{% else %}Definir nuevo esquema{% endif %}</h2>
+            <p class="page-subtitle">Define entidad, frecuencia y columnas del esquema sin romper el flujo actual de aprobación.</p>
         </div>
         <div class="page-hero__actions">
             <a href="{% url 'schemas:schema_list' %}" class="page-back-link">
@@ -32,13 +32,13 @@
         <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
             <div class="space-y-2">
                 <p class="text-[10px] font-black uppercase tracking-[0.18em] text-sky-300">Flujo sembrado desde proyectos</p>
-                <h3 class="text-lg font-header font-bold text-white">Este esquema se esta creando para {{ seed_project_label }}</h3>
+                <h3 class="text-lg font-header font-bold text-white">Este esquema se está creando para {{ seed_project_label }}</h3>
                 <p class="text-sm text-slate-300">
-                    Crea la estructura tecnica y luego enviala a aprobacion. La administracion revisara el esquema antes de habilitar la carga operativa.
+                    Cree la estructura técnica y luego envíela a aprobación. La administración revisará el esquema antes de habilitar la carga operativa.
                 </p>
             </div>
             <span class="inline-flex items-center px-3 py-1.5 rounded-xl border border-sky-400/30 bg-sky-500/10 text-[10px] font-black uppercase tracking-widest text-sky-200">
-                Requiere aprobacion admin
+                Requiere aprobación admin
             </span>
         </div>
 
@@ -75,7 +75,7 @@
             <div class="section-heading">
                 <h3 class="section-heading__title text-emerald-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                    Parametros del esquema
+                    Parámetros del esquema
                 </h3>
                 {% if has_global_loader and not is_admin %}
                 <span class="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-sky-500/10 text-sky-300 border border-sky-400/30">Loader global</span>
@@ -103,7 +103,7 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre tecnico</label>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nombre técnico</label>
                     {{ form.name }}
                 </div>
 
@@ -120,14 +120,14 @@
 
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="rounded-2xl border border-white/10 bg-slate-900/35 p-4 space-y-2">
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Jerarquia del alcance</p>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Jerarquía del alcance</p>
                     {% if dataset_scope %}
                     <div class="flex flex-wrap items-center gap-2 text-[11px]">
                         <span class="px-2 py-1 rounded-md bg-sky-500/10 border border-sky-400/30 text-sky-200">Sector: {{ dataset_scope.sector.name }}</span>
                         <span class="text-slate-500">/</span>
                         <span class="px-2 py-1 rounded-md bg-cyan-500/10 border border-cyan-400/30 text-cyan-200">Subsector: {{ dataset_scope.subsector.name }}</span>
                         <span class="text-slate-500">/</span>
-                        <span class="px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-400/30 text-emerald-200">Categoria: {{ dataset_scope.category.name }}</span>
+                        <span class="px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-400/30 text-emerald-200">Categoría: {{ dataset_scope.category.name }}</span>
                         <span class="text-slate-500">/</span>
                         <span class="px-2 py-1 rounded-md bg-amber-500/10 border border-amber-400/30 text-amber-200">Entidad: {{ dataset_scope.entity.name }}</span>
                     </div>
@@ -152,7 +152,7 @@
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer group">
                         {{ form.is_one_time }}
-                        <span class="text-[10px] font-bold text-slate-400 uppercase group-hover:text-slate-200 transition-colors">Carga unica</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase group-hover:text-slate-200 transition-colors">Carga única</span>
                     </label>
                 </div>
             </div>
@@ -162,10 +162,10 @@
             <div class="px-6 py-5 border-b border-white/5 flex flex-wrap items-center justify-between gap-4 bg-white/[0.01]">
                 <h3 class="section-heading__title text-sky-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-                    Definicion de campos
+                    Definición de campos
                 </h3>
                 <button type="button" id="add-column-btn" class="btn-primary py-2 px-5 glow-emerald text-xs">
-                    + Anadir columna
+                    + Añadir columna
                 </button>
             </div>
 
@@ -177,15 +177,15 @@
                     <thead>
                         <tr class="bg-white/[0.02] text-[9px] font-black text-slate-500 uppercase tracking-[0.16em]">
                             <th class="text-center">#</th>
-                            <th>Nombre tecnico</th>
+                            <th>Nombre técnico</th>
                             <th>Etiqueta</th>
                             <th>Tipo</th>
                             <th class="text-center">Req.</th>
                             <th>Min</th>
                             <th>Max</th>
                             <th>Unidad</th>
-                            <th>Rol grafico</th>
-                            <th>Agregacion</th>
+                            <th>Rol gráfico</th>
+                            <th>Agregación</th>
                             <th class="text-center">KPI</th>
                             <th class="text-center">Accion</th>
                         </tr>

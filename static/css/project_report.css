@@ -8,16 +8,18 @@
 }
 
 .project-report-stage {
-  --report-line: rgba(56, 189, 248, 0.28);
-  --report-accent: #0f3f53;
-  --report-accent-strong: #0b3140;
-  --report-program: #38bdf8;
-  --report-executed: #34d399;
+  --report-line: rgba(91, 141, 204, 0.22);
+  --report-accent: rgba(184, 155, 134, 0.62);
+  --report-accent-strong: rgba(146, 117, 99, 0.74);
+  --report-program: #5b8dcc;
+  --report-executed: #34aa9a;
   background:
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(2, 6, 23, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.3);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.20)),
+    rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  box-shadow: 0 24px 58px rgba(48, 43, 38, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(30px) saturate(118%);
+  -webkit-backdrop-filter: blur(30px) saturate(118%);
 }
 
 .report-agreement-stage .glass-card,
@@ -45,10 +47,10 @@
 .report-grid-value {
   min-height: 2.65rem;
   align-items: center;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.34);
   border: 1px solid var(--report-line);
   border-radius: 0.95rem;
-  color: #e2e8f0;
+  color: var(--sicgad-text, #28292f);
   display: flex;
   font-size: 0.88rem;
   justify-content: center;
@@ -64,10 +66,10 @@
 }
 
 .report-grid-panel {
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255, 255, 255, 0.28);
   border: 1px solid var(--report-line);
   border-radius: 0.95rem;
-  color: #cbd5e1;
+  color: var(--sicgad-text-muted, #6e717a);
   min-height: 5.5rem;
 }
 
@@ -84,7 +86,7 @@
 
 .report-curve-table th,
 .report-curve-table td {
-  border: 1px solid rgba(116, 133, 143, 0.45);
+  border: 1px solid rgba(80, 70, 64, 0.14);
   font-size: 0.8rem;
   line-height: 1.1;
   padding: 0.32rem 0.38rem;
@@ -92,14 +94,14 @@
 }
 
 .report-curve-table thead th {
-  background: var(--report-accent-strong);
-  color: #fff;
+  background: rgba(230, 217, 208, 0.72);
+  color: #5a514b;
   font-weight: 800;
   text-transform: uppercase;
 }
 
 .report-curve-table tbody th {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.34);
   font-weight: 900;
 }
 
@@ -116,7 +118,7 @@
 }
 
 .report-kpi-strong {
-  color: #f8fafc;
+  color: var(--sicgad-text, #28292f);
   font-weight: 900;
   letter-spacing: -0.02em;
 }
@@ -141,6 +143,10 @@
   height: 2.75rem;
   object-fit: contain;
   width: 2.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  box-shadow: 0 10px 24px rgba(48, 43, 38, 0.12);
 }
 
 .report-aside-card {
@@ -212,6 +218,68 @@ button.report-filter-control {
 
 .project-curve-chart--agreement {
   height: clamp(18rem, 38vw, 23.75rem);
+}
+
+.project-report-stage header {
+  border-color: rgba(80, 70, 64, 0.12) !important;
+}
+
+.project-report-stage .text-white,
+.project-report-stage .text-slate-100,
+.project-report-stage .text-slate-200,
+.project-report-stage .text-slate-300 {
+  color: var(--sicgad-text, #28292f) !important;
+}
+
+.project-report-stage .text-slate-400,
+.project-report-stage .text-slate-500,
+.project-report-stage .text-cyan-300 {
+  color: var(--sicgad-text-muted, #6e717a) !important;
+}
+
+.project-report-stage .text-emerald-300,
+.project-report-stage .text-emerald-400 {
+  color: var(--sicgad-success, #149c79) !important;
+}
+
+.project-report-stage input.report-filter-control,
+.project-report-stage select.report-filter-control {
+  background: rgba(255, 255, 255, 0.48) !important;
+  border-color: rgba(80, 70, 64, 0.14) !important;
+  color: var(--sicgad-text, #28292f) !important;
+  box-shadow: 0 8px 18px rgba(48, 43, 38, 0.06);
+}
+
+.project-report-stage input.report-filter-control:focus,
+.project-report-stage select.report-filter-control:focus {
+  border-color: rgba(91, 141, 204, 0.42) !important;
+  box-shadow: 0 0 0 3px rgba(91, 141, 204, 0.14), 0 10px 22px rgba(48, 43, 38, 0.08) !important;
+}
+
+.project-report-stage .report-aside-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.22)),
+    rgba(255, 255, 255, 0.28) !important;
+  border-color: rgba(255, 255, 255, 0.66) !important;
+  box-shadow: 0 14px 34px rgba(48, 43, 38, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.68) !important;
+  backdrop-filter: blur(24px) saturate(116%);
+  -webkit-backdrop-filter: blur(24px) saturate(116%);
+}
+
+.project-report-stage .report-grid-panel,
+.project-report-stage .report-grid-value {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.54), 0 8px 18px rgba(48, 43, 38, 0.06);
+  backdrop-filter: blur(18px) saturate(112%);
+  -webkit-backdrop-filter: blur(18px) saturate(112%);
+}
+
+.report-agreement-stage .glass-card {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.22)),
+    rgba(255, 255, 255, 0.28) !important;
+  border-color: rgba(255, 255, 255, 0.66) !important;
+  color: var(--sicgad-text, #28292f);
+  box-shadow: 0 14px 34px rgba(48, 43, 38, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.68) !important;
 }
 
 @media (min-width: 768px) and (max-width: 1279px) {

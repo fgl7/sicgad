@@ -23,9 +23,9 @@
             </select>
         </div>
         <div class="md:col-span-4 lg:col-span-5 min-w-0">
-            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Dataset</label>
+            <label class="block mb-1 text-slate-400 font-semibold uppercase tracking-wider font-heading">Conjunto de datos</label>
             <select id="kpi-instance-select" class="w-full h-10">
-                <option value="">Selecciona un dataset...</option>
+                <option value="">Seleccione un conjunto de datos institucional...</option>
                 {% for ds in datasets %}
                 <option value="{{ ds.id }}">
                     [{{ ds.entity.code|default:ds.entity.name }}] {{ ds.name }} ({{ ds.get_validation_frequency_display }})
@@ -55,17 +55,17 @@
     <article class="authority-kpi-card authority-kpi-card-empty">
         <div class="authority-kpi-label">M&eacute;trica 1</div>
         <div class="authority-kpi-value">--</div>
-        <div class="authority-kpi-trend">Selecciona un dataset</div>
+        <div class="authority-kpi-trend">Seleccione informaci&oacute;n validada</div>
     </article>
     <article class="authority-kpi-card authority-kpi-card-empty">
         <div class="authority-kpi-label">M&eacute;trica 2</div>
         <div class="authority-kpi-value">--</div>
-        <div class="authority-kpi-trend">Selecciona un dataset</div>
+        <div class="authority-kpi-trend">Seleccione informaci&oacute;n validada</div>
     </article>
     <article class="authority-kpi-card authority-kpi-card-empty">
         <div class="authority-kpi-label">M&eacute;trica 3</div>
         <div class="authority-kpi-value">--</div>
-        <div class="authority-kpi-trend">Selecciona un dataset</div>
+        <div class="authority-kpi-trend">Seleccione informaci&oacute;n validada</div>
     </article>
 </section>
 
@@ -166,7 +166,7 @@
                             </h2>
                             <p id="related-performance-help"
                                 class="max-w-full sm:max-w-[70%] rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] text-slate-400 truncate">
-                                Se activa cuando el dataset seleccionado participa en una f&oacute;rmula aprobada.
+                                Se activa cuando el conjunto de datos seleccionado participa en un indicador calculado aprobado.
                             </p>
                         </div>
                     </div>
@@ -250,7 +250,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<script src="{% static 'js/kpis_charts.js' %}?v=31"></script>
+<script src="{% static 'js/kpis_charts.js' %}?v=32"></script>
 {% endblock %}
 
 

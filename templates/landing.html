@@ -1,116 +1,144 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}SICGAD | Acceso institucional{% endblock %}
+{% block title %}SICGAD para ABEN | Demo Institucional{% endblock %}
 
 {% block extra_head %}
+<!-- Opcional si landing.css sigue vivo -->
 <link rel="stylesheet" href="{% static 'css/landing.css' %}?v=8" />
 {% endblock %}
 
-{% block body_class %}min-h-screen selection:bg-emerald-400/30 saas-hybrid{% endblock %}
-
-{% block background_layer %}
-<div class="landing-backdrop" aria-hidden="true">
-  <img src="{% static 'background.png' %}" alt="" class="landing-image" />
-  <div class="landing-overlay"></div>
-  <div class="landing-glow landing-glow-left"></div>
-  <div class="landing-glow landing-glow-right"></div>
-</div>
-{% endblock %}
+{% block body_class %}min-h-screen bg-[#140a28] text-slate-200 antialiased font-sans{% endblock %}
 
 {% block page_layout %}
-<a href="#contenido"
-  class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-full focus:bg-slate-900 focus:text-white">
+{% block background_layer %}
+{{ block.super }}
+{% endblock %}
+
+<a href="#contenido" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:rounded-full focus:bg-primary focus:text-white">
   Saltar al contenido
 </a>
 
 <div class="app-shell">
-  <main id="contenido" class="relative z-10 min-h-screen flex items-center px-6 py-16">
-    <section class="landing-stagger w-full max-w-6xl mx-auto space-y-16">
-      <div class="flex justify-end">
-        <div class="system-status inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.35em]"
-          data-system-status aria-live="polite">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span data-status-label>Sistema en l&iacute;nea</span>
-        </div>
+  <main id="contenido" class="relative z-10 min-h-screen flex flex-col justify-center px-4 sm:px-6 py-12 lg:px-8">
+    
+    <!-- Top System Status -->
+    <div class="absolute top-8 right-8 flex justify-end">
+      <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.3em] bg-surface backdrop-blur border border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_5px_rgba(16,185,129,0.8)] animate-pulse" aria-hidden="true"></span>
+        <span>Entorno demostrativo con datos ficticios</span>
       </div>
+    </div>
 
-      <div class="landing-header text-center space-y-8">
-        <div class="landing-emblem mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-white/95">
-          <img src="{% static 'escudo.png' %}" alt="Escudo del Estado Plurinacional de Bolivia"
-            class="h-24 w-24 sm:h-28 sm:w-28" />
+    <!-- Main Central Content -->
+    <section class="w-full max-w-5xl mx-auto space-y-16 mt-8">
+      
+      <!-- Headers -->
+      <div class="text-center space-y-6">
+        <div class="mx-auto flex h-32 w-32 items-center justify-center rounded-full bg-surface-light border border-primary/40 shadow-neon">
+          <img src="{% static 'escudo.png' %}" alt="Escudo del Estado Plurinacional de Bolivia" class="h-24 w-24 drop-shadow-2xl" />
         </div>
-        <div class="text-[11px] sm:text-xs uppercase tracking-[0.38em] text-slate-300">
-          <p>Ministerio de Hidrocarburos y Energ&iacute;as</p>
-          <p class="text-[10px] sm:text-[11px] tracking-[0.3em] text-slate-400">
-            Viceministerio de Exploraci&oacute;n y Explotaci&oacute;n de Recursos Energ&eacute;ticos
+        
+        <div class="text-[9px] sm:text-[10px] uppercase tracking-[0.4em] text-slate-400 space-y-1">
+          <p class="text-slate-300">Agencia Boliviana de Energ&iacute;a Nuclear</p>
+          <p>Demo institucional para Direcci&oacute;n Ejecutiva</p>
+        </div>
+        
+        <div class="space-y-4 max-w-3xl mx-auto">
+          <p class="text-xs sm:text-sm text-slate-400 tracking-wider">Plataforma demostrativa para gesti&oacute;n institucional.</p>
+          <h1 class="text-3xl sm:text-4xl lg:text-6xl font-bold text-white tracking-tight leading-tight">
+            SICGAD para ABEN
+          </h1>
+          <p class="text-sm sm:text-base font-semibold uppercase tracking-[0.28em] text-accent">
+            Sistema Integral de Carga, Gesti&oacute;n, Validaci&oacute;n y An&aacute;lisis de Datos Institucionales
+          </p>
+          <p class="mx-auto max-w-3xl text-sm sm:text-base text-slate-300 leading-relaxed">
+            Plataforma demostrativa para centralizar informaci&oacute;n, validar datos oficiales, reducir procesos manuales y generar indicadores ejecutivos para la toma de decisiones de la Agencia Boliviana de Energ&iacute;a Nuclear.
           </p>
         </div>
-        <div class="space-y-4">
-          <p class="text-sm sm:text-base text-slate-300">Bienvenidos a la plataforma institucional.</p>
-          <h1 class="text-3xl sm:text-4xl lg:text-6xl font-heading font-semibold text-white">
-            Sistema Integral de Carga, Gesti&oacute;n y An&aacute;lisis de Datos
-          </h1>
-          <p class="text-base sm:text-lg font-semibold uppercase tracking-[0.45em] text-emerald-300">(SICGAD)</p>
-        </div>
 
-        <div class="landing-actions flex flex-wrap items-center justify-center gap-4 pt-6">
+        <!-- Call To Action -->
+        <div class="pt-8 flex justify-center">
           {% if user.is_authenticated %}
           <a href="{% url 'home' %}"
-            class="inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:bg-white/10">
-            Volver a Panel de control
+            class="inline-flex items-center justify-center rounded-full bg-surface border border-primary text-sm font-semibold text-white px-8 py-4 transition-all hover:bg-primary/20 hover:shadow-neon hover:border-primary/80">
+            Volver al Panel de control
           </a>
           {% else %}
-          <a href="{% url 'login' %}" class="landing-login-cta landing-login-cta--sky"
-            aria-label="Iniciar sesi&oacute;n en SICGAD">
-            <span class="landing-login-cta__copy">
-              <span class="landing-login-cta__label">Acceso institucional</span>
-              <span class="landing-login-cta__title">Iniciar sesi&oacute;n</span>
+          <a href="{% url 'login' %}" 
+             class="group relative inline-flex items-center justify-center rounded-full overflow-hidden border border-primary bg-primary/10 px-8 py-4 text-sm font-semibold tracking-wider text-white shadow-neon transition duration-300 ease-out hover:bg-primary/30">
+            <span class="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-100%)] group-hover:duration-1000 group-hover:[transform:skew(-12deg)_translateX(100%)]">
+              <div class="relative h-full w-8 bg-white/20"></div>
             </span>
-            <span class="landing-login-cta__arrow" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M13 5l7 7-7 7M5 12h15" />
-              </svg>
-            </span>
+            <div class="flex flex-col items-center leading-tight">
+               <span class="text-[9px] text-primary-200 uppercase tracking-widest opacity-80">Acceso Institucional</span>
+               <span class="flex items-center gap-2 mt-0.5">
+                 Iniciar sesi&oacute;n
+                 <svg class="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+               </span>
+            </div>
           </a>
           {% endif %}
         </div>
       </div>
 
-      <div class="landing-stats grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <a href="{% url 'kpis_charts' %}"
-          class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4 block hover:border-emerald-300/40 transition-colors">
-          <p class="text-[10px] uppercase tracking-[0.35em] text-emerald-300 font-semibold">Publicaciones oficiales</p>
-          <p class="mt-3 text-3xl font-semibold text-white">{{ landing_stats.published_total }}</p>
-          <p class="mt-2 text-xs text-slate-300">Instancias publicadas y bloqueadas</p>
-        </a>
+      <!-- KPI Cards (Neon Glassmorphism layout) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-2">
+        
+        <!-- Official Publications -->
+        <div class="bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-primary/50 hover:shadow-neon transition-all duration-300 group flex flex-col justify-between">
+          <div>
+            <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(176,82,255,0.8)]"></span>
+              Publicaciones oficiales
+            </p>
+            <p class="text-4xl lg:text-5xl font-bold text-white tracking-tight group-hover:text-primary transition-colors">{{ landing_stats.published_total|default:"0" }}</p>
+          </div>
+          <p class="mt-4 text-xs text-slate-500">Instancias publicadas y bloqueadas</p>
+        </div>
 
-        <a href="{% url 'kpis_charts' %}"
-          class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4 block hover:border-sky-300/40 transition-colors">
-          <p class="text-[10px] uppercase tracking-[0.35em] text-sky-300 font-semibold">Datasets con datos</p>
-          <p class="mt-3 text-3xl font-semibold text-white">{{ landing_stats.published_datasets }}</p>
-          <p class="mt-2 text-xs text-slate-300">
-            &Uacute;ltimo corte:
-            {% if landing_stats.latest_period %}{{ landing_stats.latest_period|date:"d/m/Y" }}{% else %}sin publicaciones{% endif %}
+        <!-- Datasets -->
+        <div class="bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-accent/50 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)] transition-all duration-300 group flex flex-col justify-between">
+          <div>
+             <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_rgba(0,212,255,0.8)]"></span>
+              Datasets con datos
+            </p>
+            <p class="text-4xl lg:text-5xl font-bold text-white tracking-tight group-hover:text-accent transition-colors">{{ landing_stats.published_datasets|default:"0" }}</p>
+          </div>
+          <p class="mt-4 text-xs text-slate-500">
+            &Uacute;ltimo corte: {% if landing_stats.latest_period %}{{ landing_stats.latest_period|date:"d/m/Y" }}{% else %}sin publicaciones{% endif %}
           </p>
-        </a>
+        </div>
 
-        <a href="{% url 'kpis_charts' %}"
-          class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4 block hover:border-amber-300/40 transition-colors">
-          <p class="text-[10px] uppercase tracking-[0.35em] text-amber-300 font-semibold">Cobertura publicada</p>
-          <p class="mt-3 text-3xl font-semibold text-white">{{ landing_stats.published_sectors }}</p>
-          <p class="mt-2 text-xs text-slate-300">
-            Sectores &middot; {{ landing_stats.published_subsectors }} subsectores &middot; {{ landing_stats.published_entities }} entidades
+        <!-- Coverage -->
+        <div class="bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-secondary/50 hover:shadow-neon-pink transition-all duration-300 group flex flex-col justify-between">
+          <div>
+             <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(255,42,133,0.8)]"></span>
+              Cobertura Publicada
+            </p>
+            <p class="text-4xl lg:text-5xl font-bold text-white tracking-tight group-hover:text-secondary transition-colors">{{ landing_stats.published_sectors|default:"0" }}</p>
+          </div>
+          <p class="mt-4 text-[10px] text-slate-500 bg-surface-light p-2 rounded-lg leading-relaxed">
+            Sectores &middot; {{ landing_stats.published_subsectors|default:"0" }} subsectores &middot; {{ landing_stats.published_entities|default:"0" }} entidades
           </p>
-        </a>
+        </div>
 
-        <a href="{% url 'kpis_charts' %}"
-          class="landing-stat rounded-2xl border border-white/10 bg-white/[0.06] p-4 block hover:border-cyan-300/40 transition-colors">
-          <p class="text-[10px] uppercase tracking-[0.35em] text-slate-300 font-semibold">Instituciones registradas</p>
-          <p class="mt-3 text-3xl font-semibold text-white">{{ landing_stats.institutions_total }}</p>
-          <p class="mt-2 text-xs text-slate-300">Activas: {{ landing_stats.institutions_active }}</p>
-        </a>
+        <!-- Institutions -->
+        <div class="bg-surface backdrop-blur-md rounded-3xl p-6 border border-surface-light hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all duration-300 group flex flex-col justify-between">
+          <div>
+             <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold mb-4 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+              Instituciones
+            </p>
+            <p class="text-4xl lg:text-5xl font-bold text-white tracking-tight group-hover:text-emerald-400 transition-colors">{{ landing_stats.institutions_total|default:"0" }}</p>
+          </div>
+          <div class="mt-4 flex items-center gap-2 text-xs text-slate-400">
+             Activas: <span class="bg-emerald-500/20 text-emerald-400 px-2 rounded-full font-semibold">{{ landing_stats.institutions_active|default:"0" }}</span>
+          </div>
+        </div>
+
       </div>
     </section>
   </main>

@@ -54,7 +54,7 @@ class DatasetType(models.Model):
     )
     name = models.CharField(
         max_length=255,
-        help_text="Nombre del dataset, por ejemplo 'Producción diaria PICP'.",
+        help_text="Nombre del dataset, por ejemplo 'Atenciones mensuales en Medicina Nuclear'.",
     )
     version = models.PositiveIntegerField(default=1)
     validation_frequency = models.CharField(

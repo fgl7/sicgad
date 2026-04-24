@@ -223,7 +223,7 @@ class AdminUserCreateForm(forms.ModelForm):
         ),
     )
     authority_scope_mode = forms.ChoiceField(
-        label="Alcance autoridad MHE",
+        label="Alcance autoridad institucional",
         choices=AUTH_SCOPE_CHOICES,
         required=False,
         initial=AUTH_SCOPE_SECTOR,

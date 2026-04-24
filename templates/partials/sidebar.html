@@ -1,12 +1,12 @@
 {% load static %}
-<aside class='{% if sidebar_mode == "mobile" %}sidebar-mobile-shell max-w-full sidebar border-r border-white/10 flex flex-col h-full shadow-2xl relative lg:hidden{% else %}w-64 sidebar border-r border-white/10 hidden lg:flex flex-col h-screen sticky top-0 z-50{% endif %}'>
+<aside class='{% if sidebar_mode == "mobile" %}sidebar-mobile-shell max-w-full sidebar border-r border-surface-light bg-surface/80 backdrop-blur-md flex flex-col h-full shadow-2xl relative lg:hidden{% else %}w-64 bg-surface/30 backdrop-blur-md lg:rounded-3xl border border-surface-light shadow-[10px_0_30px_rgba(0,0,0,0.5)] hidden lg:flex flex-col h-full overflow-hidden shrink-0 z-50{% endif %}'>
   <div class='p-6 flex items-center gap-3'>
-    <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden">
+    <div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/40 overflow-hidden shadow-neon">
       <img src="{% static 'escudo.png' %}" alt="Escudo Bolivia" class="w-7 h-7 object-contain" />
     </div>
     {% url 'landing' as landing_url %}
     <a href='{{ landing_url }}'
-      class='text-xl font-header tracking-tighter text-white hover:text-blue-600 transition-colors'>
+      class='text-xl font-header font-bold tracking-wider text-white hover:text-primary transition-colors'>
       SICGAD
     </a>
   </div>
@@ -192,20 +192,20 @@
     </a>
   </nav>
 
-  <div class="p-4 border-t border-white/5 bg-slate-950/20">
+  <div class="p-4 border-t border-surface-light bg-surface/10">
     <div class="flex items-center gap-3 mb-2">
-      <div class="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold uppercase text-white">
+      <div class="w-8 h-8 rounded-full bg-primary border border-primary/50 flex items-center justify-center text-[10px] font-bold uppercase text-white shadow-neon">
         {{ request.user.username|slice:":2" }}
       </div>
       <div class="flex-1 min-w-0">
-        <p class="text-xs font-semibold text-white truncate font-heading tracking-wide">{{ request.user.username }}</p>
+        <p class="text-xs font-semibold text-white truncate tracking-wide">{{ request.user.username }}</p>
         <p class="text-[10px] text-slate-500 truncate">Sesión activa</p>
       </div>
     </div>
     <form method='post' action='{% url "logout" %}'>
       {% csrf_token %}
       <button type='submit'
-        class='w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-[0.25em] text-red-100 bg-red-500/15 border border-red-500/30 shadow-[0_10px_24px_-18px_rgba(239,68,68,0.8)] transition hover:bg-red-500/25 hover:border-red-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60'>
+        class='w-full flex items-center justify-center gap-2 px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.25em] text-secondary bg-secondary/10 border border-secondary/30 shadow-neon-pink transition hover:bg-secondary/20 hover:border-secondary focus:outline-none'>
         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H3m0 0l3-3m-3 3l3 3m6-9V5a2 2 0 012-2h3a2 2 0 012 2v14a2 2 0 01-2 2h-3a2 2 0 01-2-2v-1" />
         </svg>

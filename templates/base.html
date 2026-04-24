@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es" style="{% block html_style %}background:#060b14; color:#f3f8ff;{% endblock %}">
+<html lang="es">
 
 <head>
   <meta charset="utf-8" />
@@ -8,10 +8,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="{% static 'favicon.ico' %}?v=1" type="image/x-icon" />
   <link rel="stylesheet" href="{% static 'css/fonts_local.css' %}?v=1" />
-  <link rel="stylesheet" href="{% static 'css/tailwind.generated.css' %}?v=2" />
+  <link rel="stylesheet" href="{% static 'css/tailwind.generated.css' %}?v=6" />
   <link rel="stylesheet" href="{% static 'css/app.css' %}" />
-  <link rel="stylesheet" href="{% static 'css/base_shell.css' %}?v=1" />
-  <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=6" />
+  <link rel="stylesheet" href="{% static 'css/base_shell.css' %}?v=4" />
+  <link rel="stylesheet" href="{% static 'css/sicgad_theme.css' %}?v=10" />
   <!-- HTMX -->
   <script src="{% static 'vendor/htmx-2.0.3.min.js' %}"></script>
   <!-- Alpine.js -->
@@ -19,12 +19,13 @@
   {% block extra_head %}{% endblock %}
 </head>
 
-<body class="{% block body_class %}min-h-screen selection:bg-sky-400/30 antialiased font-body saas-hybrid{% endblock %}" style="{% block body_style %}background:#060b14; color:#f3f8ff;{% endblock %}">
+<body class="{% block body_class %}min-h-screen bg-[#140a28] text-slate-100 selection:bg-primary/30 antialiased font-sans{% endblock %}">
   {% block background_layer %}
-  <div class="fixed inset-0 -z-10" aria-hidden="true">
-    <div class="absolute -top-36 -left-24 h-[28rem] w-[28rem] rounded-full bg-cyan-500/10 blur-3xl"></div>
-    <div class="absolute bottom-0 right-0 h-[36rem] w-[36rem] rounded-full bg-blue-500/20 blur-3xl"></div>
-    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40"></div>
+  <div class="fixed inset-0 -z-10" aria-hidden="true" style="pointer-events: none;">
+    <div class="absolute -top-40 -left-40 h-[40rem] w-[40rem] rounded-full blur-[150px] bg-primary/20"></div>
+    <div class="absolute bottom-0 right-1/4 h-[50rem] w-[50rem] rounded-full blur-[200px] bg-secondary/10"></div>
+    <div class="absolute bottom-0 right-0 h-[30rem] w-[30rem] rounded-full blur-[150px] bg-pink-600/20"></div>
+    <div class="absolute inset-0 bg-black/40"></div>
   </div>
   {% endblock %}
 
@@ -118,15 +119,15 @@
       </div>
     </div>
 
-    <div class="flex h-screen min-h-screen w-full max-w-full relative z-10 overflow-hidden">
+    <div class="flex h-screen min-h-screen w-full max-w-full relative z-10 overflow-hidden lg:p-6 lg:gap-6">
       {% if is_authority_viewer or is_external_monthly_viewer %}
       {% include "partials/sidebar_authority_mhe.html" %}
       {% else %}
       {% include "partials/sidebar.html" %}
       {% endif %}
-      <div class="route-main-pane flex-1 min-w-0 min-h-0 h-screen flex flex-col overflow-y-auto">
+      <div class="route-main-pane bg-surface backdrop-blur-2xl lg:rounded-[32px] border border-surface-light flex-1 min-w-0 min-h-0 h-full flex flex-col overflow-y-auto relative shadow-2xl z-10 pb-4">
         {% include "partials/topbar.html" %}
-        <main class="route-content-pane flex-1 min-w-0 p-3 sm:p-4 lg:p-6 relative z-10">
+        <main class="route-content-pane flex-1 min-w-0 p-3 sm:p-4 lg:p-10 relative z-10">
           {% block content %}{% endblock %}
         </main>
       </div>

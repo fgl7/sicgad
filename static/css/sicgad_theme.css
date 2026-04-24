@@ -1,30 +1,33 @@
 :root {
-    --bg-0: #060b14;
-    --bg-1: #0a1221;
-    --bg-2: #0f1b31;
-    --panel-0: rgba(9, 18, 35, 0.86);
-    --panel-1: rgba(11, 24, 46, 0.84);
-    --panel-2: rgba(16, 34, 66, 0.7);
+    /* Fondo del sistema adaptado de Stitch Neon Futuristic Dashboard (Onyx8) */
+    --bg-0: #140a28; 
+    --bg-1: #1a0e35;
+    --bg-2: #0f0720;
 
-    --border-soft: rgba(94, 122, 170, 0.38);
-    --border-strong: rgba(82, 212, 255, 0.55);
+    /* Paneles de cristal con tintes de violeta oscuro */
+    --panel-0: rgba(20, 10, 40, 0.4);
+    --panel-1: rgba(176, 82, 255, 0.05);
+    --panel-2: rgba(176, 82, 255, 0.1);
 
-    --primary: #1e7cff;
-    --secondary: #1bc9ff;
-    --success: #00cfa0;
-    --warning: #f8b84e;
-    --danger: #f66184;
-    --accent: #17d6ff;
+    --border-soft: rgba(176, 82, 255, 0.2);
+    --border-strong: rgba(176, 82, 255, 0.4);
 
-    --text-0: #f3f8ff;
-    --text-1: #c5d5ee;
-    --text-2: #8ea3c4;
+    --primary: #b052ff;
+    --secondary: #ff2a85;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --accent: #00d4ff;
 
-    --font-heading: "Lexend", sans-serif;
-    --font-body: "Source Sans 3", sans-serif;
+    --text-0: #ffffff;
+    --text-1: #e2d8f0;
+    --text-2: #8a7b9d;
 
-    --shadow-panel: 0 18px 48px -30px rgba(0, 4, 12, 0.9);
-    --shadow-glow: 0 0 0 1px rgba(27, 201, 255, 0.15), 0 0 44px -22px rgba(27, 201, 255, 0.45);
+    --font-heading: "Inter", sans-serif;
+    --font-body: "Inter", sans-serif;
+
+    --shadow-panel: 0 4px 30px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 15px rgba(176, 82, 255, 0.5);
 }
 
 html {
@@ -35,12 +38,7 @@ html {
 body {
     font-family: var(--font-body);
     color: var(--text-0);
-    background:
-        radial-gradient(1200px 520px at 14% -5%, rgba(31, 124, 255, 0.2), transparent 60%),
-        radial-gradient(900px 420px at 100% 0%, rgba(0, 207, 160, 0.12), transparent 65%),
-        radial-gradient(700px 460px at 50% 100%, rgba(56, 189, 248, 0.09), transparent 75%),
-        linear-gradient(170deg, var(--bg-2), var(--bg-1) 42%, var(--bg-0));
-    background-attachment: fixed;
+    background: transparent;
     line-height: 1.55;
     letter-spacing: 0.01em;
     overflow-x: hidden;
@@ -60,6 +58,7 @@ body.saas-hybrid {
 .app-shell {
     height: 100vh;
     overflow: hidden;
+    background: transparent;
 }
 
 .app-shell .flex-1,
@@ -131,17 +130,17 @@ h6,
 .glass-effect,
 .glass-card {
     background:
-        linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01)),
-        linear-gradient(155deg, var(--panel-2), var(--panel-0) 55%);
+        linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+        var(--panel-1);
     border: 1px solid var(--border-soft);
-    border-radius: 20px;
+    border-radius: 24px;
     box-shadow: var(--shadow-panel);
-    backdrop-filter: blur(14px) saturate(120%);
-    -webkit-backdrop-filter: blur(14px) saturate(120%);
+    backdrop-filter: blur(36px) saturate(110%);
+    -webkit-backdrop-filter: blur(36px) saturate(110%);
 }
 
 .glass-card:hover {
-    border-color: rgba(82, 212, 255, 0.5);
+    border-color: var(--primary);
 }
 
 header.topbar-flat {
@@ -149,10 +148,8 @@ header.topbar-flat {
 }
 
 .sidebar {
-    background:
-        linear-gradient(180deg, rgba(7, 16, 32, 0.95), rgba(7, 14, 26, 0.9) 38%, rgba(8, 17, 33, 0.94));
-    border-right: 1px solid rgba(94, 122, 170, 0.34);
-    backdrop-filter: blur(14px);
+    background: transparent;
+    border-right: none;
 }
 
 .sidebar-link {
@@ -167,12 +164,9 @@ header.topbar-flat {
 .sidebar-link:hover,
 .sidebar-link.active {
     color: #ffffff;
-    border-color: rgba(30, 124, 255, 0.36);
-    border-left-color: var(--secondary);
-    background:
-        linear-gradient(90deg, rgba(30, 124, 255, 0.26), rgba(30, 124, 255, 0.04)),
-        rgba(255, 255, 255, 0.02);
-    box-shadow: inset 0 0 0 1px rgba(27, 201, 255, 0.11);
+    border-color: var(--primary);
+    background: var(--panel-1);
+    box-shadow: inset 0 0 0 1px var(--border-soft), var(--shadow-glow);
 }
 
 .saas-hybrid input[type="text"],
@@ -184,9 +178,8 @@ header.topbar-flat {
 .saas-hybrid textarea {
     width: 100%;
     color: var(--text-0) !important;
-    background:
-        linear-gradient(180deg, rgba(9, 19, 36, 0.9), rgba(7, 16, 31, 0.9)) !important;
-    border: 1px solid rgba(94, 122, 170, 0.45) !important;
+    background: var(--bg-1) !important;
+    border: 1px solid var(--border-strong) !important;
     border-radius: 12px;
     font-size: 0.88rem;
     line-height: 1.2;
@@ -202,9 +195,9 @@ header.topbar-flat {
 .saas-hybrid input:focus,
 .saas-hybrid select:focus,
 .saas-hybrid textarea:focus {
-    border-color: var(--border-strong) !important;
-    box-shadow: 0 0 0 2px rgba(27, 201, 255, 0.2), 0 0 24px -14px rgba(27, 201, 255, 0.65) !important;
-    background: linear-gradient(180deg, rgba(10, 20, 40, 0.98), rgba(7, 16, 31, 0.95)) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05), 0 0 24px -14px rgba(255, 255, 255, 0.1) !important;
+    background: var(--bg-2) !important;
     outline: none !important;
 }
 
@@ -230,23 +223,24 @@ header.topbar-flat {
 }
 
 .btn-primary {
-    color: #ecf7ff;
+    color: #ffffff;
     font-size: 0.74rem;
     font-weight: 800;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    border-radius: 12px;
-    border: 1px solid rgba(103, 221, 255, 0.3);
+    border-radius: 99px;
+    border: 1px solid var(--border-strong);
     padding: 10px 18px;
-    background: linear-gradient(140deg, #1175ff, #18b7ff);
-    box-shadow: 0 12px 26px -18px rgba(17, 117, 255, 0.92), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background: var(--primary);
+    box-shadow: var(--shadow-glow);
     transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 .btn-primary:hover {
     transform: translateY(-1px);
-    filter: brightness(1.07);
-    box-shadow: 0 16px 30px -18px rgba(17, 117, 255, 1), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    filter: brightness(1.1);
+    border-color: var(--text-0);
+    box-shadow: 0 0 20px rgba(176, 82, 255, 0.8);
 }
 
 .btn-primary:disabled {
@@ -261,17 +255,17 @@ header.topbar-flat {
     font-weight: 800;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    border-radius: 12px;
-    border: 1px solid rgba(94, 122, 170, 0.45);
+    border-radius: 99px;
+    border: 1px solid var(--border-soft);
     padding: 10px 18px;
-    background: linear-gradient(160deg, rgba(16, 31, 56, 0.9), rgba(8, 18, 34, 0.95));
+    background: var(--panel-1);
     transition: all 0.18s ease;
 }
 
 .btn-secondary:hover {
     color: #ffffff;
-    border-color: rgba(82, 212, 255, 0.5);
-    box-shadow: 0 12px 26px -20px rgba(27, 201, 255, 0.55);
+    border-color: var(--secondary);
+    box-shadow: 0 0 15px rgba(255, 42, 133, 0.5);
 }
 
 .btn-danger {
@@ -423,26 +417,30 @@ header.topbar-flat {
 .saas-hybrid .bg-slate-900\/20,
 .saas-hybrid .bg-slate-900\/40,
 .saas-hybrid .bg-slate-900\/60,
+.saas-hybrid .bg-slate-800,
+.saas-hybrid .bg-slate-800\/20,
+.saas-hybrid .bg-slate-800\/40,
+.saas-hybrid .bg-slate-800\/60,
 .saas-hybrid .bg-black\/20,
 .saas-hybrid .bg-black\/30,
 .saas-hybrid .bg-black\/40 {
-    background-color: rgba(8, 17, 32, 0.76) !important;
+    background-color: var(--panel-1) !important;
 }
 
 .saas-hybrid .bg-white\/\[0\.01\],
 .saas-hybrid .bg-white\/\[0\.02\],
 .saas-hybrid .bg-white\/\[0\.03\],
 .saas-hybrid .bg-white\/\[0\.05\] {
-    background-color: rgba(18, 35, 66, 0.42) !important;
+    background-color: var(--panel-1) !important;
 }
 
 .saas-hybrid .from-slate-900 {
-    --tw-gradient-from: rgba(9, 18, 34, 0.82) !important;
-    --tw-gradient-to: rgba(9, 18, 34, 0) !important;
+    --tw-gradient-from: var(--bg-2) !important;
+    --tw-gradient-to: rgba(20, 19, 17, 0) !important;
 }
 
 .saas-hybrid .to-slate-950 {
-    --tw-gradient-to: rgba(6, 11, 20, 0.94) !important;
+    --tw-gradient-to: var(--bg-0) !important;
 }
 
 /* Authority chart experience */
@@ -456,10 +454,8 @@ header.topbar-flat {
     position: relative;
     padding: 14px 16px 12px;
     border-radius: 16px;
-    border: 1px solid rgba(120, 147, 192, 0.34);
-    background:
-        radial-gradient(80% 140% at 100% 0%, rgba(23, 214, 255, 0.14), transparent 65%),
-        linear-gradient(165deg, rgba(7, 18, 34, 0.95), rgba(5, 13, 26, 0.94));
+    border: 1px solid var(--border-soft);
+    background: var(--panel-2);
     box-shadow:
         0 12px 28px -22px rgba(0, 0, 0, 0.95),
         inset 0 0 0 1px rgba(255, 255, 255, 0.03);

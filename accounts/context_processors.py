@@ -84,6 +84,10 @@ def _resolve_current_section(path: str) -> str:
         return "Auditoria"
     if path.startswith("/performance/"):
         return "Desempeno"
+    if path.startswith("/kpis/"):
+        return "Tablero Ejecutivo ABEN"
+    if path.startswith("/projects/"):
+        return "Proyectos y convenios"
     if path.startswith("/structure/"):
         return "Clasificacion"
     if path.startswith("/home/"):

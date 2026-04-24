@@ -1,5 +1,5 @@
-:root {
-    --primary-glow: conic-gradient(from 180deg at 50% 50%, #2563eb 0deg, #38bdf8 160deg, #2563eb 360deg);
+:root {
+    --primary-glow: conic-gradient(from 180deg at 50% 50%, #b052ff 0deg, #ff2a85 160deg, #b052ff 360deg);
 }
 
 body {
@@ -39,10 +39,10 @@ body {
 }
 
 .glass-login {
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(20px) saturate(150%);
-    border: 1px solid rgba(148, 163, 184, 0.35);
-    box-shadow: 0 30px 70px -50px rgba(2, 6, 23, 0.8);
+    background: rgba(20, 10, 40, 0.7);
+    backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid rgba(176, 82, 255, 0.25);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), 0 0 40px rgba(176, 82, 255, 0.1);
 }
 
 .login-field {

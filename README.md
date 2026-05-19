@@ -4,6 +4,12 @@ SICGAD is a Django-based system for managing the full lifecycle of institutional
 
 This public repository is a pilot/demo version. It includes a SQLite database with fictitious sample data so interested users can explore the system, review workflows, and understand the product concept quickly. A more advanced and structured private version is maintained separately and can be adapted to specific operational, institutional, or user requirements.
 
+## Project Context
+
+SICGAD was designed and built as a proposal for ABEN (Bolivia's Nuclear Energy Agency) to automate institutional data management processes. Built independently in approximately four months using Python/Django, it demonstrates how a single developer using AI-assisted tools can replace manual bureaucratic workflows that typically require multiple staff members.
+
+The project also surfaced real questions about AI deployment in resource-constrained public institutions, including security, governance, and institutional resistance to automation.
+
 The current functional domain is centered on `Entity`. The main organizational hierarchy is:
 
 1. `Sector`

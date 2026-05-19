@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -19,7 +20,7 @@ from structure.models import Category, Entity, Sector, Subsector
 from validation.models import ValidationAction
 
 
-DEMO_PASSWORD = "REMOVED!!!"
+DEMO_PASSWORD_ENV = "SICGAD_DEMO_PASSWORD"
 DEMO_INSTITUTION_CODE = "ABEN"
 DEMO_SECTOR_NAME = "Energía Nuclear y Aplicaciones Tecnológicas"
 
@@ -334,9 +335,18 @@ class Command(BaseCommand):
             action="store_true",
             help="Elimina solo objetos demo ABEN conocidos y los vuelve a crear.",
         )
+        parser.add_argument(
+            "--password",
+            default=os.environ.get(DEMO_PASSWORD_ENV, ""),
+            help=f"Password for demo users. Can also be provided through {DEMO_PASSWORD_ENV}.",
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
+        self.demo_password = options["password"]
+        if not self.demo_password:
+            raise CommandError(f"Provide a demo password with --password or {DEMO_PASSWORD_ENV}.")
+
         if options["reset"]:
             self._reset_demo()
 
@@ -355,7 +365,7 @@ class Command(BaseCommand):
         cache.clear()
         self.stdout.write(self.style.SUCCESS("Demo ABEN creada correctamente."))
         self.stdout.write(f"Usuarios demo: {', '.join(DEMO_USERNAMES)}")
-        self.stdout.write(f"Contraseña demo: {DEMO_PASSWORD}")
+        self.stdout.write(f"Contraseña demo configurada desde --password/{DEMO_PASSWORD_ENV}.")
 
     def _reset_demo(self):
         demo_entities = Entity.objects.filter(code__in=ABEN_ENTITY_CODES)
@@ -464,7 +474,7 @@ class Command(BaseCommand):
             user.email = f"{username}@demo.aben.gob.bo"
             user.is_active = True
             user.is_staff = is_staff
-            user.set_password(DEMO_PASSWORD)
+            user.set_password(self.demo_password)
             user.save()
             profile, _ = AccountProfile.objects.get_or_create(user=user)
             profile.must_change_password = False

@@ -84,7 +84,7 @@ También permanece el identificador interno `AUTHORITY_MHE` y el template `sideb
 - `seguimiento_mhe`
 - `auditoria_aben`
 
-Contraseña demo: `REMOVED!!!`
+La contraseña demo se configura fuera del repositorio y debe compartirse por un canal separado para cada presentación.
 
 ## Flujo recomendado de presentación
 

@@ -24,11 +24,7 @@ El comando crea estructura institucional, usuarios, membresías, esquemas aproba
 
 ## Usuarios demo
 
-Contraseña para todos los usuarios:
-
-```text
-REMOVED!!!
-```
+La contraseña de los usuarios demo se configura fuera del repositorio y debe compartirse por un canal separado cuando se prepare una presentación.
 
 | Usuario | Rol | Alcance |
 | --- | --- | --- |

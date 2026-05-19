@@ -2,6 +2,8 @@
 
 SICGAD is a Django-based system for managing the full lifecycle of institutional data: schema definition, data ingestion, multi-level validation, KPI publication, auditing, and operational reporting.
 
+This public repository is a pilot/demo version. It includes a SQLite database with fictitious sample data so interested users can explore the system, review workflows, and understand the product concept quickly. A more advanced and structured private version is maintained separately and can be adapted to specific operational, institutional, or client requirements.
+
 The current functional domain is centered on `Entity`. The main organizational hierarchy is:
 
 1. `Sector`
